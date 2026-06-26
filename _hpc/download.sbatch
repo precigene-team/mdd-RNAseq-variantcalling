@@ -7,8 +7,8 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=4G
 #SBATCH --time=48:00:00
-#SBATCH --output=_data/logs/download/download_%j.log
-#SBATCH --error=_data/logs/download/download_%j.err
+#SBATCH --output=_data/logs/download_%j.log
+#SBATCH --error=_data/logs/download_%j.err
 
 # Steps:
 #   1. Discover project root and set paths
@@ -90,7 +90,7 @@ echo "-------------------------------------------------------------------------"
 
 if [ "$URL_COUNT" -gt 0 ]; then
 
-LOG_DIR="$PROJECT_ROOT/_data/logs/download/download"
+LOG_DIR="$PROJECT_ROOT/_data/logs/download"
 mkdir -p "$LOG_DIR"
 
     # Check for download tool
