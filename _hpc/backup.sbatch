@@ -14,8 +14,8 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
 #SBATCH --time=12:00:00
-#SBATCH --output=_data/logs/backup_log_%j.txt
-#SBATCH --error=_data/logs/backup_error_%j.txt
+#SBATCH --output=_data/logs/backup/backup_log_%j.txt
+#SBATCH --error=_data/logs/backup/backup_error_%j.txt
 
 # --- Project Root Discovery ---
 # Use SLURM_SUBMIT_DIR (set by SLURM to the dir where sbatch was called).
