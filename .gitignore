@@ -1,0 +1,81 @@
+
+# ============================================================
+# MDD RNAseq Pipeline — .gitignore
+# Mirrors convention from ../RNAseq_pipeline/.gitignore
+# ============================================================
+
+# --- Heavy bioinformatics data files ---
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bam
+*.bai
+*.sam
+*.sra
+*.vcf
+*.vcf.gz
+*.cram
+
+# --- Large production output directories ---
+_data/fastq/
+_data/trimmed_fastq/
+_data/bam/
+_data/genome/
+_data/qc_raw/
+_data/qc_trim/
+_data/qc_trim_fastp/
+_data/qc_bam/
+_data/qc_rnaseq/
+_data/logs/
+
+# --- Keep _metadata and logs tracked (small, important) ---
+# (not ignored — committed intentionally)
+
+# --- STAR temporary folders ---
+*_STARtmp/
+*_STARpass1/
+*_STARgenome/
+
+# --- R intermediate objects ---
+*.RData
+*.rds
+*.RDS
+.Rhistory
+.Rapp.history
+
+# --- Python cache ---
+__pycache__/
+*.py[cod]
+
+# --- Pipeline log files ---
+_data/logs/
+*.log
+*.err
+
+# --- Results (large figures/tables, regenerable) ---
+results/
+
+# --- Scratch & legacy ---
+scratch/
+_legacy/
+_pub/
+
+# --- OS generated files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- Editor config ---
+.vscode/
+.idea/
+*.swp
+*~
+
+# --- PDF / image assets ---
+*.pdf
+img/

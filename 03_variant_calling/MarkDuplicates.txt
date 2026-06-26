@@ -1,0 +1,16 @@
+#!/bin/bash
+
+mkdir -p variant/duplicates tmp
+
+find variant/readgroups -name '*.rg.bam' | \
+xargs -I{} -P 8 bash -c '
+bam="$1"
+sample=$(basename "$bam" .rg.bam)
+
+gatk --java-options "-Xmx16G -Djava.io.tmpdir=tmp" MarkDuplicates \
+    -I "$bam" \
+    -O "variant/duplicates/${sample}.marked.bam" \
+    -M "variant/duplicates/${sample}.metrics.txt" \
+    --CREATE_INDEX true \
+    --READ_NAME_REGEX null
+' _ {}

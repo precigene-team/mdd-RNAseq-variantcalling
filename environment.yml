@@ -1,0 +1,35 @@
+name: mdd
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Upstream Core Tools
+  - star
+  - samtools
+  - subread
+  - multiqc
+  - picard
+  - gatk4
+  - trimmomatic
+  - fastqc
+  - qualimap
+  # - aria2
+  - aspera-cli
+  - fastp
+
+  # Python Stack
+  - python=3.9
+  - pandas
+  - tqdm
+  
+  # R Stack
+  - r-base=4.3
+  - r-tidyverse
+  - r-yaml
+  - r-plotly
+  - r-htmlwidgets
+  - r-ggrepel
+  - bioconductor-deseq2
+  - bioconductor-biomart
+  - bioconductor-apeglm

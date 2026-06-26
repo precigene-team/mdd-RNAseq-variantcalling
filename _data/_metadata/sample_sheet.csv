@@ -1,0 +1,79 @@
+File1,File2,Accession,Spots,Bases,Organisms,Gender,SampleType,DataType,size
+male_mdd_10_m6A_1,male_mdd_10_m6A_2,SRR30401480,100.7M spots,20.3G bases,Homo sapiens,male,mdd,m6A,6.1 Gb
+male_mdd_1_m6A_1,male_mdd_1_m6A_2,SRR30401481,78.6M spots,15.9G bases,Homo sapiens,male,mdd,m6A,4.7 Gb
+male_mdd_2_m6A_1,male_mdd_2_m6A_2,SRR30401479,55.4M spots,11.2G bases,Homo sapiens,male,mdd,m6A,3.4 Gb
+male_mdd_3_m6A_1,male_mdd_3_m6A_2,SRR30401478,41.3M spots,8.3G bases,Homo sapiens,male,mdd,m6A,2.5 Gb
+male_mdd_4_m6A_1,male_mdd_4_m6A_2,SRR30401477,71M spots,14.3G bases,Homo sapiens,male,mdd,m6A,4.2 Gb
+male_mdd_5_m6A_1,male_mdd_5_m6A_2,SRR30401476,51.1M spots,10.3G bases,Homo sapiens,male,mdd,m6A,3.1 Gb
+male_mdd_6_m6A_1,male_mdd_6_m6A_2,SRR30401475,91.4M spots,18.5G bases,Homo sapiens,male,mdd,m6A,5.5 Gb
+male_mdd_7_m6A_1,male_mdd_7_m6A_2,SRR30401474,46.6M spots,9.4G bases,Homo sapiens,male,mdd,m6A,2.8 Gb
+male_mdd_8_m6A_1,male_mdd_8_m6A_2,SRR30401473,34.5M spots,7G bases,Homo sapiens,male,mdd,m6A,2.1 Gb
+male_mdd_9_m6A_1,male_mdd_9_m6A_2,SRR30401472,38.4M spots,7.8G bases,Homo sapiens,male,mdd,m6A,2.3 Gb
+female_mdd_10_m6A_1,female_mdd_10_m6A_2,SRR30401512,51M spots,10.3G bases,Homo sapiens,female,mdd,m6A,3.1Gb
+female_mdd_1_m6A_1,female_mdd_1_m6A_2,SRR30401513,36.8M spots,7.4G bases,Homo sapiens,female,mdd,m6A,2.2Gb
+female_mdd_2_m6A_1,female_mdd_2_m6A_2,SRR30401511,40.8M spots,8.2G bases,Homo sapiens,female,mdd,m6A,2.5Gb
+female_mdd_3_m6A_1,female_mdd_3_m6A_2,SRR30401510,83.7M spots,16.9G bases,Homo sapiens,female,mdd,m6A,5Gb
+female_mdd_4_m6A_1,female_mdd_4_m6A_2,SRR30401509,71.5M spots,14.4G bases,Homo sapiens,female,mdd,m6A,4.3Gb
+female_mdd_5_m6A_1,female_mdd_5_m6A_2,SRR30401508,62.5M spots,12.6G bases,Homo sapiens,female,mdd,m6A,3.9Gb
+female_mdd_6_m6A_1,female_mdd_6_m6A_2,SRR30401507,123.2M spots,24.9G bases,Homo sapiens,female,mdd,m6A,7.4Gb
+female_mdd_7_m6A_1,female_mdd_7_m6A_2,SRR30401506,55.8M spots,11.3G bases,Homo sapiens,female,mdd,m6A,3.4Gb
+female_mdd_8_m6A_1,female_mdd_8_m6A_2,SRR30401505,33.7M spots,6.8G bases,Homo sapiens,female,mdd,m6A,2.1Gb
+female_mdd_9_m6A_1,female_mdd_9_m6A_2,SRR30401492,45.4M spots,9.2G bases,Homo sapiens,female,mdd,m6A,2.8Gb
+male_ctrl_10_m6A_1,male_ctrl_10_m6A_2,SRR30401490,34M spots,6.9G bases,Homo sapiens,male,ctrl,m6A,2Gb
+male_ctrl_1_m6A_1,male_ctrl_1_m6A_2,SRR30401491,74.3M spots,15G bases,Homo sapiens,male,ctrl,m6A,4.5Gb
+male_ctrl_2_m6A_1,male_ctrl_2_m6A_2,SRR30401489,72.3M spots,14.6G bases,Homo sapiens,male,ctrl,m6A,4.4Gb
+male_ctrl_3_m6A_1,male_ctrl_3_m6A_2,SRR30401488,77M spots,15.6G bases,Homo sapiens,male,ctrl,m6A,4.6Gb
+male_ctrl_4_m6A_1,male_ctrl_4_m6A_2,SRR30401487,,9.6G bases,Homo sapiens,male,ctrl,m6A,4.6GB
+male_ctrl_5_m6A_1,male_ctrl_5_m6A_2,SRR30401486,,,Homo sapiens,male,ctrl,m6A,3.7GB
+male_ctrl_6_m6A_1,male_ctrl_6_m6A_2,SRR30401485,,14.6G bases,Homo sapiens,male,ctrl,m6A,4.4GB
+male_ctrl_7_m6A_1,male_ctrl_7_m6A_2,SRR30401484,42.5M spots,8.6G bases,Homo sapiens,male,ctrl,m6A,2.6 Gb
+male_ctrl_8_m6A_1,male_ctrl_8_m6A_2,SRR30401483,40.8M spots,8.2G bases,Homo sapiens,male,ctrl,m6A,2.4 Gb
+male_ctrl_9_m6A_1,male_ctrl_9_m6A_2,SRR30401482,52M spots,10.5G bases,Homo sapiens,male,ctrl,m6A,3.1 Gb
+female_ctrl_1_m6A_1,female_ctrl_1_m6A_2,SRR30401522,42.7M spots,8.6G bases,Homo sapiens,female,ctrl,m6A,2.5Gb
+female_ctrl_2_m6A_1,female_ctrl_2_m6A_2,SRR30401521,125.6M spots,25.4G bases,Homo sapiens,female,ctrl,m6A,7.6Gb
+female_ctrl_3_m6A_1,female_ctrl_3_m6A_2,SRR30401520,45.8M spots,9.3G bases,Homo sapiens,female,ctrl,m6A,2.7Gb
+female_ctrl_4_m6A_1,female_ctrl_4_m6A_2,SRR30401519,37.8M spots,7.6G bases,Homo sapiens,female,ctrl,m6A,2.3Gb
+female_ctrl_5_m6A_1,female_ctrl_5_m6A_2,SRR30401518,59M spots,11.9G bases,Homo sapiens,female,ctrl,m6A,3.6Gb
+female_ctrl_6_m6A_1,female_ctrl_6_m6A_2,SRR30401517,52.6M spots,10.6G bases,Homo sapiens,female,ctrl,m6A,3.1Gb
+female_ctrl_7_m6A_1,female_ctrl_7_m6A_2,SRR30401516,54.1M spots,10.9G bases,Homo sapiens,female,ctrl,m6A,3.2Gb
+female_ctrl_8_m6A_1,female_ctrl_8_m6A_2,SRR30401515,34.2M spots,6.9G bases,Homo sapiens,female,ctrl,m6A,2.1Gb
+female_ctrl_9_m6A_1,female_ctrl_9_m6A_2,SRR30401514,40.1M spots,8.1G bases,Homo sapiens,female,ctrl,m6A,2.4Gb
+male_mdd_10_input_1,male_mdd_10_input_2,SRR30401501,74.6M spots,15.1G bases,Homo sapiens,male,mdd,RNA-seq,4.6Gb
+male_mdd_1_input_1,male_mdd_1_input_2,SRR30401502,83.2M spots,16.8G bases,Homo sapiens,male,mdd,RNA-seq,5.2Gb
+male_mdd_2_input_1,male_mdd_2_input_2,SRR30401500,32.6M spots,6.6G bases,Homo sapiens,male,mdd,RNA-seq,2Gb
+male_mdd_3_input_1,male_mdd_3_input_2,SRR30401499,108.6M spots,21.9G bases,Homo sapiens,male,mdd,RNA-seq,6.7Gb
+male_mdd_4_input_1,male_mdd_4_input_2,SRR30401498,96M spots,19.4G bases,Homo sapiens,male,mdd,RNA-seq,6Gb
+male_mdd_5_input_1,male_mdd_5_input_2,SRR30401497,67.8M spots,13.7G bases,Homo sapiens,male,mdd,RNA-seq,4.2Gb
+male_mdd_6_input_1,male_mdd_6_input_2,SRR30401496,82.5M spots,16.7G bases,Homo sapiens,male,mdd,RNA-seq,5.1Gb
+male_mdd_7_input_1,male_mdd_7_input_2,SRR30401495,110.6M spots,22.3G bases,Homo sapiens,male,mdd,RNA-seq,6.9Gb
+male_mdd_8_input_1,male_mdd_8_input_2,SRR30401494,80.6M spots,16.3G bases,Homo sapiens,male,mdd,RNA-seq,5Gb
+male_mdd_9_input_1,male_mdd_9_input_2,SRR30401493,68.6M spots,13.9G bases,Homo sapiens,male,mdd,RNA-seq,4.2Gb
+female_mdd_10_input_1,female_mdd_10_input_2,SRR30401461,92.8M spots,18.7G bases,Homo sapiens,female,mdd,RNA-seq,5.7 Gb
+female_mdd_1_input_1,female_mdd_1_input_2,SRR30401462,76.6M spots,15.5G bases,Homo sapiens,female,mdd,RNA-seq,4.7 Gb
+female_mdd_2_input_1,female_mdd_2_input_2,SRR30401460,34.8M spots,7G bases,Homo sapiens,female,mdd,RNA-seq,2.2 Gb
+female_mdd_3_input_1,female_mdd_3_input_2,SRR30401459,114.3M spots,23.1G bases,Homo sapiens,female,mdd,RNA-seq,7 Gb
+female_mdd_4_input_1,female_mdd_4_input_2,SRR30401458,83.9M spots,16.9G bases,Homo sapiens,female,mdd,RNA-seq,5.1 Gb
+female_mdd_5_input_1,female_mdd_5_input_2,SRR30401457,84.6M spots,17.1G bases,Homo sapiens,female,mdd,RNA-seq,5.2 Gb
+female_mdd_6_input_1,female_mdd_6_input_2,SRR30401456,74.5M spots,15.1G bases,Homo sapiens,female,mdd,RNA-seq,4.6 Gb
+female_mdd_7_input_1,female_mdd_7_input_2,SRR30401455,87.9M spots,17.8G bases,Homo sapiens,female,mdd,RNA-seq,5.4 Gb
+female_mdd_8_input_1,female_mdd_8_input_2,SRR30401454,25.5M spots,5.2G bases,Homo sapiens,female,mdd,RNA-seq,1.6 Gb
+female_mdd_9_input_1,female_mdd_9_input_2,SRR30401453,58.5M spots,5.3G bases,Homo sapiens,female,mdd,RNA-seq,3.6 Gb
+male_ctrl_10_input_1,male_ctrl_10_input_2,SRR30401451,100.9M spots,20.4G bases,Homo sapiens,male,ctrl,RNA-seq,6.2 Gb
+male_ctrl_1_input_1,male_ctrl_1_input_2,SRR30401452,26.4M spots,5.3G bases,Homo sapiens,male,ctrl,RNA-seq,1.6 Gb
+male_ctrl_2_input_1,male_ctrl_2_input_2,SRR30401450,102.4M spots,20.7G bases,Homo sapiens,male,ctrl,RNA-seq,6.3 Gb
+male_ctrl_3_input_1,male_ctrl_3_input_2,SRR30401449,85.12M spots,17.2G bases,Homo sapiens,male,ctrl,RNA-seq,5.3 Gb
+male_ctrl_4_input_1,male_ctrl_4_input_2,SRR30401448,90.16M spots,18.2G bases,Homo sapiens,male,ctrl,RNA-seq,5.5 Gb
+male_ctrl_5_input_1,male_ctrl_5_input_2,SRR30401447,76.8M spots,15.5G bases,Homo sapiens,male,ctrl,RNA-seq,4.8 Gb
+male_ctrl_6_input_1,male_ctrl_6_input_2,SRR30401446,107.5M spots,21.7G bases,Homo sapiens,male,ctrl,RNA-seq,6.57 Gb
+male_ctrl_7_input_1,male_ctrl_7_input_2,SRR30401445,71.7M spots,14.5G bases,Homo sapiens,male,ctrl,RNA-seq,4.4 Gb
+male_ctrl_8_input_1,male_ctrl_8_input_2,SRR30401504,71.6M spots,14.5G bases,Homo sapiens,male,ctrl,RNA-seq,4.4Gb
+male_ctrl_9_input_1,male_ctrl_9_input_2,SRR30401503,97M spots,19.6G bases,Homo sapiens,male,ctrl,RNA-seq,5.9Gb
+female_ctrl_1_input_1,female_ctrl_1_input_2,SRR30401471,83.5M spots,16.9G bases,Homo sapiens,female,ctrl,RNA-seq,5.2 Gb
+female_ctrl_2_input_1,female_ctrl_2_input_2,SRR30401470,77.8M spots,15.7G bases,Homo sapiens,female,ctrl,RNA-seq,4.8 Gb
+female_ctrl_3_input_1,female_ctrl_3_input_2,SRR30401469,60.7M spots,12.3G bases,Homo sapiens,female,ctrl,RNA-seq,3.9 Gb
+female_ctrl_4_input_1,female_ctrl_4_input_2,SRR30401468,77.6M spots,15.7G bases,Homo sapiens,female,ctrl,RNA-seq,4.8 Gb
+female_ctrl_5_input_1,female_ctrl_5_input_2,SRR30401467,60.1M spots,12.1G bases,Homo sapiens,female,ctrl,RNA-seq,3.7 Gb
+female_ctrl_6_input_1,female_ctrl_6_input_2,SRR30401466,23.2M spots,4.7G bases,Homo sapiens,female,ctrl,RNA-seq,1.4 Gb
+female_ctrl_7_input_1,female_ctrl_7_input_2,SRR30401465,74.8M spots,15.1G bases,Homo sapiens,female,ctrl,RNA-seq,4.6 Gb
+female_ctrl_8_input_1,female_ctrl_8_input_2,SRR30401464,79.2M spots,16G bases,Homo sapiens,female,ctrl,RNA-seq,4.9 Gb
+female_ctrl_9_input_1,female_ctrl_9_input_2,SRR30401463,112.5M spots,22.7G bases,Homo sapiens,female,ctrl,RNA-seq,7 Gb

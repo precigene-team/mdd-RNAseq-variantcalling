@@ -1,0 +1,26 @@
+module_order:
+  - fastqc:
+      name: "FastQC (Raw)"
+      anchor: "fastqc_raw"
+      path_filters:
+        - "*qc_raw*"
+  - fastqc:
+      name: "FastQC (Trimmed)"
+      anchor: "fastqc_trimmed"
+      path_filters:
+        - "*qc_trim*"
+  - star
+  - picard
+  - qualimap
+  - featurecounts
+
+# Customizing the appearance
+section_comments:
+    biotype_counts: "Detailed breakdown of read counts across different genomic biotypes."
+
+# Ensure the custom biotype plot is easily visible
+custom_content_header_config:
+    biotype_counts:
+        parent_id: 'quantification_summary'
+        parent_name: 'Quantification'
+        parent_description: 'Summary of read counting and biotype distribution.'
