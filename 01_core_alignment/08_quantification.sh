@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[01_core_alignment/07_quantification.sh]]
+# [[01_core_alignment/08_quantification.sh]]
 # Goal: Run featureCounts on aligned BAM files.
 
 # Steps:
@@ -51,7 +51,7 @@ fi
 
 # --- Resource Auto-detection ---
 TOTAL_CPUS=${SLURM_CPUS_PER_TASK:-32}
-PARALLEL_JOBS=4
+PARALLEL_JOBS=2
 CPUS_PER_JOB=$((TOTAL_CPUS / PARALLEL_JOBS))
 [ "$CPUS_PER_JOB" -lt 1 ] && CPUS_PER_JOB=1
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[01_core_alignment/08_counts_qc.sh]]
+# [[01_core_alignment/09_counts_qc.sh]]
 # Goal: Compile sample gene count files and generate alignment/assignment QC summaries using bash/awk.
 
 # Steps:

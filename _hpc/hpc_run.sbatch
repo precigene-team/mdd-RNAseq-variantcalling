@@ -4,8 +4,8 @@
 #SBATCH --job-name=MDD_RNAseq_Prod_Run
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=64
-#SBATCH --mem=256G
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=32G
 #SBATCH --time=48:00:00
 #SBATCH --output=_data/logs/hpc_run/hpc_run_log_%j.txt
 #SBATCH --error=_data/logs/hpc_run/hpc_run_error_%j.txt

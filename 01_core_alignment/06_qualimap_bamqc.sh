@@ -1,13 +1,13 @@
 #!/bin/bash
-# [[01_core_alignment/06_qualimap_rnaseq.sh]]
-# Goal: Run Qualimap RNA-seq QC on aligned BAM files.
+# [[01_core_alignment/06_qualimap_bamqc.sh]]
+# Goal: Run Qualimap BAM QC on aligned BAM files.
 
 # Steps:
-#   1. Validate inputs and environment (BAM folder and GTF file existence, active mdd environment).
+#   1. Validate inputs and environment (BAM folder existence, active mdd environment).
 #   2. Detect CPU resources and set parallelism.
 #   3. Find all aligned BAM files to process.
-#   4. Run Qualimap RNA-seq QC in parallel for each sample BAM file.
-#   5. Assert that all expected Qualimap RNA-seq reports are successfully generated.
+#   4. Run Qualimap BAM QC in parallel for each sample BAM file.
+#   5. Assert that all expected Qualimap reports are successfully generated.
 
 # Exit on error
 set -e
@@ -24,9 +24,8 @@ if [ -z "$CONDA_PREFIX" ]; then
 fi
 
 BAM_DIR="$PROJECT_ROOT/_data/bam"
-QC_DIR="$PROJECT_ROOT/_data/qc_rnaseq"
-GTF_FILE="$PROJECT_ROOT/_data/genome/Homo_sapiens.GRCh38.115.gtf"
-LOG_DIR="$PROJECT_ROOT/_data/logs/qualimap_rnaseq"
+QC_DIR="$PROJECT_ROOT/_data/qc_bam"
+LOG_DIR="$PROJECT_ROOT/_data/logs/qualimap_bamqc"
 
 mkdir -p "$QC_DIR"
 mkdir -p "$LOG_DIR"
@@ -34,10 +33,6 @@ mkdir -p "$LOG_DIR"
 # --- Input Assertions ---
 if [ ! -d "$BAM_DIR" ]; then
     echo "Assertion Error: BAM directory not found at $BAM_DIR" >&2
-    exit 1
-fi
-if [ ! -f "$GTF_FILE" ]; then
-    echo "Assertion Error: GTF annotation file not found at $GTF_FILE" >&2
     exit 1
 fi
 
@@ -52,11 +47,13 @@ fi
 # --- Resource Auto-detection ---
 TOTAL_CPUS=${SLURM_CPUS_PER_TASK:-32}
 PARALLEL_SAMPLES=4
+CPUS_PER_SAMPLE=$((TOTAL_CPUS / PARALLEL_SAMPLES))
+[ "$CPUS_PER_SAMPLE" -lt 1 ] && CPUS_PER_SAMPLE=1
 
 echo "================================================================================"
-echo "   QUALIMAP RNA-SEQ QC: Starting Qualimap rnaseq"
+echo "   QUALIMAP BAM QC: Starting Qualimap bamqc"
 echo "================================================================================"
-echo "Resources: $PARALLEL_SAMPLES concurrent samples."
+echo "Resources: $PARALLEL_SAMPLES concurrent samples, $CPUS_PER_SAMPLE threads per sample."
 
 CURRENT_SAMPLE=0
 for bam in $BAM_LIST; do
@@ -65,7 +62,7 @@ for bam in $BAM_LIST; do
     CURRENT_SAMPLE=$((CURRENT_SAMPLE + 1))
     
     # Check if Qualimap report already exists
-    if [ -f "$QC_DIR/$sample_name/rnaseq_qc_results.txt" ]; then
+    if [ -f "$QC_DIR/$sample_name/genome_results.txt" ] && [ -f "$QC_DIR/$sample_name/qualimapReport.html" ]; then
         echo "[Skip] [$CURRENT_SAMPLE/$SAMPLE_COUNT] $sample_name (report already exists)"
         continue
     fi
@@ -76,20 +73,20 @@ for bam in $BAM_LIST; do
     done
     
     echo ">>> Submitting [$CURRENT_SAMPLE/$SAMPLE_COUNT]: $sample_name"
-    SAMPLE_LOG="$LOG_DIR/${sample_name}.qualimap_rnaseq.log"
+    SAMPLE_LOG="$LOG_DIR/${sample_name}.qualimap_bamqc.log"
     
     # Run in background
     (
         mkdir -p "$QC_DIR/$sample_name"
-        qualimap rnaseq \
+        qualimap bamqc \
             -bam "$bam" \
-            -gtf "$GTF_FILE" \
             -outdir "$QC_DIR/$sample_name" \
-            --java-mem-size=32G
+            -nt "$CPUS_PER_SAMPLE" \
+            --java-mem-size=16G
     ) > "$SAMPLE_LOG" 2>&1 &
 done
 
-echo "Waiting for all Qualimap RNA-seq QC jobs to complete..."
+echo "Waiting for all Qualimap BAM QC jobs to complete..."
 wait
 
 # --- Output Assertions ---
@@ -100,18 +97,18 @@ for bam in $BAM_LIST; do
     sample_name=$(basename "$bam" _Aligned.sortedByCoord.out.bam)
     
     HTML_OUT="$QC_DIR/$sample_name/qualimapReport.html"
-    RESULTS_OUT="$QC_DIR/$sample_name/rnaseq_qc_results.txt"
+    RESULTS_OUT="$QC_DIR/$sample_name/genome_results.txt"
     
     if [ ! -s "$HTML_OUT" ] || [ ! -s "$RESULTS_OUT" ]; then
-        echo "Assertion Error: Qualimap RNA-seq QC output missing or empty for sample $sample_name" >&2
+        echo "Assertion Error: Qualimap BAM QC output missing or empty for sample $sample_name" >&2
         MISSING_OUTPUTS=$((MISSING_OUTPUTS + 1))
     fi
 done
 
 if [ "$MISSING_OUTPUTS" -gt 0 ]; then
-    echo "Assertion Error: $MISSING_OUTPUTS sample(s) failed Qualimap RNA-seq QC validation." >&2
+    echo "Assertion Error: $MISSING_OUTPUTS sample(s) failed Qualimap BAM QC validation." >&2
     exit 1
 fi
 
 echo "All outputs successfully validated."
-echo "=== Qualimap RNA-seq QC Complete ==="
+echo "=== Qualimap BAM QC Complete ==="

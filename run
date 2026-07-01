@@ -94,13 +94,14 @@ if [ "$RUN_CORE" = true ]; then
         cd 01_core_alignment/
         # bash 01_raw_fastqc.sh
         # bash 02_trimming.sh
-        # bash 03_trimmed_fastqc.sh
-        bash 04_star_align.sh
-        bash 05_qualimap_bamqc.sh
-        bash 06_qualimap_rnaseq.sh
-        bash 07_quantification.sh
-        bash 08_counts_qc.sh
-        bash 09_multiqc.sh
+        # bash 03_rrna_filter.sh
+        # bash 04_trimmed_fastqc.sh
+        # bash 05_star_align.sh
+        # bash 06_qualimap_bamqc.sh
+        # bash 07_qualimap_rnaseq.sh
+        bash 08_quantification.sh
+        bash 09_counts_qc.sh
+        bash 10_multiqc.sh
     ) || { echo "Core Alignment failed. Exiting."; exit 1; }
     echo "CORE ALIGNMENT COMPLETE."
     echo ""

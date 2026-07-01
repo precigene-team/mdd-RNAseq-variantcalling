@@ -1,15 +1,16 @@
 # [[02_dge_analysis/03_pca_analysis.R]]
-# Goal: Perform PCA and generate interactive 3D PCA plot widgets.
+# Goal: Perform noise-filtered, sex-aware PCA and generate interactive 3D plot widgets.
 #
-# Pipeline steps:
-#   1. Load normalized expression RDS objects (vst/rlog) and metadata
-#   2. Standardize sample name matching and align metadata
-#   3. Transpose matrix and compute PCA using prcomp()
-#   4. Calculate percentage of variance explained by each PC
-#   5. Save PCA coordinates and variance percent tables to results/tables/
-#   6. Save PCA prcomp R objects to _data/RData/02_dge_analysis/
-#   7. Generate interactive 3D PCA plot widgets using plotly
-#   8. Export plots as self-contained HTML files to results/figures/
+# Steps:
+#   1. Load normalized expression RDS objects (vst/rlog)
+#   2. Retrieve raw sample metadata to map sex (Gender) covariates
+#   3. Filter the expression matrix to the top 500 most variable genes
+#   4. Compute PCA using prcomp() with center = TRUE and scale. = FALSE
+#   5. Calculate percentage of variance explained by each PC
+#   6. Save PCA coordinates and variance percent tables to results/tables/
+#   7. Save PCA prcomp R objects to _data/RData/02_dge_analysis/
+#   8. Generate interactive 3D PCA plot widgets colored by sex-specific groups
+#   9. Export plots as self-contained HTML files to results/figures/
 #
 
 suppressPackageStartupMessages({
@@ -62,11 +63,16 @@ process_pca <- function(datatype) {
   
   coldata <- colData(rld)
   
-  # Run PCA
+  # Filter to top 500 variable genes to reduce noise
+  rv <- matrixStats::rowVars(norm_mat)
+  ntop <- 500
+  select <- order(rv, decreasing = TRUE)[seq_len(min(ntop, length(rv)))]
+
+  # Run PCA on the top variable genes (scale. = FALSE is standard for VST/rlog)
   pca <- prcomp(
-    t(norm_mat),
+    t(norm_mat[select, ]),
     center = TRUE,
-    scale. = TRUE
+    scale. = FALSE
   )
   
   # Save PCA prcomp RDS object with prefix 03_
@@ -75,15 +81,25 @@ process_pca <- function(datatype) {
   # Compute variance explained
   var_exp <- 100 * (pca$sdev^2 / sum(pca$sdev^2))
   
+  # Read metadata to retrieve Gender
+  metadata_full <- readr::read_csv(
+    file.path(project_root, "_data/_metadata/sample_sheet.csv"),
+    show_col_types = FALSE
+  ) %>%
+    dplyr::mutate(Sample = sub("_1$", "", File1)) %>%
+    dplyr::select(Sample, Gender, SampleType) %>%
+    dplyr::distinct()
+
   # PCA DataFrame
   pca_df <- data.frame(
     Sample = rownames(pca$x),
     PC1 = pca$x[, 1],
     PC2 = pca$x[, 2],
     PC3 = pca$x[, 3],
-    SampleType = coldata[rownames(pca$x), "SampleType"],
     stringsAsFactors = FALSE
-  )
+  ) %>%
+    dplyr::left_join(metadata_full, by = "Sample") %>%
+    dplyr::mutate(Group = paste(Gender, SampleType, sep = "_"))
   
   # Save PCA coordinates to results/tables/ with prefix 03_
   write.csv(
@@ -104,14 +120,22 @@ process_pca <- function(datatype) {
     quote = FALSE
   )
   
+  # Define colors: Female Ctrl/MDD (light/dark red), Male Ctrl/MDD (light/dark blue)
+  group_colors <- c(
+    "female_ctrl" = "#fb9a99", # Light Red
+    "female_mdd"  = "#b2182b", # Dark Red
+    "male_ctrl"   = "#a6cee3", # Light Blue
+    "male_mdd"    = "#1f78b4"  # Dark Blue
+  )
+
   # 3D PCA plot
   p <- plot_ly(
     data = pca_df,
     x = ~PC1,
     y = ~PC2,
     z = ~PC3,
-    color = ~SampleType,
-    colors = c("blue", "red"),
+    color = ~Group,
+    colors = group_colors,
     text = ~Sample,
     type = "scatter3d",
     mode = "markers",
@@ -121,7 +145,7 @@ process_pca <- function(datatype) {
     ),
     hovertemplate = paste0(
       "<b>%{text}</b><br>",
-      "SampleType: %{color}<br>",
+      "Group: %{color}<br>",
       "PC1: %{x:.2f}<br>",
       "PC2: %{y:.2f}<br>",
       "PC3: %{z:.2f}<extra></extra>"

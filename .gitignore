@@ -28,6 +28,7 @@ _data/qc_trim_fastp/
 _data/qc_bam/
 _data/qc_rnaseq/
 _data/logs/
+_data/rrna_databases/
 
 # --- Keep _metadata and logs tracked (small, important) ---
 # (not ignored — committed intentionally)
@@ -79,3 +80,6 @@ Thumbs.db
 # --- PDF / image assets ---
 *.pdf
 img/
+
+
+_data/featurecounts

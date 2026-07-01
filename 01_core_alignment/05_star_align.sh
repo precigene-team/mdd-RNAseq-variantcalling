@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[01_core_alignment/04_star_align.sh]]
+# [[01_core_alignment/05_star_align.sh]]
 # Goal: Build STAR index (if missing) and map trimmed FastQ files.
 
 # Steps:
@@ -25,7 +25,8 @@ if [ -z "$CONDA_PREFIX" ]; then
 fi
 
 CSV_FILE="$PROJECT_ROOT/_data/_metadata/sample_sheet.csv"
-FASTQ_DIR="$PROJECT_ROOT/_data/trimmed_fastq"
+TRIMMED_DIR="$PROJECT_ROOT/_data/trimmed_fastq"        # m6A samples
+RRNA_FILTERED_DIR="$PROJECT_ROOT/_data/rrna_filtered"  # input samples (rRNA-depleted)
 OUTPUT_DIR="$PROJECT_ROOT/_data/bam"
 
 GENOME_DIR="$PROJECT_ROOT/_data/genome"
@@ -89,8 +90,8 @@ if [ ! -f "$STAR_INDEX/Genome" ] || [ ! -s "$STAR_INDEX/Genome" ]; then
 fi
 
 # 2. Alignment loop
-# Format of sample sheet: File1 is col 1, File2 is col 2, Accession is col 3
-SAMPLE_ROWS=$(awk -F',' 'NR>1 {print $3 "\t" $1 "\t" $2}' "$CSV_FILE" | grep -v '^$')
+# Col 1=file1_base, Col 2=file2_base, Col 3=accession, Col 9=DataType (m6A|input)
+SAMPLE_ROWS=$(awk -F',' 'NR>1 {print $3 "\t" $1 "\t" $2 "\t" $9}' "$CSV_FILE" | grep -v '^$')
 SAMPLE_COUNT=$(echo "$SAMPLE_ROWS" | wc -l)
 
 # Assert that we parsed at least one sample row
@@ -105,13 +106,23 @@ while read -r row; do
     [ -n "$row" ] || continue
     file1_base=$(echo "$row" | cut -f2)
     file2_base=$(echo "$row" | cut -f3)
-    if [ -f "$FASTQ_DIR/${file1_base}_paired.fastq.gz" ] && [ -f "$FASTQ_DIR/${file2_base}_paired.fastq.gz" ]; then
+    data_type=$(echo "$row" | cut -f4)
+
+    if [ "$data_type" = "RNA-seq" ]; then
+        r1_test="$RRNA_FILTERED_DIR/${file1_base}_filtered.fastq.gz"
+        r2_test="$RRNA_FILTERED_DIR/${file2_base}_filtered.fastq.gz"
+    else
+        r1_test="$TRIMMED_DIR/${file1_base}_paired.fastq.gz"
+        r2_test="$TRIMMED_DIR/${file2_base}_paired.fastq.gz"
+    fi
+
+    if [ -f "$r1_test" ] && [ -f "$r2_test" ]; then
         FOUND_INPUTS=$((FOUND_INPUTS + 1))
     fi
 done <<< "$SAMPLE_ROWS"
 
 if [ "$FOUND_INPUTS" -eq 0 ]; then
-    echo "Assertion Error: No matching trimmed paired FastQ files found in $FASTQ_DIR." >&2
+    echo "Assertion Error: No matching pre-alignment FastQ files found in $TRIMMED_DIR or $RRNA_FILTERED_DIR." >&2
     exit 1
 fi
 
@@ -123,9 +134,17 @@ while read -r row; do
     accession=$(echo "$row" | cut -f1)
     file1_base=$(echo "$row" | cut -f2)
     file2_base=$(echo "$row" | cut -f3)
-    
-    r1="$FASTQ_DIR/${file1_base}_paired.fastq.gz"
-    r2="$FASTQ_DIR/${file2_base}_paired.fastq.gz"
+    data_type=$(echo "$row" | cut -f4)
+
+    # --- Route to correct source directory based on DataType ---
+    # RNA-seq samples: rRNA-filtered reads | m6A samples: standard trimmed reads
+    if [ "$data_type" = "RNA-seq" ]; then
+        r1="$RRNA_FILTERED_DIR/${file1_base}_filtered.fastq.gz"
+        r2="$RRNA_FILTERED_DIR/${file2_base}_filtered.fastq.gz"
+    else
+        r1="$TRIMMED_DIR/${file1_base}_paired.fastq.gz"
+        r2="$TRIMMED_DIR/${file2_base}_paired.fastq.gz"
+    fi
     
     if [ ! -f "$r1" ] || [ ! -f "$r2" ]; then
         echo "[Warn] Missing input files for $accession: $r1 or $r2. Skipping."
@@ -167,7 +186,6 @@ while read -r row; do
             --outFilterMultimapNmax 20 \
             --alignSJoverhangMin 8 \
             --alignSJDBoverhangMin 1 \
-            --twopassMode Basic \
             --quantMode GeneCounts
     ) > "$SAMPLE_LOG" 2>&1 &
         
@@ -183,9 +201,15 @@ while read -r row; do
     [ -n "$row" ] || continue
     file1_base=$(echo "$row" | cut -f2)
     file2_base=$(echo "$row" | cut -f3)
-    
-    r1="$FASTQ_DIR/${file1_base}_paired.fastq.gz"
-    r2="$FASTQ_DIR/${file2_base}_paired.fastq.gz"
+    data_type=$(echo "$row" | cut -f4)
+
+    if [ "$data_type" = "RNA-seq" ]; then
+        r1="$RRNA_FILTERED_DIR/${file1_base}_filtered.fastq.gz"
+        r2="$RRNA_FILTERED_DIR/${file2_base}_filtered.fastq.gz"
+    else
+        r1="$TRIMMED_DIR/${file1_base}_paired.fastq.gz"
+        r2="$TRIMMED_DIR/${file2_base}_paired.fastq.gz"
+    fi
     [ -f "$r1" ] && [ -f "$r2" ] || continue # If inputs were missing, outputs won't exist
     
     sample_name=$(echo "$file1_base" | sed 's/_1$//')
