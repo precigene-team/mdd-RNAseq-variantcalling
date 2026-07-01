@@ -14,10 +14,8 @@ dependencies:
   - trimmomatic
   - fastqc
   - qualimap
-  # - aria2
   - aspera-cli
   - fastp
-  - bbmap
 
   # Python Stack
   - python=3.9
