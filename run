@@ -115,8 +115,8 @@ if [ "$RUN_DGE" = true ]; then
         Rscript 01_gene_mapping.R
         Rscript 02_rna_processing.R
         Rscript 03_pca_analysis.R
-        # Rscript 04_deg_analysis.R
-        # Rscript 05_dge_plotting.R
+        Rscript 04_deg_analysis.R
+        Rscript 05_dge_plotting.R
     ) || { echo "DGE Analysis failed. Exiting."; exit 1; }
     echo "DGE ANALYSIS COMPLETE."
     echo ""
@@ -127,10 +127,12 @@ if [ "$RUN_VC" = true ]; then
     echo ">>> Running VARIANT CALLING Module..."
     (
         cd 03_variant_calling/
-        if [ -f "01_split_n_cigar.sh" ]; then
-            bash 01_split_n_cigar.sh
-            bash 02_haplotype_caller.sh
-            bash 03_variant_filtration.sh
+        if [ -f "01_read_groups.sh" ]; then
+            bash 01_read_groups.sh
+            bash 02_mark_duplicates.sh
+            bash 03_split_n_cigar.sh
+            bash 04_haplotype_caller.sh
+            bash 05_variant_filtration.sh
         else
             echo "Variant calling scripts (GATK Best Practices) are not yet implemented. Please complete the tasks in TODO.md first."
             exit 1
