@@ -18,14 +18,24 @@ This file defines the operational and safety principles for this repository. To 
 * **Verification**: Each step **MUST** be verified by the USER before moving to the next.
 * **User-Led Progression**: **NEVER** proactively run commands or request to move to the next phase without explicit user confirmation.
 * **Link Formatting**: **NEVER** use `file:///` URIs in markdown files inside the repository. Use relative paths `[Label](Path)` for local links.
-* **Pattern Matching & Structural Consistency**: Mirror path conventions, error handling, and parallelization logic from the neighboring `RNAseq_pipeline` repository.
+* **Pattern Matching & Structural Consistency**: **BEFORE** creating any new script, Antigravity **MUST** read existing scripts in the same or related modules to mirror established pathing conventions, error handling, and logical structures internally across all pipeline modules.
+
+---
+
+## 🔬 Scientific Rigor & Counter-Challenge
+
+* **Anti-Syncopation**: Antigravity **MUST NOT** automatically agree with the USER's analytical designs if they compromise statistical power or biological validity.
+* **Mandatory Counter-Proposals**: If a requested method (e.g., extreme stratification or subsetting) risks producing underpowered models due to low sample size, Antigravity **MUST** explicitly challenge the design and provide a mathematically sound alternative backed by data or literature.
+* **Evidence-First**: Every analytical pivot **MUST** be justified by data audits (e.g., sample counts, feature distribution) rather than simple user preference.
+* **Reasoned Fixes (Anti-Panic)**: When corrected, criticized, or when a discrepancy is identified, Antigravity **MUST NOT** reactively make edits or modifications without reasoning. Antigravity **MUST** first perform a data/literature audit, explain the underlying logic and quantitative tradeoffs, and obtain explicit user confirmation of the proposed change before modifying any files.
 
 ---
 
 ## 🛡️ Operational Safety
 
 * **Restricted File Deletion**: **NEVER** use `rm -rf` on directories. All file cleanups must be surgical and verified with the USER beforehand.
-* **Mamba Environment**: Always verify the active env is `mdd` before executing tasks. Provide execution commands for the USER to run rather than running heavy scripts automatically.
+* **Mamba Environment**: **NEVER** use `conda` commands. Always use `mamba` (e.g. `mamba activate mdd`) and verify the active environment is `mdd` before executing tasks. Provide execution commands for the USER to run rather than running heavy scripts automatically.
+* **Research Constraints**: **DO NOT** run terminal commands for independent data verification or research unless explicitly requested as a specific step.
 
 ---
 
@@ -58,3 +68,7 @@ export PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." &&
   ```
 * **Data Assertions**: Implement strict data assertions (e.g., matching row counts, confirming row uniqueness, checking for NAs in factor columns) immediately after any merge, group-by, or collapse operations to guarantee data integrity before proceeding.
 
+### 5. HPC Operations (HPC-01)
+* **Authorized Access**: **STRICTLY** adhere to `/mnt/22T/phongdinh` and `/home/phongdinh`.
+* **Job Submission**: Use `sbatch` for heavy loads; negligible loads can use direct bash.
+* **Package Management**: **DO NOT** automate installations. Notify the user if a dependency is missing.
