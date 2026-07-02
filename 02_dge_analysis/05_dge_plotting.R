@@ -1,12 +1,12 @@
 # [[02_dge_analysis/05_dge_plotting.R]]
-# Goal: Load shrunken DESeq2 results and generate Volcano and MA plots.
+# Goal: Load multi-factor DGE and relative methylation results to generate Volcano and MA plots.
 #
 # Pipeline steps:
-#   1. Load shrunken results RDS objects and raw results RDS objects
-#   2. Load metadata to identify comparison groups
+#   1. Load shrunken results RDS objects and raw results RDS objects for each contrast
+#   2. Construct processed dataframes with pvalue, padj, and gene names
 #   3. Process and format Volcano plot data (identify significant, top genes)
-#   4. Render Volcano plot using ggplot2 and ggrepel, and save to results/figures/05_{DataType}_volcano.png
-#   5. Render MA plot using base R plotMA, and save to results/figures/05_{DataType}_MA.png
+#   4. Render Volcano plot using ggplot2 and ggrepel, and save to results/figures/ prefixed with 05_
+#   5. Render MA plot using ggplot2 (log10 baseMean vs log2FC), and save to results/figures/ prefixed with 05_
 
 suppressPackageStartupMessages({
   library(DESeq2)
@@ -31,99 +31,180 @@ rdata_dir <- file.path(project_root, "_data/RData/02_dge_analysis")
 figures_dir <- file.path(project_root, "results/figures")
 dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
-# Plot function
-plot_dge_results <- function(datatype) {
-  message("\n==============================")
-  message("Plotting DGE for: ", datatype)
-  message("==============================")
-
-  shrunk_file <- file.path(rdata_dir, paste0("04_", datatype, "_res_shrunk.rds"))
-  raw_file <- file.path(rdata_dir, paste0("04_", datatype, "_res_raw.rds"))
-  dds_file <- file.path(rdata_dir, paste0("02_", datatype, "_dds.rds"))
-
-  if (!file.exists(shrunk_file) || !file.exists(raw_file) || !file.exists(dds_file)) {
-    stop("Required DGE results RDS files not found for ", datatype)
+# Helper function to plot a single contrast
+plot_contrast_results <- function(rds_prefix, volcano_name, ma_name, plot_title) {
+  shrunk_file <- file.path(rdata_dir, paste0("04_", rds_prefix, "_res_shrunk.rds"))
+  raw_file <- file.path(rdata_dir, paste0("04_", rds_prefix, "_res_raw.rds"))
+  
+  if (!file.exists(shrunk_file) || !file.exists(raw_file)) {
+    message("  [SKIP] RDS files not found for contrast: ", rds_prefix)
+    return(NULL)
   }
-
+  
+  message("  [PLOT] Rendering plots for: ", rds_prefix)
+  
   res <- readRDS(shrunk_file)
   res_raw <- readRDS(raw_file)
-  dds <- readRDS(dds_file)
-
-  # Check comparison groups
-  groups <- levels(colData(dds)$SampleType)
-
+  
   res_df <- as.data.frame(res)
   res_df$stat <- res_raw$stat
   res_df$pvalue <- res_raw$pvalue
   res_df$padj <- res_raw$padj
   res_df$gene_name <- rownames(res_df)
-
-  # Volcano plot
+  
+  # 1. Volcano Plot
   volcano_df <- res_df %>%
     mutate(
-      Significant = !is.na(pvalue) & pvalue < 0.05 & abs(log2FoldChange) >= 1,
+      Regulation = case_when(
+        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange >= 0.2 ~ "Upregulated",
+        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange <= -0.2 ~ "Downregulated",
+        TRUE ~ "Non-significant"
+      ),
+      Regulation = factor(Regulation, levels = c("Downregulated", "Non-significant", "Upregulated")),
       negLog10P = -log10(pvalue)
     )
-
+  
+  # Select top 15 significant genes for labelling
   top_labels <- volcano_df %>%
-    filter(Significant) %>%
+    filter(Regulation != "Non-significant") %>%
     arrange(pvalue) %>%
-    head(20)
-
+    head(15)
+  
   volcano_plot <- ggplot(volcano_df, aes(x = log2FoldChange, y = negLog10P)) +
-    geom_point(aes(color = Significant), alpha = 0.7, size = 1.5) +
-    geom_vline(xintercept = c(-1, 1), linetype = "dashed") +
-    geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
-    geom_text_repel(data = top_labels, aes(label = gene_name), size = 3, max.overlaps = 20) +
-    scale_color_manual(
-      values = c("FALSE" = "grey70", "TRUE" = "red"),
-      labels = c("FALSE" = "Non-significant", "TRUE" = "Significant")
+    geom_point(aes(color = Regulation), alpha = 0.6, size = 1.5) +
+    geom_vline(xintercept = c(-0.2, 0.2), linetype = "dashed", color = "grey50") +
+    geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "grey50") +
+    geom_text_repel(
+      data = top_labels,
+      aes(label = gene_name),
+      size = 3.5,
+      max.overlaps = 20,
+      fontface = "italic"
     ) +
-    theme_bw() +
+    scale_color_manual(
+      values = c("Downregulated" = "#1f78b4", "Non-significant" = "grey70", "Upregulated" = "#e31a1c"),
+      labels = c("Downregulated" = "Downregulated", "Non-significant" = "Non-significant", "Upregulated" = "Upregulated")
+    ) +
+    theme_bw(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      legend.title = element_blank(),
+      legend.position = "bottom"
+    ) +
     labs(
-      title = paste0(datatype, " Volcano Plot (", groups[2], " vs ", groups[1], ")"),
+      title = paste0(plot_title, " - Volcano Plot"),
       x = "log2 Fold Change",
       y = "-log10 P-value"
     )
-
-  # Save volcano plot to results/figures/ with prefix 05_
-  volcano_file <- file.path(figures_dir, paste0("05_", datatype, "_volcano.png"))
+  
+  volcano_file <- file.path(figures_dir, volcano_name)
   ggsave(
     filename = volcano_file,
     plot = volcano_plot,
     width = 8,
-    height = 6,
-    dpi = 300
+    height = 6.5,
+    dpi = 300,
+    bg = "white"
   )
-  message("  [OUT] Saved Volcano plot to ", volcano_file)
-
-  # MA plot to results/figures/ with prefix 05_
-  ma_file <- file.path(figures_dir, paste0("05_", datatype, "_MA.png"))
-  png(
+  
+  # 2. MA Plot (using ggplot2)
+  ma_df <- res_df %>%
+    mutate(
+      Regulation = case_when(
+        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange >= 0.2 ~ "Upregulated",
+        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange <= -0.2 ~ "Downregulated",
+        TRUE ~ "Non-significant"
+      ),
+      Regulation = factor(Regulation, levels = c("Downregulated", "Non-significant", "Upregulated"))
+    )
+  
+  ma_plot <- ggplot(ma_df, aes(x = baseMean, y = log2FoldChange)) +
+    geom_point(aes(color = Regulation), alpha = 0.5, size = 1.2) +
+    scale_x_log10(
+      breaks = 10^(0:6),
+      labels = scales::trans_format("log10", scales::math_format(10^.x))
+    ) +
+    geom_hline(yintercept = 0, color = "#1f78b4", linetype = "dashed", linewidth = 0.8) +
+    geom_hline(yintercept = c(-0.2, 0.2), color = "grey50", linetype = "dotted") +
+    scale_color_manual(
+      values = c("Downregulated" = "#1f78b4", "Non-significant" = "grey70", "Upregulated" = "#e31a1c"),
+      labels = c("Downregulated" = "Downregulated", "Non-significant" = "Non-significant", "Upregulated" = "Upregulated")
+    ) +
+    theme_bw(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      legend.title = element_blank(),
+      legend.position = "bottom"
+    ) +
+    labs(
+      title = paste0(plot_title, " - MA Plot"),
+      x = "Mean of Normalized Counts (log10 scale)",
+      y = "log2 Fold Change"
+    )
+  
+  ma_file <- file.path(figures_dir, ma_name)
+  ggsave(
     filename = ma_file,
-    width = 2400,
-    height = 1800,
-    res = 300
+    plot = ma_plot,
+    width = 8,
+    height = 6.5,
+    dpi = 300,
+    bg = "white"
   )
-
-  plotMA(
-    res,
-    ylim = c(-5, 5),
-    main = paste0(datatype, " MA Plot (", groups[2], " vs ", groups[1], ")")
-  )
-
-  dev.off()
-  message("  [OUT] Saved MA plot to ", ma_file)
-
-  message("Finished plotting for ", datatype)
 }
 
-datatypes <- c("RNAseq", "RIPseq")
-for (dt in datatypes) {
+# Define contrasts and output details
+contrasts_list <- list(
+  list(
+    rds_prefix = "deg_male_input",
+    volcano = "05_volcano_male_input.png",
+    ma = "05_ma_male_input.png",
+    title = "Male RNA-seq DGE (MDD vs Ctrl)"
+  ),
+  list(
+    rds_prefix = "deg_female_input",
+    volcano = "05_volcano_female_input.png",
+    ma = "05_ma_female_input.png",
+    title = "Female RNA-seq DGE (MDD vs Ctrl)"
+  ),
+  list(
+    rds_prefix = "deg_male_ip",
+    volcano = "05_volcano_male_ip.png",
+    ma = "05_ma_male_ip.png",
+    title = "Male IP DGE (MDD vs Ctrl)"
+  ),
+  list(
+    rds_prefix = "deg_female_ip",
+    volcano = "05_volcano_female_ip.png",
+    ma = "05_ma_female_ip.png",
+    title = "Female IP DGE (MDD vs Ctrl)"
+  ),
+  list(
+    rds_prefix = "meth_male_interaction",
+    volcano = "05_volcano_male_meth.png",
+    ma = "05_ma_male_meth.png",
+    title = "Male Relative Methylation (Interaction)"
+  ),
+  list(
+    rds_prefix = "meth_female_interaction",
+    volcano = "05_volcano_female_meth.png",
+    ma = "05_ma_female_meth.png",
+    title = "Female Relative Methylation (Interaction)"
+  )
+)
+
+# Render plots
+message("\n--- Generating Volcano and MA plots for contrasts ---")
+for (contrast in contrasts_list) {
   tryCatch({
-    plot_dge_results(dt)
+    plot_contrast_results(
+      rds_prefix = contrast$rds_prefix,
+      volcano_name = contrast$volcano,
+      ma_name = contrast$ma,
+      plot_title = contrast$title
+    )
   }, error = function(e) {
-    message("Error plotting ", dt, ": ", e$message)
+    message("  [ERROR] Plotting failed for ", contrast$rds_prefix, ": ", e$message)
   })
 }
 
