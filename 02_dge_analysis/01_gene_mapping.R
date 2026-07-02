@@ -76,12 +76,36 @@ if (n_duplicates == 0) {
 }
 
 # Connect to Ensembl BioMart
-message("[ENSEMBL] Connecting to hsapiens_gene_ensembl (mirror = www)...")
-mart <- useEnsembl(
-  biomart = "genes",
-  dataset = "hsapiens_gene_ensembl",
-  mirror = "www"
-)
+ensembl_version <- cfg$ensembl_map$ensembl_version
+mart <- NULL
+for (attempt in 1:5) {
+  mart <- tryCatch({
+    if (attempt == 1 && !is.null(ensembl_version)) {
+      message("[ENSEMBL] Attempt 1: Connecting via useEnsembl with version = ", ensembl_version)
+      useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = ensembl_version)
+    } else if (attempt == 2) {
+      message("[ENSEMBL] Attempt 2: Connecting via useEnsembl with mirror = 'useast'")
+      useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", mirror = "useast")
+    } else if (attempt == 3) {
+      message("[ENSEMBL] Attempt 3: Connecting via useEnsembl with mirror = 'uswest'")
+      useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", mirror = "uswest")
+    } else if (attempt == 4) {
+      message("[ENSEMBL] Attempt 4: Connecting via useEnsembl with mirror = 'www'")
+      useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", mirror = "www")
+    } else {
+      message("[ENSEMBL] Attempt 5: Connecting via useMart with host = 'https://www.ensembl.org'")
+      useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", host = "https://www.ensembl.org")
+    }
+  }, error = function(e) {
+    message("  Connection failed: ", conditionMessage(e))
+    NULL
+  })
+  if (!is.null(mart)) break
+}
+
+if (is.null(mart)) {
+  stop("Failed to connect to Ensembl BioMart after multiple attempts.")
+}
 
 # Query BioMart
 ensembl_ids <- unique(expr$gene_id)

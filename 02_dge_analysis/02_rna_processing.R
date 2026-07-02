@@ -193,8 +193,8 @@ process_datatype <- function(meta_subset, datatype, expr_df) {
 }
 
 # Run analysis
-lapply(names(sample_groups), function(datatype) {
+invisible(lapply(names(sample_groups), function(datatype) {
   process_datatype(sample_groups[[datatype]], datatype, expr_df)
-})
+}))
 
 message("\n02_rna_processing.R completed successfully.")

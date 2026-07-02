@@ -32,3 +32,4 @@ dependencies:
   - bioconductor-deseq2
   - bioconductor-biomart
   - bioconductor-apeglm
+  - bioconductor-limma
