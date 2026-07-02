@@ -21,10 +21,36 @@ LOG_DIR="$PROJECT_ROOT/_data/logs/readgroups"
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$LOG_DIR"
 
-# Resource configuration (adjust for HPC node capacity)
-PARALLEL_JOBS=4
-CPUS_PER_JOB=2
-MEM_PER_JOB="8G"
+# --- Resource Auto-detection ---
+TOTAL_CPUS=${SLURM_CPUS_PER_TASK:-$(nproc 2>/dev/null || echo 16)}
+if [ -n "$SLURM_MEM_PER_NODE" ]; then
+    TOTAL_MEM_GB=$(($SLURM_MEM_PER_NODE / 1024))
+else
+    TOTAL_MEM_GB=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}' || echo 128)
+fi
+
+# We target 4 CPUs per job for GATK tool execution
+CPUS_PER_JOB=4
+PARALLEL_JOBS=$((TOTAL_CPUS / CPUS_PER_JOB))
+[ "$PARALLEL_JOBS" -lt 1 ] && PARALLEL_JOBS=1
+
+# Ensure we have at least 8 GB RAM per job for JVM instances
+MIN_MEM_PER_JOB=8
+MEM_JOBS=$((TOTAL_MEM_GB / MIN_MEM_PER_JOB))
+[ "$MEM_JOBS" -lt 1 ] && MEM_JOBS=1
+
+if [ "$PARALLEL_JOBS" -gt "$MEM_JOBS" ]; then
+    PARALLEL_JOBS=$MEM_JOBS
+fi
+
+# Recalculate requirements based on actual concurrent jobs
+CPUS_PER_JOB=$((TOTAL_CPUS / PARALLEL_JOBS))
+[ "$CPUS_PER_JOB" -lt 1 ] && CPUS_PER_JOB=1
+MEM_PER_JOB_GB=$((TOTAL_MEM_GB / PARALLEL_JOBS))
+[ "$MEM_PER_JOB_GB" -lt 4 ] && MEM_PER_JOB_GB=4
+MEM_PER_JOB="${MEM_PER_JOB_GB}G"
+
+echo "Resources allocated: $PARALLEL_JOBS concurrent jobs, each with $CPUS_PER_JOB threads and ${MEM_PER_JOB} memory."
 
 # Find all aligned coordinate-sorted BAM files
 BAM_FILES=$(find "$BAM_DIR" -name "*_Aligned.sortedByCoord.out.bam" | sort)
