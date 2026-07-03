@@ -29,6 +29,7 @@ _data/qc_bam/
 _data/qc_rnaseq/
 _data/logs/
 _data/rrna_databases/
+_data/variant/
 
 # --- Keep _metadata and logs tracked (small, important) ---
 # (not ignored — committed intentionally)
