@@ -6,15 +6,50 @@
 set -e
 
 # --- Project Root Discovery ---
-export PROJECT_ROOT="$(dirname "$(realpath "$0")")"
+if [ -n "${SLURM_SUBMIT_DIR:-}" ]; then
+    export PROJECT_ROOT="$SLURM_SUBMIT_DIR"
+else
+    curr_dir="$(pwd)"
+    while [ "$curr_dir" != "/" ] && [ -n "$curr_dir" ]; do
+        if [ -f "$curr_dir/run" ]; then
+            export PROJECT_ROOT="$curr_dir"
+            break
+        fi
+        curr_dir="$(dirname "$curr_dir")"
+    done
+fi
+export PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 # ------------------------------
+
+# --- Pipeline Resource Configuration ---
+# 1. Slurm Job Array Submission Config
+export VC_ARRAY_CONCURRENCY=5    # Max concurrent array tasks running in parallel
+export VC_TASK_CPUS=1            # CPUs per task in Slurm Job Array
+export VC_TASK_MEM="16G"         # Memory per task in Slurm Job Array (must fit all tools)
+export VC_TASK_TIME="24:00:00"   # Max walltime per task in Slurm Job Array
+
+# 2. Local/Single-Batch Mode Config (e.g. hpc_run.sbatch)
+export VC_LOCAL_CONCURRENT=2     # Max concurrent samples running locally
+export VC_LOCAL_CPUS=1           # CPUs per sample running locally
+
+# 3. Step Definitions (script_name | step_label | memory_limit)
+VC_STEPS=(
+    "01_read_groups.sh|Read Groups|8G"
+    "02_mark_duplicates.sh|Mark Duplicates|12G"
+    "03_split_n_cigar.sh|Split N Cigar|12G"
+    "04_haplotype_caller.sh|Haplotype Caller|12G"
+    "05_variant_filtration.sh|Variant Filtration|4G"
+)
+# --------------------------------------
 
 # --- Logging Setup ---
 LOG_DIR="$PROJECT_ROOT/_data/logs/run"
 mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/run_$(date +%Y%m%d_%H%M%S).log"
-exec > >(tee -a "$LOG_FILE") 2>&1
-echo "Log file: $LOG_FILE"
+if [ -z "${SLURM_ARRAY_TASK_ID:-}" ]; then
+    LOG_FILE="$LOG_DIR/run_$(date +%Y%m%d_%H%M%S).log"
+    exec > >(tee -a "$LOG_FILE") 2>&1
+    echo "Log file: $LOG_FILE"
+fi
 # ---------------------
 
 echo "========================================================="
@@ -53,12 +88,77 @@ if [ "$#" -eq 0 ]; then
     exit 1
 fi
 
-for arg in "$@"; do
+while [ "$#" -gt 0 ]; do
+    arg="$1"
     case $arg in
-        core) RUN_CORE=true ;;
-        dge)  RUN_DGE=true ;;
-        vc)   RUN_VC=true ;;
-        all)  RUN_CORE=true; RUN_DGE=true; RUN_VC=true ;;
+        core) RUN_CORE=true; shift ;;
+        dge)  RUN_DGE=true; shift ;;
+        vc)
+            # If we are already running inside a Slurm batch job (but not an array task),
+            # run local multi-processing mode inside the existing allocation.
+            if [ -n "${SLURM_JOB_ID:-}" ] && [ -z "${SLURM_ARRAY_TASK_ID:-}" ]; then
+                RUN_VC=true
+                shift
+            else
+                # We count aligned coordinate-sorted BAM files in total
+                BAM_COUNT=$(find "$PROJECT_ROOT/_data/bam" -name "*_Aligned.sortedByCoord.out.bam" | grep -v '^$' | wc -l || echo 0)
+                if [ "$BAM_COUNT" -eq 0 ]; then
+                    echo "ERROR: No aligned BAM files found in _data/bam/." >&2
+                    exit 1
+                fi
+                MAX_INDEX=$((BAM_COUNT - 1))
+                echo "[INFO] Submitting Slurm Job Arrays (Step-by-Step Chained) for $BAM_COUNT samples..."
+                
+                PREV_JOB_ID=""
+                for i in "${!VC_STEPS[@]}"; do
+                    step_num=$((i + 1))
+                    step_info="${VC_STEPS[$i]}"
+                    
+                    # Parse script name and step label
+                    script=$(echo "$step_info" | cut -d'|' -f1)
+                    name=$(echo "$step_info" | cut -d'|' -f2)
+                    
+                    # Format step label to lower snake_case for dynamic folder structures
+                    step_dir=$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+                    mkdir -p "$PROJECT_ROOT/_data/logs/run/vc_array/${step_dir}"
+                    
+                    # Construct dependency argument if there is a previous job in the chain
+                    dep_arg=""
+                    if [ -n "$PREV_JOB_ID" ]; then
+                        dep_arg="--dependency=afterok:$PREV_JOB_ID"
+                    fi
+                    
+                    # Submit the job array for the current step
+                    PREV_JOB_ID=$(sbatch --parsable --job-name="vc_step${step_num}" \
+                                   $dep_arg \
+                                   --array="0-${MAX_INDEX}%${VC_ARRAY_CONCURRENCY}" \
+                                   --cpus-per-task="${VC_TASK_CPUS}" \
+                                   --mem="${VC_TASK_MEM}" \
+                                   --time="${VC_TASK_TIME}" \
+                                   --output="_data/logs/run/vc_array/${step_dir}/task_%A_%a.log" \
+                                   --error="_data/logs/run/vc_array/${step_dir}/task_%A_%a.err" \
+                                   "$PROJECT_ROOT/run" vc-task "$step_num")
+                    
+                    if [ -z "$dep_arg" ]; then
+                        echo "  -> Submitted Step $step_num ($name) - Job ID: $PREV_JOB_ID"
+                    else
+                        echo "  -> Submitted Step $step_num ($name) - Job ID: $PREV_JOB_ID (Dependent on $dep_arg)"
+                    fi
+                done
+                exit 0
+            fi
+            ;;
+        vc-task)
+            # Executed by Slurm inside each array task
+            if [ -z "$SLURM_ARRAY_TASK_ID" ]; then
+                echo "ERROR: vc-task must be run inside a Slurm Job Array (SLURM_ARRAY_TASK_ID is not set)." >&2
+                exit 1
+            fi
+            RUN_VC=true
+            export VC_TASK_STEP="${2:-}"
+            shift 2
+            ;;
+        all)  RUN_CORE=true; RUN_DGE=true; RUN_VC=true; shift ;;
         script)
             if [ "$#" -lt 2 ]; then
                 echo "Usage: ./run script <path_to_script> [args...]"
@@ -83,7 +183,10 @@ for arg in "$@"; do
             )
             exit 0
             ;;
-        *)    echo "Unknown argument: $arg. Use 'core', 'dge', 'vc', 'all', or 'script'."; exit 1 ;;
+        *)
+            echo "Unknown argument: $arg. Use 'core', 'dge', 'vc', 'all', or 'script'."
+            exit 1
+            ;;
     esac
 done
 
@@ -127,15 +230,96 @@ if [ "$RUN_VC" = true ]; then
     echo ">>> Running VARIANT CALLING Module..."
     (
         cd 03_variant_calling/
-        if [ -f "01_read_groups.sh" ]; then
-            bash 01_read_groups.sh
-            bash 02_mark_duplicates.sh
-            bash 03_split_n_cigar.sh
-            bash 04_haplotype_caller.sh
-            bash 05_variant_filtration.sh
-        else
-            echo "Variant calling scripts (GATK Best Practices) are not yet implemented. Please complete the tasks in TODO.md first."
+        
+        # Build the static cohort list based on raw BAM files
+        BAM_DIR="$PROJECT_ROOT/_data/bam"
+        RAW_BAM_LIST=$(find "$BAM_DIR" -name "*_Aligned.sortedByCoord.out.bam" | sort)
+        BAM_COUNT=$(echo "$RAW_BAM_LIST" | grep -v '^$' | wc -l || echo 0)
+        
+        if [ "$BAM_COUNT" -eq 0 ]; then
+            echo "ERROR: No aligned BAM files found in $BAM_DIR." >&2
             exit 1
+        fi
+
+        # Create all required pipeline folders once to prevent redundant mkdir syscalls
+        mkdir -p "$PROJECT_ROOT/_data/variant/readgroups" \
+                 "$PROJECT_ROOT/_data/variant/duplicates" \
+                 "$PROJECT_ROOT/_data/variant/split_n_cigar" \
+                 "$PROJECT_ROOT/_data/variant/raw_vcf" \
+                 "$PROJECT_ROOT/_data/variant/snps_raw" \
+                 "$PROJECT_ROOT/_data/variant/filtered_vcf" \
+                 "$PROJECT_ROOT/_data/logs/readgroups" \
+                 "$PROJECT_ROOT/_data/logs/duplicates" \
+                 "$PROJECT_ROOT/_data/logs/split_n_cigar" \
+                 "$PROJECT_ROOT/_data/logs/haplotype_caller" \
+                 "$PROJECT_ROOT/_data/logs/variant_filtration" \
+                 "$PROJECT_ROOT/_data/tmp"
+        
+        # 5.1 Run task in Slurm Array mode
+        if [ -n "${SLURM_ARRAY_TASK_ID:-}" ]; then
+            RAW_BAM=$(echo "$RAW_BAM_LIST" | sed -n "$((SLURM_ARRAY_TASK_ID + 1))p")
+            SAMPLE_NAME=$(basename "$RAW_BAM" _Aligned.sortedByCoord.out.bam)
+            
+            if [ -z "$VC_TASK_STEP" ]; then
+                echo "ERROR: VC_TASK_STEP is not defined in Slurm Array task mode." >&2
+                exit 1
+            fi
+            
+            # Resolve script and memory from VC_STEPS dynamically
+            step_idx=$((VC_TASK_STEP - 1))
+            step_info="${VC_STEPS[$step_idx]}"
+            
+            if [ -z "$step_info" ]; then
+                echo "ERROR: Unknown task step index $step_idx." >&2
+                exit 1
+            fi
+            
+            script=$(echo "$step_info" | cut -d'|' -f1)
+            name=$(echo "$step_info" | cut -d'|' -f2)
+            mem_val=$(echo "$step_info" | cut -d'|' -f3)
+            
+            echo ">>> [Slurm Task $SLURM_ARRAY_TASK_ID] Running Step $VC_TASK_STEP ($name): $script for Sample: $SAMPLE_NAME"
+            bash "$script" "$SAMPLE_NAME" "$VC_TASK_CPUS" "$mem_val"
+            echo ">>> [Slurm Task $SLURM_ARRAY_TASK_ID] Finished Step $VC_TASK_STEP ($name) for Sample: $SAMPLE_NAME"
+            
+        # 5.2 Run task in Local Multi-processing mode
+        else
+            echo ">>> Running Variant Calling locally for $BAM_COUNT samples..."
+            
+            CONCURRENT_SAMPLES=$VC_LOCAL_CONCURRENT
+            CPUS_PER_SAMPLE=$VC_LOCAL_CPUS
+            
+            echo "Local resource plan: $CONCURRENT_SAMPLES concurrent samples, each with $CPUS_PER_SAMPLE CPU and GATK recommended memory."
+            
+            # Helper function to run a specific step cohort-wide in local mode
+            run_local_step() {
+                local step_script="$1"
+                local step_mem="$2"
+                local step_name="$3"
+                echo ">>> [Local] Starting Cohort-wide Step: $step_name"
+                for raw_bam in $RAW_BAM_LIST; do
+                    [ -f "$raw_bam" ] || continue
+                    sample=$(basename "$raw_bam" _Aligned.sortedByCoord.out.bam)
+                    
+                    while [ $(jobs -r | wc -l) -ge "$CONCURRENT_SAMPLES" ]; do
+                        sleep 5
+                    done
+                    
+                    bash "$step_script" "$sample" "$CPUS_PER_SAMPLE" "$step_mem" &
+                done
+                wait
+                echo ">>> [Local] Finished Cohort-wide Step: $step_name"
+            }
+
+            # Loop through centralized VC_STEPS to run cohort-wide locally
+            for i in "${!VC_STEPS[@]}"; do
+                step_info="${VC_STEPS[$i]}"
+                script=$(echo "$step_info" | cut -d'|' -f1)
+                name=$(echo "$step_info" | cut -d'|' -f2)
+                mem_val=$(echo "$step_info" | cut -d'|' -f3)
+                
+                run_local_step "$script" "$mem_val" "$name"
+            done
         fi
     ) || { echo "Variant Calling failed. Exiting."; exit 1; }
     echo "VARIANT CALLING COMPLETE."
