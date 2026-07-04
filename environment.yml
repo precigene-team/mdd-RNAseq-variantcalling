@@ -32,7 +32,11 @@ dependencies:
   - r-plotly
   - r-htmlwidgets
   - r-ggrepel
+  - r-msigdbr
+  - r-ggtext
   - bioconductor-deseq2
   - bioconductor-biomart
   - bioconductor-apeglm
   - bioconductor-limma
+  - bioconductor-clusterprofiler
+  - bioconductor-org.hs.eg.db
