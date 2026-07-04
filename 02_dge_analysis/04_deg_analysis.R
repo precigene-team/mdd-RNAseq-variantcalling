@@ -106,6 +106,34 @@ message("[INFO] Loading and annotating input DDS objects...")
 dds_rnaseq <- annotate_dds(readRDS(dds_rnaseq_file))
 dds_ripseq <- annotate_dds(readRDS(dds_ripseq_file))
 
+# --- Dynamic QC Gating (Exclude low-quality subjects) ---
+# Minimum 12 Million exonic reads per library to match published cohort QC
+MIN_LIBRARY_SIZE <- 12e6 
+
+# Calculate total exonic counts for each sample
+rna_lib_sizes <- colSums(counts(dds_rnaseq))
+rip_lib_sizes <- colSums(counts(dds_ripseq))
+
+# Identify subjects where either Input or IP library falls below the gate
+low_qual_rna_subs <- colData(dds_rnaseq)$Subject[rna_lib_sizes < MIN_LIBRARY_SIZE]
+low_qual_rip_subs <- colData(dds_ripseq)$Subject[rip_lib_sizes < MIN_LIBRARY_SIZE]
+excluded_subjects <- unique(c(as.character(low_qual_rna_subs), as.character(low_qual_rip_subs)))
+
+if (length(excluded_subjects) > 0) {
+  message("[QC GATE] Excluding subjects with at least one sample < 10M counts: ", 
+          paste(excluded_subjects, collapse = ", "))
+  
+  # Exclude from both datasets to maintain proper subject pairing
+  dds_rnaseq <- dds_rnaseq[, !colData(dds_rnaseq)$Subject %in% excluded_subjects]
+  dds_ripseq <- dds_ripseq[, !colData(dds_ripseq)$Subject %in% excluded_subjects]
+  
+  # Drop unused subject levels to prevent design matrix rank deficiency
+  colData(dds_rnaseq)$Subject <- droplevels(colData(dds_rnaseq)$Subject)
+  colData(dds_ripseq)$Subject <- droplevels(colData(dds_ripseq)$Subject)
+} else {
+  message("[QC GATE] All subjects successfully passed the library size gate (", MIN_LIBRARY_SIZE, ").")
+}
+
 # Helper function to run DESeq2, shrink, and write tables
 run_deseq_and_save <- function(dds_sub, design_formula, coef_regex, contrast_spec, output_name, use_model_matrix = FALSE) {
   if (use_model_matrix) {
