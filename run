@@ -32,13 +32,13 @@ export VC_TASK_TIME="24:00:00"   # Max walltime per task in Slurm Job Array
 export VC_LOCAL_CONCURRENT=2     # Max concurrent samples running locally
 export VC_LOCAL_CPUS=1           # CPUs per sample running locally
 
-# 3. Step Definitions (script_name | step_label | memory_limit)
+# 3. Step Definitions (script_name | step_label | memory_limit | cpu_limit)
 VC_STEPS=(
-    "01_read_groups.sh|Read Groups|8G"
-    "02_mark_duplicates.sh|Mark Duplicates|12G"
-    "03_split_n_cigar.sh|Split N Cigar|12G"
-    "04_haplotype_caller.sh|Haplotype Caller|12G"
-    "05_variant_filtration.sh|Variant Filtration|4G"
+    "01_read_groups.sh|Read Groups|8G|1"
+    "02_mark_duplicates.sh|Mark Duplicates|12G|1"
+    "03_split_n_cigar.sh|Split N Cigar|12G|1"
+    "04_haplotype_caller.sh|Haplotype Caller|12G|4"
+    "05_variant_filtration.sh|Variant Filtration|4G|1"
 )
 # --------------------------------------
 
@@ -114,9 +114,11 @@ while [ "$#" -gt 0 ]; do
                     step_num=$((i + 1))
                     step_info="${VC_STEPS[$i]}"
                     
-                    # Parse script name and step label
+                    # Parse script name, step label, and CPUs
                     script=$(echo "$step_info" | cut -d'|' -f1)
                     name=$(echo "$step_info" | cut -d'|' -f2)
+                    step_cpus=$(echo "$step_info" | cut -d'|' -f4)
+                    step_cpus="${step_cpus:-$VC_TASK_CPUS}"
                     
                     # Format step label to lower snake_case for dynamic folder structures
                     step_dir=$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
@@ -132,7 +134,7 @@ while [ "$#" -gt 0 ]; do
                     PREV_JOB_ID=$(sbatch --parsable --job-name="vc_step${step_num}" \
                                    $dep_arg \
                                    --array="0-${MAX_INDEX}%${VC_ARRAY_CONCURRENCY}" \
-                                   --cpus-per-task="${VC_TASK_CPUS}" \
+                                   --cpus-per-task="${step_cpus}" \
                                    --mem="${VC_TASK_MEM}" \
                                    --time="${VC_TASK_TIME}" \
                                    --output="_data/logs/run/vc_array/${step_dir}/task_%A_%a.log" \
@@ -277,9 +279,11 @@ if [ "$RUN_VC" = true ]; then
             script=$(echo "$step_info" | cut -d'|' -f1)
             name=$(echo "$step_info" | cut -d'|' -f2)
             mem_val=$(echo "$step_info" | cut -d'|' -f3)
+            step_cpus=$(echo "$step_info" | cut -d'|' -f4)
+            step_cpus="${step_cpus:-$VC_TASK_CPUS}"
             
             echo ">>> [Slurm Task $SLURM_ARRAY_TASK_ID] Running Step $VC_TASK_STEP ($name): $script for Sample: $SAMPLE_NAME"
-            bash "$script" "$SAMPLE_NAME" "$VC_TASK_CPUS" "$mem_val"
+            bash "$script" "$SAMPLE_NAME" "${SLURM_CPUS_PER_TASK:-$step_cpus}" "$mem_val"
             echo ">>> [Slurm Task $SLURM_ARRAY_TASK_ID] Finished Step $VC_TASK_STEP ($name) for Sample: $SAMPLE_NAME"
             
         # 5.2 Run task in Local Multi-processing mode

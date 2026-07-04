@@ -21,6 +21,9 @@ dependencies:
   - python=3.9
   - pandas
   - tqdm
+  - pip
+  - pip:
+    - macs2
   
   # R Stack
   - r-base=4.3

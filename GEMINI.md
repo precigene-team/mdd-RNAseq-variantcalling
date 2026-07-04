@@ -75,5 +75,5 @@ export PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." &&
 
 ### 5. HPC Operations (HPC-01)
 * **Authorized Access**: **STRICTLY** adhere to `/mnt/22T/phongdinh` and `/home/phongdinh`.
-* **Job Submission**: Use `sbatch` for heavy loads; negligible loads can use direct bash.
+* **Job Submission**: Use `sbatch` for heavy loads; negligible loads can use direct bash. Provide execution commands for the USER to run rather than running heavy scripts automatically.
 * **Package Management**: **DO NOT** automate installations. Notify the user if a dependency is missing.
