@@ -34,10 +34,13 @@ This file defines the operational and safety principles for this repository. To 
 ## 🛡️ Operational Safety
 
 * **Restricted File Deletion**: **NEVER** use `rm -rf` on directories. All file cleanups must be surgical and verified with the USER beforehand.
-* **Mamba Environment**: **NEVER** use `conda` commands. Always use `mamba` (e.g. `mamba activate mdd`) and verify the active environment is `mdd` before executing tasks. Provide execution commands for the USER to run rather than running heavy scripts automatically.
+* **Mamba Environment**: **NEVER** use `conda` commands. Always use `mamba` (e.g. `mamba activate mdd`) and verify the active environment is `mdd` before executing tasks. Provide execution commands for the USER to run rather than running heavy scripts automatically. Always consult [environment.yml](environment.yml) to check existing packages before suggesting or importing new dependencies.
 * **Research Constraints**: **DO NOT** run terminal commands for independent data verification or research unless explicitly requested as a specific step.
 * **Scratch & Test Scripts**: If a script is for testing, temporary debugging, or is not in the primary pipeline, it **MUST** be written in `./scratch` relative to the workspace root. **DO NOT** use Antigravity's internal brain/scratch directories (e.g. `<appDataDir>/brain/.../scratch/`).
 * **NCBI/SRA Manual Lookup**: If a task requires retrieving dataset-specific clinical metadata or supplementary files from NCBI/SRA/GEO (which often fail to resolve cleanly via programmatic AI scrapers), provide the user with clear instructions and search coordinates for manual lookup rather than relying solely on automated scripts.
+* **Major Changes & Workspace Auditing**: Whenever major changes are made to pipeline parameters or code logic:
+  * **Broken File Audit**: Proactively scan target directories for 0-byte or truncated files left behind by aborted runs (e.g., use size-based checks `[ -s "$file" ]` rather than existence checks `[ -f "$file" ]`).
+  * **Parameter Consistency (Batching Effect)**: Identify if previous runs generated completed outputs using old/mismatched parameters. If so, those outputs must be cleared and re-run to ensure cohort-wide parameter consistency.
 
 ---
 
