@@ -41,6 +41,7 @@ This file defines the operational and safety principles for this repository. To 
 * **Major Changes & Workspace Auditing**: Whenever major changes are made to pipeline parameters or code logic:
   * **Broken File Audit**: Proactively scan target directories for 0-byte or truncated files left behind by aborted runs (e.g., use size-based checks `[ -s "$file" ]` rather than existence checks `[ -f "$file" ]`).
   * **Parameter Consistency (Batching Effect)**: Identify if previous runs generated completed outputs using old/mismatched parameters. If so, those outputs must be cleared and re-run to ensure cohort-wide parameter consistency.
+* **Empirical Execution Benchmarking**: The agent **MUST NOT** provide absolute cohort-wide execution time estimations for heavy pipeline runs based on theoretical values. If the user asks for a timeline, the agent **MUST** request to run a live benchmark on a single representative sample first, measure the exact I/O and calculation durations, and extrapolate from that empirical baseline.
 
 ---
 
