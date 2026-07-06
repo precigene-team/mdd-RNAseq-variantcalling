@@ -31,6 +31,7 @@ _data/logs/
 _data/rrna_databases/
 _data/variant/
 _data/peaks/
+_data/tmp/
 
 # --- Keep _metadata and logs tracked (small, important) ---
 # (not ignored — committed intentionally)

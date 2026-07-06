@@ -33,7 +33,7 @@ This file defines the operational and safety principles for this repository. To 
 
 ## 🛡️ Operational Safety
 
-* **Restricted File Deletion**: **NEVER** use `rm -rf` on directories. All file cleanups must be surgical and verified with the USER beforehand.
+* **Restricted File Deletion**: **NEVER** use `rm -rf` on directories, and **NEVER** use automated batch deletion commands/flags (like `find ... -delete` or broad wildcards). All file cleanups must be surgical: first list target files for the USER to verify, and then delete them one-by-one using their exact, explicit file paths.
 * **Mamba Environment**: **NEVER** use `conda` commands. Always use `mamba` (e.g. `mamba activate mdd`) and verify the active environment is `mdd` before executing tasks. Provide execution commands for the USER to run rather than running heavy scripts automatically. Always consult [environment.yml](environment.yml) to check existing packages before suggesting or importing new dependencies.
 * **Research Constraints**: **DO NOT** run terminal commands for independent data verification or research unless explicitly requested as a specific step.
 * **Scratch & Test Scripts**: If a script is for testing, temporary debugging, or is not in the primary pipeline, it **MUST** be written in `./scratch` relative to the workspace root. **DO NOT** use Antigravity's internal brain/scratch directories (e.g. `<appDataDir>/brain/.../scratch/`).
