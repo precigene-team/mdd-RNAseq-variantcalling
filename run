@@ -26,7 +26,7 @@ export PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pw
 export VC_ARRAY_CONCURRENCY=5    # Max concurrent array tasks running in parallel
 export VC_TASK_CPUS=1            # CPUs per task in Slurm Job Array
 export VC_TASK_MEM="16G"         # Memory per task in Slurm Job Array (must fit all tools)
-export VC_TASK_TIME="24:00:00"   # Max walltime per task in Slurm Job Array
+export VC_TASK_TIME="48:00:00"   # Max walltime per task in Slurm Job Array
 
 # 2. Local/Single-Batch Mode Config (e.g. hpc_run.sbatch)
 export VC_LOCAL_CONCURRENT=2     # Max concurrent samples running locally
@@ -36,7 +36,7 @@ export VC_LOCAL_CPUS=1           # CPUs per sample running locally
 VC_STEPS=(
     "01_read_groups.sh|Read Groups|8G|1"
     "02_mark_duplicates.sh|Mark Duplicates|12G|1"
-    "03_split_n_cigar.sh|Split N Cigar|12G|1"
+    "03_split_n_cigar.sh|Split N Cigar|12G|4"
     "04_haplotype_caller.sh|Haplotype Caller|12G|4"
     "05_variant_filtration.sh|Variant Filtration|4G|1"
 )
