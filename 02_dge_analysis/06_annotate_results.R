@@ -4,10 +4,10 @@
 #
 # Steps:
 #   1. Load metadata from sample_sheet.csv and export SRA accession lists per subgroup.
-#   2. Load significant DGE results from results/tables/04_*_sig.csv
+#   2. Load significant DGE results from results/02_dge_analysis/tables/04_*_sig.csv
 #   3. Connect to Ensembl BioMart to fetch genomic coordinate and biotype annotations.
 #   4. Join annotations to each significant DGE table.
-#   5. Save the annotated significant tables as results/tables/04_*_sig_annotated.csv
+#   5. Save the annotated significant tables as results/02_dge_analysis/tables/04_*_sig_annotated.csv
 
 suppressPackageStartupMessages({
   library(biomaRt)
@@ -27,7 +27,7 @@ get_project_root <- function() {
 project_root <- get_project_root()
 
 # Directories
-tables_dir <- file.path(project_root, "results/tables")
+tables_dir <- file.path(project_root, "results/02_dge_analysis/tables")
 meta_file <- file.path(project_root, "_data/_metadata/sample_sheet.csv")
 
 if (!file.exists(meta_file)) {

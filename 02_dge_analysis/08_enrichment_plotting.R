@@ -3,11 +3,11 @@
 #       Follows the aesthetic conventions of the neighboring RNAseq_pipeline.
 #
 # Steps:
-#   1. Find GSEA results files results/tables/07_*_gsea_*.csv
+#   1. Find GSEA results files results/02_dge_analysis/tables/07_*_gsea_*.csv
 #   2. Load enrichment tables and format pathway names.
 #   3. Select the top activated (NES > 0) and suppressed (NES < 0) pathways.
 #   4. Render horizontal barplots with red/blue coloring and facet layout.
-#   5. Save the plots as results/figures/08_{contrast}_gsea_{type}_nes.png
+#   5. Save the plots as results/02_dge_analysis/figures/08_{contrast}_gsea_{type}_nes.png
 
 suppressPackageStartupMessages({
   library(ggplot2)
@@ -28,8 +28,8 @@ get_project_root <- function() {
 project_root <- get_project_root()
 
 # Directories
-tables_dir <- file.path(project_root, "results/tables")
-figures_dir <- file.path(project_root, "results/figures")
+tables_dir <- file.path(project_root, "results/02_dge_analysis/tables")
+figures_dir <- file.path(project_root, "results/02_dge_analysis/figures")
 dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
 # Helper: clean Hallmark/GO names for professional display

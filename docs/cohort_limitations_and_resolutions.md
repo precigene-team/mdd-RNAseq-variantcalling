@@ -10,7 +10,7 @@ This document outlines potential technical and biological confounders in the MDD
 | :--- | :--- | :--- | :--- | :--- |
 | **QC-01** | **Postmortem Confounders** (RIN, PMI, Age, pH, etc.) skewing expression profiles | Technical | Confirm cohort matching in paper and verify public availability of individual covariates | **Resolved (Baseline Model Final)** |
 | **QC-02** | **Cell-Type Heterogeneity** (neuronal atrophy making synaptic transcripts look downregulated) | Biological | Run signature-based cell-type deconvolution to estimate glial/neuronal proportions | **Resolved (Astrocyte Loss Documented)** |
-| **QC-03** | **Gene-Level vs. Peak-Level Resolution** (gene body sums canceling out site-specific changes) | Methodological | Peak-calling analysis (MACS2 / exomePeak2) on the HPC | **Ready (HPC Script Created)** |
+| **QC-03** | **Gene-Level vs. Peak-Level Resolution** (gene body sums canceling out site-specific changes) | Methodological | Peak-calling analysis (MACS2) on the HPC, followed by exonic overlap audit | **Resolved (Audit Completed)** |
 | **QC-04** | **Antibody Cross-Reactivity / Spike-In Absence** (inability to measure absolute methylation occupancy) | Technical | Document as relative methylation shift, check if synthetic spike-ins were sequenced | **Resolved (Relative Ratios Only)** |
 
 ---
@@ -43,10 +43,14 @@ This document outlines potential technical and biological confounders in the MDD
 * **The Risk:** Summarizing read counts across the entire gene body ignores site-specific shifts.
 * **Resolution & Findings:**
   1. We are using a gene-level count matrix, which acts as a robust proxy for absolute transcript-level methylation abundance.
-  2. For site-level or transcript-isoform methylation resolution, peak-calling runs must be performed on the HPC using coordinate-sorted BAM files.
-  3. **Implementation:** We have created a self-contained Slurm script at `_hpc/peak_calling.sbatch` that runs **MACS2** peak calling on all 36 gated subjects in parallel.
-  4. Running this script will generate high-resolution BED peak files for each subject in `_data/peaks/`.
-* **Status:** Ready (HPC MACS2 Script Created). Can be run in the background on the HPC.
+  2. For site-level or transcript-isoform methylation resolution, peak-calling runs were executed on the HPC using MACS2 on all 36 gated subjects, yielding local high-resolution narrowPeak files in `_data/peaks/`.
+  3. **Methodological Audit:** Implemented and executed a cohort-wide overlap analysis in [02_audit_gene_vs_peak.py](../04_peak_calling/02_audit_gene_vs_peak.py) mapping peak coordinates to exonic intervals.
+  4. **High Technical Consistency:** Across all 36 subjects, the exonic peak-mapping rate is extremely uniform at **~61% - 63%**.
+  5. **Sex-Specific Sensitivity Discordance:** 
+     * **Female Cohort**: Showed high concordance with **~81%** of the 25 female interaction DMGs supported by narrowPeaks.
+     * **Male Cohort**: Showed lower concordance (**~33%** of the 4 male interaction DMGs supported), showing that male cohort results are more sensitive to individual subject heterogeneity.
+  6. **Documentation**: Detailed statistics are saved in [02_cohort_audit_summary.txt](../results/04_peak_calling/tables/02_cohort_audit_summary.txt) and [02_cohort_audit_summary.csv](../results/04_peak_calling/tables/02_cohort_audit_summary.csv).
+* **Status:** Resolved (Audit Completed).
 
 ### 🧪 QC-04: Antibody Cross-reactivity / Spike-ins
 * **The Risk:** MeRIP-seq antibodies can capture non-$m^6A$ sites and are semi-quantitative.

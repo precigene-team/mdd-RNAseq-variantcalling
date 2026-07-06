@@ -9,7 +9,7 @@
 #   4. Run KEGG Over-Representation Analysis (ORA).
 #   5. Run GSEA GO Biological Process using Wald-statistic (stat) ranking.
 #   6. Run GSEA MSigDB Hallmark using Wald-statistic (stat) ranking.
-#   7. Save all results tables to results/tables/ prefixed with 07_.
+#   7. Save all results tables to results/02_dge_analysis/tables/ prefixed with 07_.
 
 suppressPackageStartupMessages({
   library(clusterProfiler)
@@ -32,7 +32,7 @@ project_root <- get_project_root()
 
 # Directories
 rdata_dir <- file.path(project_root, "_data/RData/02_dge_analysis")
-tables_dir <- file.path(project_root, "results/tables")
+tables_dir <- file.path(project_root, "results/02_dge_analysis/tables")
 mapper_file <- file.path(tables_dir, "01_gene_mapper.csv")
 
 if (!file.exists(mapper_file)) {

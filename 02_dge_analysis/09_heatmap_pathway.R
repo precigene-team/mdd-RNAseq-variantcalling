@@ -6,7 +6,7 @@
 #   2. Select the top activated and suppressed Hallmark pathways.
 #   3. Extract leading edge genes for these pathways.
 #   4. Compute VST expression, scale rows (z-score), and draw heatmaps using ComplexHeatmap.
-#   5. Save pathway heatmaps to results/figures/ prefixed with 09_.
+#   5. Save pathway heatmaps to results/02_dge_analysis/figures/ prefixed with 09_.
 
 suppressPackageStartupMessages({
   library(DESeq2)

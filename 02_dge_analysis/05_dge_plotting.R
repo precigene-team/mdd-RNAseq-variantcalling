@@ -5,8 +5,8 @@
 #   1. Load shrunken results RDS objects and raw results RDS objects for each contrast
 #   2. Construct processed dataframes with pvalue, padj, and gene names
 #   3. Process and format Volcano plot data (identify significant, top genes)
-#   4. Render Volcano plot using ggplot2 and ggrepel, and save to results/figures/ prefixed with 05_
-#   5. Render MA plot using ggplot2 (log10 baseMean vs log2FC), and save to results/figures/ prefixed with 05_
+#   4. Render Volcano plot using ggplot2 and ggrepel, and save to results/02_dge_analysis/figures/ prefixed with 05_
+#   5. Render MA plot using ggplot2 (log10 baseMean vs log2FC), and save to results/02_dge_analysis/figures/ prefixed with 05_
 
 suppressPackageStartupMessages({
   library(DESeq2)
@@ -28,7 +28,7 @@ project_root <- get_project_root()
 
 # Directories
 rdata_dir <- file.path(project_root, "_data/RData/02_dge_analysis")
-figures_dir <- file.path(project_root, "results/figures")
+figures_dir <- file.path(project_root, "results/02_dge_analysis/figures")
 dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
 # Helper function to plot a single contrast

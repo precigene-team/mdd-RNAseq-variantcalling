@@ -7,9 +7,9 @@
 #   3. Intersect expression columns and metadata samples to align common samples
 #   4. Split common metadata and counts by DataType
 #   5. Filter out low-expressed genes (cumulative counts >= 10)
-#   6. Save filtered count matrices to results/tables/02_{DataType}_filtered_counts.csv
+#   6. Save filtered count matrices to results/02_dge_analysis/tables/02_{DataType}_filtered_counts.csv
 #   7. Load DESeqDataSet, estimate size factors, and normalize using vst() or rlog()
-#   8. Save normalized matrices to results/tables/02_{DataType}_{norm_method}_normalized_counts.csv
+#   8. Save normalized matrices to results/02_dge_analysis/tables/02_{DataType}_{norm_method}_normalized_counts.csv
 #   9. Save serialized dds and normalized RDS objects to _data/RData/02_dge_analysis/
 #
 
@@ -30,12 +30,12 @@ get_project_root <- function() {
 project_root <- get_project_root()
 
 # Input files
-expr_file <- file.path(project_root, "results/tables/01_annotated_counts.csv")
+expr_file <- file.path(project_root, "results/02_dge_analysis/tables/01_annotated_counts.csv")
 meta_file <- file.path(project_root, "_data/_metadata/sample_sheet.csv")
 
 # Output directories
 rdata_dir <- file.path(project_root, "_data/RData/02_dge_analysis")
-tables_dir <- file.path(project_root, "results/tables")
+tables_dir <- file.path(project_root, "results/02_dge_analysis/tables")
 
 dir.create(rdata_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
@@ -126,7 +126,7 @@ process_datatype <- function(meta_subset, datatype, expr_df) {
   count_mat <- count_mat[keep, , drop = FALSE]
   message("Retained ", nrow(count_mat), " genes.")
   
-  # Save filtered counts to results/tables/ with prefix 02_
+  # Save filtered counts to results/02_dge_analysis/tables/ with prefix 02_
   write.csv(
     data.frame(gene_name = rownames(count_mat), count_mat, check.names = FALSE),
     file.path(tables_dir, paste0("02_", datatype, "_filtered_counts.csv")),
@@ -177,7 +177,7 @@ process_datatype <- function(meta_subset, datatype, expr_df) {
   
   norm_mat <- assay(rld)
   
-  # Save normalized matrix to results/tables/ with prefix 02_
+  # Save normalized matrix to results/02_dge_analysis/tables/ with prefix 02_
   write.csv(
     data.frame(gene_name = rownames(norm_mat), norm_mat, check.names = FALSE),
     file.path(tables_dir, paste0("02_", datatype, "_", norm_method, "_normalized_counts.csv")),

@@ -7,10 +7,10 @@
 #   3. Filter the expression matrix to the top 500 most variable genes
 #   4. Compute PCA using prcomp() with center = TRUE and scale. = FALSE
 #   5. Calculate percentage of variance explained by each PC
-#   6. Save PCA coordinates and variance percent tables to results/tables/
+#   6. Save PCA coordinates and variance percent tables to results/02_dge_analysis/tables/
 #   7. Save PCA prcomp R objects to _data/RData/02_dge_analysis/
 #   8. Generate interactive 3D PCA plot widgets colored by sex-specific groups
-#   9. Export plots as self-contained HTML files to results/figures/
+#   9. Export plots as self-contained HTML files to results/02_dge_analysis/figures/
 #
 suppressPackageStartupMessages({
   library(DESeq2)
@@ -33,8 +33,8 @@ project_root <- get_project_root()
 
 # Directories
 rdata_dir <- file.path(project_root, "_data/RData/02_dge_analysis")
-tables_dir <- file.path(project_root, "results/tables")
-figures_dir <- file.path(project_root, "results/figures")
+tables_dir <- file.path(project_root, "results/02_dge_analysis/tables")
+figures_dir <- file.path(project_root, "results/02_dge_analysis/figures")
 
 dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
 dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
@@ -85,7 +85,7 @@ run_and_save_pca <- function(mat, metadata_full, title_suffix, file_suffix, data
     dplyr::left_join(metadata_full, by = "Sample") %>%
     dplyr::mutate(Group = paste(Gender, SampleType, sep = "_"))
   
-  # Save PCA coordinates to results/tables/
+  # Save PCA coordinates to results/02_dge_analysis/tables/
   write.csv(
     pca_df,
     file.path(tables_dir, paste0("03_", datatype, "_PCA_coordinates", file_suffix, ".csv")),
@@ -93,7 +93,7 @@ run_and_save_pca <- function(mat, metadata_full, title_suffix, file_suffix, data
     quote = FALSE
   )
   
-  # Save PCA variance to results/tables/
+  # Save PCA variance to results/02_dge_analysis/tables/
   write.csv(
     data.frame(
       PC = paste0("PC", seq_along(var_exp)),

@@ -17,7 +17,7 @@
 #      - Female Relative Methylation (paired interaction)
 #      - Three-Way Interaction (sex-specific methylation change)
 #   6. Shrink log fold changes using apeglm (with fallback to ashr or normal)
-#   7. Save results tables (full and significant) to results/tables/ prefixed with 04_
+#   7. Save results tables (full and significant) to results/02_dge_analysis/tables/ prefixed with 04_
 #   8. Save serialized dds and results objects to _data/RData/02_dge_analysis/ prefixed with 04_
 
 suppressPackageStartupMessages({
@@ -39,7 +39,7 @@ project_root <- get_project_root()
 
 # Directories
 rdata_dir <- file.path(project_root, "_data/RData/02_dge_analysis")
-tables_dir <- file.path(project_root, "results/tables")
+tables_dir <- file.path(project_root, "results/02_dge_analysis/tables")
 meta_file <- file.path(project_root, "_data/_metadata/sample_sheet.csv")
 
 dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)

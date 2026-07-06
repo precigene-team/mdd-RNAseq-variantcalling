@@ -10,8 +10,8 @@
 #   6. Join annotations onto the expression count matrix
 #   7. Filter the matrix strictly for valid biotypes (e.g. protein_coding)
 #   8. Collapse duplicate HGNC symbols by sum
-#   9. Save the annotated counts to results/tables/01_annotated_counts.csv
-#  10. Generate and save mapping table to results/tables/01_gene_mapper.csv
+#   9. Save the annotated counts to results/02_dge_analysis/tables/01_annotated_counts.csv
+#  10. Generate and save mapping table to results/02_dge_analysis/tables/01_gene_mapper.csv
 #
 
 suppressPackageStartupMessages({
@@ -41,7 +41,7 @@ valid_biotypes <- cfg$ensembl_map$valid_biotypes
 
 # Paths
 annotated_path <- file.path(project_root, "_data/featurecounts/raw_counts.csv")
-out_dir <- file.path(project_root, "results/tables")
+out_dir <- file.path(project_root, "results/02_dge_analysis/tables")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
 rna_counts_path <- file.path(out_dir, "01_annotated_counts.csv")
