@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[_hpc/peak_calling.sbatch]]
+# [[04_peak_calling/01_peak_calling.sbatch]]
 # Goal: Slurm submission script to execute MACS2 peak-calling on the HPC in parallel.
 #SBATCH --job-name=MDD_Peak_Calling
 #SBATCH --nodes=1
