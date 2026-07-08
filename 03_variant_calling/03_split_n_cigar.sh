@@ -32,6 +32,13 @@ fi
 out_bam="$OUTPUT_DIR/${SAMPLE_NAME}.split.bam"
 sample_log="$LOG_DIR/${SAMPLE_NAME}.split.log"
 
+# Check if local workstation is processing this sample (lock file exists)
+lock_file="$LOG_DIR/${SAMPLE_NAME}.local_lock"
+if [ -f "$lock_file" ]; then
+    echo "[Skip] $SAMPLE_NAME (Local workstation is processing this sample; locked)"
+    exit 0
+fi
+
 if [ -s "$out_bam" ] && ([ -s "${out_bam}.bai" ] || [ -s "${out_bam%.bam}.bai" ]); then
     echo "[Skip] $SAMPLE_NAME (Split CIGAR BAM already exists)"
     exit 0

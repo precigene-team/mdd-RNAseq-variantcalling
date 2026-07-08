@@ -32,6 +32,13 @@ fi
 out_vcf="$OUTPUT_DIR/${SAMPLE_NAME}.raw.vcf.gz"
 sample_log="$LOG_DIR/${SAMPLE_NAME}.hc.log"
 
+# Check if local workstation is processing this sample (lock file exists)
+lock_file="$LOG_DIR/${SAMPLE_NAME}.local_lock"
+if [ -f "$lock_file" ]; then
+    echo "[Skip] $SAMPLE_NAME (Local workstation is processing this sample; locked)"
+    exit 0
+fi
+
 if [ -s "$out_vcf" ]; then
     echo "[Skip] $SAMPLE_NAME (Raw VCF already exists)"
     exit 0
