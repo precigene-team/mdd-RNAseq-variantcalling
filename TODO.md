@@ -26,15 +26,17 @@ This document lists the completed and remaining tasks for the MDD RNA-seq and Me
 
 ### 🧬 4. Variant Calling (GATK Best Practices)
 * [x] Write GATK processing scripts under `03_variant_calling/` (ReadGroups, MarkDuplicates, SplitNCigarReads, HaplotypeCaller, VariantFiltration).
-* [/] Execute local worker pipeline script (`scratch/local_worker_pipeline.sh`) to run CPU-heavy SplitNCigarReads on aligned BAMs.
+* [x] Execute local worker pipeline script (`scratch/local_worker_pipeline.sh`) to run CPU-heavy SplitNCigarReads on aligned BAMs.
   * **Current State**: Active. Two local workers are currently processing SplitNCigarReads for the remaining cohort samples.
-* [ ] Execute HaplotypeCaller (`04_haplotype_caller.sh`) on the split BAMs to identify raw SNPs.
+* [x] Execute HaplotypeCaller (`04_haplotype_caller.sh`) on the split BAMs to identify raw SNPs. 
 * [ ] Apply VariantFiltration (`05_variant_filtration.sh`) to identify high-confidence m6A-SNPs and allele-specific methylation (ASM) patterns.
-* **Status**: **In Progress** (SplitNCigarReads processing).
+* **Status**: **In Progress** (HaplotypeCalling processing).
 
 ### 📊 5. Centralized MultiQC Aggregation
 * [x] Create the centralized configuration [multiqc_config.yaml](multiqc_config.yaml) to organize reports chronologically.
 * [x] Run the final MultiQC execution command to consolidate raw/trimmed FastQC, STAR alignment, Qualimap, and featureCounts metrics.
 * **Status**: **Completed**. Final report generated at `_data/multiqc/rna_seq_pipeline_summary.html`.
 
-
+- Update Peak Calling in README. 
+- Format TODO
+- Reaudit DGE analysis

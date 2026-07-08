@@ -25,69 +25,82 @@ This repository hosts a modular, high-throughput bioinformatics pipeline for pro
 ---
 
 ## 📂 Repository Structure
-<!-- 
+
 Below is the layout of the analysis workspace:
 
-* **[`01_core_alignment/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment)**: Core sequence processing pipeline.
-  * [`fastqc/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/fastqc): Sequence quality check.
-    * [`initial_qc.py`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/fastqc/initial_qc.py): Parallelized pre-trim QC.
-    * [`after_trim_QC.py`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/fastqc/after_trim_QC.py): Parallelized post-trim QC.
-  * [`trim/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/trim): Adapter and quality trimming.
-    * [`trimmomatic.py`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/trim/trimmomatic.py): Multi-threaded adapter trimming via Trimmomatic.
-  * [`star/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/star): Genome alignment.
-    * [`star.py`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/star/star.py): Alignment of trimmed paired-end reads to the human reference.
-  * [`qualimap/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/qualimap): Alignment assessment.
-    * [`qualimap_bamqc.py`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/qualimap/qualimap_bamqc.py) & [`qualimap_rnaseq.py`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/qualimap/qualimap_rnaseq.py): BAM checks.
-  * [`count/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/count): Gene abundance quantification.
-    * [`featurecounts.py`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment/count/featurecounts.py): Reads mapping counts matrix creation.
-* **[`02_dge_analysis/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/02_dge_analysis)**: Expression & methylation statistical testing.
-  * [`config.yaml`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/02_dge_analysis/config.yaml): Parameter configurations.
-  * [`gene_map.R`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/02_dge_analysis/gene_map.R): Ensembl database mapping via BioMart.
-  * [`rna_processing.R`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/02_dge_analysis/rna_processing.R): Low-count filtering, variance stabilization (VST/rlog), and 3D PCA plot generation.
-  * [`deg.R`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/02_dge_analysis/deg.R): Differential expression testing via DESeq2.
-* **[`03_variant_calling/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/03_variant_calling)**: GATK variant calling on RNA-seq data.
-  * [`ReadGroups.txt`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/03_variant_calling/ReadGroups.txt): Read-group addition.
-  * [`MarkDuplicates.txt`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/03_variant_calling/MarkDuplicates.txt): Duplicate flagging.
-* **[`docs/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/docs)**: Documentation and background theory.
-  * [`rna_vs_merip.md`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/docs/rna_vs_merip.md): Detailed comparison of RNA-seq and MeRIP-seq.
-* **[`_data/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data)**: Reference annotation files, genome indices, and temporary directories.
-* **[`utils/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/utils)**: Common scripts for parsing log metrics and resolving mapping anomalies. -->
+* **[`01_core_alignment/`](01_core_alignment)**: Core sequence processing pipeline.
+  * [`01_raw_fastqc.sh`](01_core_alignment/01_raw_fastqc.sh): Quality control check on raw FastQ files.
+  * [`02_trimming.sh`](01_core_alignment/02_trimming.sh): Trimmomatic adapter and quality trimming.
+  * [`03_rrna_filter.sh`](01_core_alignment/03_rrna_filter.sh): Ribosomal RNA filtering.
+  * [`04_trimmed_fastqc.sh`](01_core_alignment/04_trimmed_fastqc.sh): Post-trimming quality control.
+  * [`05_star_align.sh`](01_core_alignment/05_star_align.sh): Map trimmed reads to the human reference.
+  * [`06_qualimap_bamqc.sh`](01_core_alignment/06_qualimap_bamqc.sh) & [`07_qualimap_rnaseq.sh`](01_core_alignment/07_qualimap_rnaseq.sh): QC assessment on BAM alignments.
+  * [`08_quantification.sh`](01_core_alignment/08_quantification.sh): Exonic reads quantification via featureCounts.
+  * [`09_counts_qc.sh`](01_core_alignment/09_counts_qc.sh): QC assertions on counts matrix.
+  * [`10_multiqc.sh`](01_core_alignment/10_multiqc.sh): Centralized report aggregator.
+* **[`02_dge_analysis/`](02_dge_analysis)**: Expression & methylation statistical testing.
+  * [`config.yaml`](02_dge_analysis/config.yaml): Parameter configurations.
+  * [`01_gene_mapping.R`](02_dge_analysis/01_gene_mapping.R): Ensembl database mapping via BioMart.
+  * [`02_rna_processing.R`](02_dge_analysis/02_rna_processing.R): Low-count filtering and normalization.
+  * [`03_pca_analysis.R`](02_dge_analysis/03_pca_analysis.R): Cohort dimensionality reduction.
+  * [`04_deg_analysis.R`](02_dge_analysis/04_deg_analysis.R): Differential expression testing.
+  * [`05_dge_plotting.R`](02_dge_analysis/05_dge_plotting.R): Generate Volcano/MA plots.
+  * [`06_annotate_results.R`](02_dge_analysis/06_annotate_results.R): Map genes to functional labels.
+* **[`03_variant_calling/`](03_variant_calling)**: GATK variant calling on RNA-seq data.
+  * [`01_read_groups.sh`](03_variant_calling/01_read_groups.sh): Add read groups to aligned BAMs.
+  * [`02_mark_duplicates.sh`](03_variant_calling/02_mark_duplicates.sh): Flag PCR duplicate alignments.
+  * [`03_split_n_cigar.sh`](03_variant_calling/03_split_n_cigar.sh): Split reads spanning exon-exon junctions.
+  * [`04_haplotype_caller.sh`](03_variant_calling/04_haplotype_caller.sh): Call raw variants using HaplotypeCaller.
+  * *HaplotypeCalling Audit*: Verification step for called raw SNPs.
+  * [`05_variant_filtration.sh`](03_variant_calling/05_variant_filtration.sh): Filter variants to identify high-confidence m6A-SNPs.
+* **[`docs/`](docs)**: Documentation and background theory.
+  * [`cohort_limitations_and_resolutions.md`](docs/cohort_limitations_and_resolutions.md): Gating thresholds and deconvolution results.
+* **[`_data/`](_data)**: Reference annotation files, genome indices, and temporary directories.
 
 ---
 
 ## 🚀 Execution Workflow
 
-<!-- ### 1. Data Retrieval and Migration
-Run the batch migration script to transfer files from the local raw directory:
+### 1. Alignment & Quantification
+Execute the pipeline shell scripts sequentially:
 ```bash
-sbatch migrate.sbatch
+bash 01_core_alignment/01_raw_fastqc.sh
+bash 01_core_alignment/02_trimming.sh
+bash 01_core_alignment/03_rrna_filter.sh
+bash 01_core_alignment/04_trimmed_fastqc.sh
+bash 01_core_alignment/05_star_align.sh
+bash 01_core_alignment/06_qualimap_bamqc.sh
+bash 01_core_alignment/07_qualimap_rnaseq.sh
+bash 01_core_alignment/08_quantification.sh
+bash 01_core_alignment/09_counts_qc.sh
+bash 01_core_alignment/10_multiqc.sh
 ```
 
-### 2. Alignment & Quantification
-Execute the Python automation scripts in [`01_core_alignment/`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/01_core_alignment) sequentially:
-```bash
-python 01_core_alignment/fastqc/initial_qc.py
-python 01_core_alignment/trim/trimmomatic.py
-python 01_core_alignment/fastqc/after_trim_QC.py
-python 01_core_alignment/star/star.py
-python 01_core_alignment/qualimap/qualimap_rnaseq.py
-python 01_core_alignment/count/featurecounts.py
-```
-
-### 3. Differential Expression (DGE) & Annotations
+### 2. Differential Expression (DGE) & Annotations
 Map counts to HGNC symbols, filter low count noise, normalize, and run tests:
 ```bash
-Rscript 02_dge_analysis/gene_map.R
-Rscript 02_dge_analysis/rna_processing.R
-Rscript 02_dge_analysis/deg.R
+Rscript 02_dge_analysis/01_gene_mapping.R
+Rscript 02_dge_analysis/02_rna_processing.R
+Rscript 02_dge_analysis/03_pca_analysis.R
+Rscript 02_dge_analysis/04_deg_analysis.R
+Rscript 02_dge_analysis/05_dge_plotting.R
+Rscript 02_dge_analysis/06_annotate_results.R
 ```
 
-### 4. Variant Calling
-Configure BAM file structure and flag PCR duplication artifacts:
+### 3. Variant Calling & HaplotypeCalling Audit
+Format BAM file structures, call raw variants, audit findings, and apply hard filtration:
 ```bash
-bash 03_variant_calling/ReadGroups.txt
-bash 03_variant_calling/MarkDuplicates.txt
-``` -->
+# Prepare alignments
+bash 03_variant_calling/01_read_groups.sh
+bash 03_variant_calling/02_mark_duplicates.sh
+bash 03_variant_calling/03_split_n_cigar.sh
+
+# Call variants
+bash 03_variant_calling/04_haplotype_caller.sh
+
+# Filter variants
+bash 03_variant_calling/05_variant_filtration.sh
+```
 
 ---
 
