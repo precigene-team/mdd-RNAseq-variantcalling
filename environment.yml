@@ -7,6 +7,7 @@ dependencies:
   # Upstream Core Tools
   - star
   - samtools
+  - bedtools
   - subread
   - multiqc
   - picard
@@ -16,14 +17,14 @@ dependencies:
   - qualimap
   - aspera-cli
   - fastp
+  - meme
+  - maven
 
   # Python Stack
   - python=3.9
   - pandas
   - tqdm
   - pip
-  - pip:
-    - macs2
   
   # R Stack
   - r-base=4.3
@@ -34,9 +35,12 @@ dependencies:
   - r-ggrepel
   - r-msigdbr
   - r-ggtext
+  - r-biocmanager
   - bioconductor-deseq2
   - bioconductor-biomart
   - bioconductor-apeglm
   - bioconductor-limma
   - bioconductor-clusterprofiler
   - bioconductor-org.hs.eg.db
+  - bioconductor-tress
+  - bioconductor-rrho

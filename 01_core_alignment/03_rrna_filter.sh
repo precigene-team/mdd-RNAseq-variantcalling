@@ -170,11 +170,8 @@ while read -r row; do
     file2_base=$(echo "$row" | cut -f3)
     data_type=$(echo "$row" | cut -f4)
 
-    # --- Only process RNA-seq (input) samples ---
-    if [ "$data_type" != "RNA-seq" ]; then
-        echo "[Skip] [$CURRENT_SAMPLE/$SAMPLE_COUNT] $accession (type=$data_type, rRNA filter not needed)"
-        continue
-    fi
+    # Process all samples (both RNA-seq and m6A)
+
 
     r1_in="$TRIMMED_DIR/${file1_base}_paired.fastq.gz"
     r2_in="$TRIMMED_DIR/${file2_base}_paired.fastq.gz"
@@ -269,8 +266,6 @@ while read -r row; do
     file1_base=$(echo "$row" | cut -f2)
     file2_base=$(echo "$row" | cut -f3)
     data_type=$(echo "$row" | cut -f4)
-
-    [ "$data_type" = "RNA-seq" ] || continue
 
     r1_in="$TRIMMED_DIR/${file1_base}_paired.fastq.gz"
     r2_in="$TRIMMED_DIR/${file2_base}_paired.fastq.gz"

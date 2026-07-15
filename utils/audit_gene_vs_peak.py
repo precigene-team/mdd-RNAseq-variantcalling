@@ -203,17 +203,23 @@ def audit_peaks(peak_path, gene_intervals, dmg_path, output_report_path=None, qu
     mapped_peaks = 0
     
     with open(peak_path, 'r') as f:
+        # TRESS peaks.xls has a header starting with "chr" or similar
+        first_line = f.readline()
+        if not (first_line.startswith('"chr"') or first_line.startswith('chr') or first_line.startswith('"seqnames"')):
+            f.seek(0)
+            
         for line in f:
             fields = line.strip().split('\t')
             if len(fields) < 3:
                 continue
             total_peaks += 1
-            chrom = fields[0]
+            chrom = fields[0].replace('"', '')
             start = int(fields[1])
             end = int(fields[2])
-            peak_name = fields[3] if len(fields) > 3 else f"peak_{total_peaks}"
-            # Fold enrichment is in column 7
-            fold_enrich = float(fields[6]) if len(fields) > 6 else 1.0
+            peak_name = f"peak_{total_peaks}"
+            # TRESS lg.fc is in column 9 (10th field)
+            lg_fc = float(fields[9]) if len(fields) > 9 else 0.0
+            fold_enrich = 2 ** abs(lg_fc)
             
             overlapping = find_overlapping_genes(chrom, start, end, gene_intervals)
             if overlapping:
@@ -295,15 +301,15 @@ def run_cohort_audit(peaks_dir, dmg_male, dmg_female, gene_intervals, output_bas
     print(f"               Male DMG: {dmg_male}")
     print(f"               Female DMG: {dmg_female}")
     
-    # 1. Locate all narrowPeak files under peaks_dir
+    # 1. Locate all peaks.xls files under peaks_dir
     peak_files = []
     for root, dirs, files in os.walk(peaks_dir):
         for f in files:
-            if f.endswith('.narrowPeak'):
+            if f.endswith('_peaks.xls'):
                 peak_files.append(os.path.join(root, f))
                 
     if not peak_files:
-        print(f"[ERROR] No .narrowPeak files found in: {peaks_dir}")
+        print(f"[ERROR] No _peaks.xls files found in: {peaks_dir}")
         return
         
     print(f"Found {len(peak_files)} samples to audit.")
@@ -314,7 +320,7 @@ def run_cohort_audit(peaks_dir, dmg_male, dmg_female, gene_intervals, output_bas
         # Determine metadata from directory or file name
         sample_name = os.path.basename(os.path.dirname(peak_path))
         if not sample_name or sample_name == 'peaks':
-            sample_name = os.path.basename(peak_path).replace('_peaks.narrowPeak', '')
+            sample_name = os.path.basename(peak_path).replace('_peaks.xls', '')
             
         name_lower = sample_name.lower()
         if 'female' in name_lower:

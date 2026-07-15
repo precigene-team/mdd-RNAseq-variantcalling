@@ -197,16 +197,32 @@ if [ "$RUN_CORE" = true ]; then
     echo ">>> Running CORE ALIGNMENT Module..."
     (
         cd 01_core_alignment/
-        # bash 01_raw_fastqc.sh
-        # bash 02_trimming.sh
-        # bash 03_rrna_filter.sh
-        # bash 04_trimmed_fastqc.sh
-        # bash 05_star_align.sh
-        # bash 06_qualimap_bamqc.sh
-        # bash 07_qualimap_rnaseq.sh
-        bash 08_quantification.sh
-        bash 09_counts_qc.sh
-        bash 10_multiqc.sh
+        bash 01_raw_fastqc.sh
+        bash 02_trimming.sh
+        bash 03_rrna_filter.sh
+        bash 04_trimmed_fastqc.sh
+        bash 05_star_align.sh
+        bash 06_qualimap_bamqc.sh
+        bash 07_qualimap_rnaseq.sh
+        
+        # TRESS Peak Calling (Cohort-wide parallel execution matching variant calling pattern)
+        echo ">>> Running TRESS Peak Calling..."
+        SUBJECTS=$(awk -F',' 'NR>1 {print $1}' "$PROJECT_ROOT/_data/_metadata/sample_sheet.csv" | sed 's/_[12]$//' | sed 's/_\(m6A\|input\)$//' | sort -u)
+        CONCURRENT_LIMIT=2
+        for subj in $SUBJECTS; do
+            while [ $(jobs -r | wc -l) -ge "$CONCURRENT_LIMIT" ]; do
+                sleep 2
+            done
+            bash 08_tress_peak_calling.sh "$subj" 2 128G &
+        done
+        wait
+
+        echo ">>> Merging TRESS Peaks into Cohort Consensus..."
+        Rscript 09_merge_tress_peaks.R
+
+        bash 10_quantification.sh
+        bash 11_counts_qc.sh
+        bash 12_multiqc.sh
     ) || { echo "Core Alignment failed. Exiting."; exit 1; }
     echo "CORE ALIGNMENT COMPLETE."
     echo ""

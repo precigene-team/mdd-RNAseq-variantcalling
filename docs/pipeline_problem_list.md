@@ -18,8 +18,8 @@
 - **Fix**: Remove the `RNA-seq`-only gate in `03_rrna_filter.sh` to run rRNA depletion on **both** fractions. Re-run rRNA filter + STAR alignment on the **36 IP samples only**. The 36 Input BAMs are untouched.
 
 ### 2. Gene-Level vs. Peak-Level Quantification
-- **Module**: `01_core_alignment/08_quantification.sh` → `02_dge_analysis/04_deg_analysis.R`
-- **Problem**: `08_quantification.sh` uses `featureCounts` with the GTF file as annotation, counting reads across entire exon bodies of annotated genes. `04_deg_analysis.R` then runs the DESeq2 `Fraction:SampleType` interaction model on these whole-gene counts.
+- **Module**: `01_core_alignment/10_quantification.sh` → `02_dge_analysis/04_deg_analysis.R`
+- **Problem**: `10_quantification.sh` uses `featureCounts` with the GTF file as annotation, counting reads across entire exon bodies of annotated genes. `04_deg_analysis.R` then runs the DESeq2 `Fraction:SampleType` interaction model on these whole-gene counts.
 - **Consequence**: m6A methylation is physically localized (~150bp near stop codons). Counting across thousands of bases of non-methylated exons dilutes the IP enrichment signal, drastically reducing the statistical power of the interaction term and producing systematic false negatives.
 - **Fix**:
   1. Run TRESS to generate high-confidence peak coordinates (replaces MACS2 — see Item 4).

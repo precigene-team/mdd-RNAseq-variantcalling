@@ -35,9 +35,11 @@ Below is the layout of the analysis workspace:
   * [`04_trimmed_fastqc.sh`](01_core_alignment/04_trimmed_fastqc.sh): Post-trimming quality control.
   * [`05_star_align.sh`](01_core_alignment/05_star_align.sh): Map trimmed reads to the human reference.
   * [`06_qualimap_bamqc.sh`](01_core_alignment/06_qualimap_bamqc.sh) & [`07_qualimap_rnaseq.sh`](01_core_alignment/07_qualimap_rnaseq.sh): QC assessment on BAM alignments.
-  * [`08_quantification.sh`](01_core_alignment/08_quantification.sh): Exonic reads quantification via featureCounts.
-  * [`09_counts_qc.sh`](01_core_alignment/09_counts_qc.sh): QC assertions on counts matrix.
-  * [`10_multiqc.sh`](01_core_alignment/10_multiqc.sh): Centralized report aggregator.
+  * [`08_tress_peak_calling.R`](01_core_alignment/08_tress_peak_calling.R): Peak calling via TRESS in R.
+  * [`09_merge_tress_peaks.R`](01_core_alignment/09_merge_tress_peaks.R): Merge peaks into cohort consensus coordinates.
+  * [`10_quantification.sh`](01_core_alignment/10_quantification.sh): Peak-level read quantification via featureCounts.
+  * [`11_counts_qc.sh`](01_core_alignment/11_counts_qc.sh): QC assertions on counts matrix.
+  * [`12_multiqc.sh`](01_core_alignment/12_multiqc.sh): Centralized report aggregator.
 * **[`02_dge_analysis/`](02_dge_analysis)**: Expression & methylation statistical testing.
   * [`config.yaml`](02_dge_analysis/config.yaml): Parameter configurations.
   * [`01_gene_mapping.R`](02_dge_analysis/01_gene_mapping.R): Ensembl database mapping via BioMart.
@@ -71,9 +73,11 @@ bash 01_core_alignment/04_trimmed_fastqc.sh
 bash 01_core_alignment/05_star_align.sh
 bash 01_core_alignment/06_qualimap_bamqc.sh
 bash 01_core_alignment/07_qualimap_rnaseq.sh
-bash 01_core_alignment/08_quantification.sh
-bash 01_core_alignment/09_counts_qc.sh
-bash 01_core_alignment/10_multiqc.sh
+Rscript 01_core_alignment/08_tress_peak_calling.R
+Rscript 01_core_alignment/09_merge_tress_peaks.R
+bash 01_core_alignment/10_quantification.sh
+bash 01_core_alignment/11_counts_qc.sh
+bash 01_core_alignment/12_multiqc.sh
 ```
 
 ### 2. Differential Expression (DGE) & Annotations

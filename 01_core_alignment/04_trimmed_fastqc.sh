@@ -49,7 +49,7 @@ PARALLEL_SAMPLES=8
 
 echo "================================================================================"
 echo "   TRIMMED FASTQC: Running FastQC on pre-alignment FastQ files"
-echo "   (input → rrna_filtered, m6A → trimmed_fastq)"
+echo "   (both fractions → rrna_filtered)"
 echo "================================================================================"
 echo "Resources: $PARALLEL_SAMPLES concurrent files."
 
@@ -73,14 +73,9 @@ while read -r row; do
     file2_base=$(echo "$row" | cut -f3)
     data_type=$(echo "$row"  | cut -f4)
 
-    # --- Resolve source directory and file suffix based on DataType ---
-    if [ "$data_type" = "input" ]; then
-        src_dir="$RRNA_FILTERED_DIR"
-        suffix="_filtered.fastq.gz"
-    else
-        src_dir="$TRIMMED_DIR"
-        suffix="_paired.fastq.gz"
-    fi
+    # --- Resolve source directory and file suffix (both fractions are now rRNA-filtered) ---
+    src_dir="$RRNA_FILTERED_DIR"
+    suffix="_filtered.fastq.gz"
 
     r1="${src_dir}/${file1_base}${suffix}"
     r2="${src_dir}/${file2_base}${suffix}"
@@ -128,11 +123,8 @@ while read -r row; do
     file2_base=$(echo "$row" | cut -f3)
     data_type=$(echo "$row"  | cut -f4)
 
-    if [ "$data_type" = "input" ]; then
-        src_dir="$RRNA_FILTERED_DIR"; suffix="_filtered.fastq.gz"
-    else
-        src_dir="$TRIMMED_DIR"; suffix="_paired.fastq.gz"
-    fi
+    src_dir="$RRNA_FILTERED_DIR"
+    suffix="_filtered.fastq.gz"
 
     for base in "$file1_base" "$file2_base"; do
         src="${src_dir}/${base}${suffix}"

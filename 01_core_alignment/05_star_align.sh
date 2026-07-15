@@ -108,13 +108,8 @@ while read -r row; do
     file2_base=$(echo "$row" | cut -f3)
     data_type=$(echo "$row" | cut -f4)
 
-    if [ "$data_type" = "RNA-seq" ]; then
-        r1_test="$RRNA_FILTERED_DIR/${file1_base}_filtered.fastq.gz"
-        r2_test="$RRNA_FILTERED_DIR/${file2_base}_filtered.fastq.gz"
-    else
-        r1_test="$TRIMMED_DIR/${file1_base}_paired.fastq.gz"
-        r2_test="$TRIMMED_DIR/${file2_base}_paired.fastq.gz"
-    fi
+    r1_test="$RRNA_FILTERED_DIR/${file1_base}_filtered.fastq.gz"
+    r2_test="$RRNA_FILTERED_DIR/${file2_base}_filtered.fastq.gz"
 
     if [ -f "$r1_test" ] && [ -f "$r2_test" ]; then
         FOUND_INPUTS=$((FOUND_INPUTS + 1))
@@ -136,15 +131,9 @@ while read -r row; do
     file2_base=$(echo "$row" | cut -f3)
     data_type=$(echo "$row" | cut -f4)
 
-    # --- Route to correct source directory based on DataType ---
-    # RNA-seq samples: rRNA-filtered reads | m6A samples: standard trimmed reads
-    if [ "$data_type" = "RNA-seq" ]; then
-        r1="$RRNA_FILTERED_DIR/${file1_base}_filtered.fastq.gz"
-        r2="$RRNA_FILTERED_DIR/${file2_base}_filtered.fastq.gz"
-    else
-        r1="$TRIMMED_DIR/${file1_base}_paired.fastq.gz"
-        r2="$TRIMMED_DIR/${file2_base}_paired.fastq.gz"
-    fi
+    # --- Resolve source directory (both fractions are now rRNA-filtered) ---
+    r1="$RRNA_FILTERED_DIR/${file1_base}_filtered.fastq.gz"
+    r2="$RRNA_FILTERED_DIR/${file2_base}_filtered.fastq.gz"
     
     if [ ! -f "$r1" ] || [ ! -f "$r2" ]; then
         echo "[Warn] Missing input files for $accession: $r1 or $r2. Skipping."
@@ -203,13 +192,8 @@ while read -r row; do
     file2_base=$(echo "$row" | cut -f3)
     data_type=$(echo "$row" | cut -f4)
 
-    if [ "$data_type" = "RNA-seq" ]; then
-        r1="$RRNA_FILTERED_DIR/${file1_base}_filtered.fastq.gz"
-        r2="$RRNA_FILTERED_DIR/${file2_base}_filtered.fastq.gz"
-    else
-        r1="$TRIMMED_DIR/${file1_base}_paired.fastq.gz"
-        r2="$TRIMMED_DIR/${file2_base}_paired.fastq.gz"
-    fi
+    r1="$RRNA_FILTERED_DIR/${file1_base}_filtered.fastq.gz"
+    r2="$RRNA_FILTERED_DIR/${file2_base}_filtered.fastq.gz"
     [ -f "$r1" ] && [ -f "$r2" ] || continue # If inputs were missing, outputs won't exist
     
     sample_name=$(echo "$file1_base" | sed 's/_1$//')
