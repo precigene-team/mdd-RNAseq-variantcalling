@@ -6,13 +6,13 @@ This document provides the theoretical background explaining the differences bet
 
 ## 🔬 1. Conceptual Comparison
 
-| Feature | Bulk RNA-seq (Input Control) | MeRIP-seq / m6A-seq (IP Fraction) |
-| :--- | :--- | :--- |
-| **Primary Target** | All transcript molecules in the sample. | Only transcript fragments containing $m^6A$ modifications. |
-| **Selection Method** | Poly(A) enrichment or ribosomal RNA depletion. | Immunoprecipitation using an $m^6A$-specific antibody. |
-| **Output Information** | Total gene/transcript expression levels. | Absolute abundance of methylated transcripts. |
-| **Biological Insight** | Transcriptional activation and RNA degradation rate. | Post-transcriptional chemical modification of RNA. |
-| **Typical Analysis** | Differential Gene Expression (DGE). | Peak Calling, Differential Methylation (interaction analysis). |
+| Feature                | Bulk RNA-seq (Input Control)                         | MeRIP-seq / m6A-seq (IP Fraction)                              |
+| :--------------------- | :--------------------------------------------------- | :------------------------------------------------------------- |
+| **Primary Target**     | All transcript molecules in the sample.              | Only transcript fragments containing $m^6A$ modifications.     |
+| **Selection Method**   | Poly(A) enrichment or ribosomal RNA depletion.       | Immunoprecipitation using an $m^6A$-specific antibody.         |
+| **Output Information** | Total gene/transcript expression levels.             | Absolute abundance of methylated transcripts.                  |
+| **Biological Insight** | Transcriptional activation and RNA degradation rate. | Post-transcriptional chemical modification of RNA.             |
+| **Typical Analysis**   | Differential Gene Expression (DGE).                  | Peak Calling, Differential Methylation (interaction analysis). |
 
 ---
 
@@ -74,3 +74,48 @@ Performing SNP variant calling on standard RNA-seq vs. MeRIP-seq IP libraries se
 1. **Input RNA-seq**: Identifies genomic variants (SNPs) expressed in the subject's brain tissue.
 2. **IP Fraction**: Identifies variants present in the methylated pool of transcripts. 
    * By comparing allele ratios in the **IP** vs. **Input** libraries, researchers can detect **Allele-Specific Methylation (ASM)**—where one allele of a heterozygous SNP is preferentially methylated over the other.
+
+
+### The core distinction: peak-level vs gene-level quantification
+
+This pipeline is **MeRIP-seq** (m6A IP + RNA-seq), not plain RNA-seq. The quantification step works like this:
+
+```
+STAR alignment → BAM
+       ↓
+TRESS peak calling → consensus_peaks.saf
+       ↓
+featureCounts -F SAF → counts per peak ("peak_1", "peak_2", ...)
+```
+
+The `consensus_peaks.saf` defines **narrow genomic windows** where m6A modifications are detected across the cohort. These are not genes — they are methylation loci. A single gene can have 3, 5, or 10 peaks across its transcript body, all with independent methylation profiles.
+
+### Why the original script failed
+
+The original `01_gene_mapping.R` was written assuming a **standard gene-level RNA-seq** workflow:
+
+```
+featureCounts -a genome.gtf → ENSG00000141510, ENSG00000183722, ...
+                                      ↓
+                          BioMart lookup by Ensembl ID
+                                      ↓
+                               HGNC symbol, biotype
+```
+
+BioMart's `ensembl_gene_id` filter only accepts `ENSG...` accessions. Passing `peak_1`, `peak_2` returns 0 rows — those IDs don't exist in Ensembl.
+
+### Why the new approach is correct
+
+The new script does what the biology requires:
+
+```
+peak_1 (chr19:71006-71355) → BioMart chromosomal_region query
+                                      ↓
+                         Find protein-coding gene overlapping that locus
+                                      ↓
+                               e.g., ENSG → PCSK9
+```
+
+Then multiple peaks mapping to the same gene are **summed**, giving you a gene-level count matrix that represents the total m6A signal per gene — which is what DESeq2 needs for the DGE test. This is exactly the same logic as what tools like exomePeak2 and MeTPeak do internally.
+
+In short: the old script assumed the data came from RNA-seq. The new script correctly treats it as MeRIP-seq peak-level data and maps it back to genes by genomic coordinates.

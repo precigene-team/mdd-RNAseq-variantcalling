@@ -36,6 +36,7 @@ dependencies:
   - r-msigdbr
   - r-ggtext
   - r-biocmanager
+  - r-ashr
   - bioconductor-deseq2
   - bioconductor-biomart
   - bioconductor-apeglm
@@ -44,3 +45,4 @@ dependencies:
   - bioconductor-org.hs.eg.db
   - bioconductor-tress
   - bioconductor-rrho
+  - bioconductor-complexheatmap

@@ -1,4 +1,4 @@
-# [[utils/cell_type_deconvolution.py]]
+# [[utils/qc02_cell_type_deconvolution.py]]
 # Goal: Perform Marker Gene Profile (MGP) analysis to estimate relative cell-type proportions 
 #       between MDD and Control subjects using VST-normalized expression counts.
 
@@ -100,7 +100,7 @@ for cell_type in cell_markers.keys():
 print("="*80)
 
 # Save scores to standardized results directory
-out_path = os.path.join(project_root, "results/utils/tables/cell_type_mgp_scores.csv")
+out_path = os.path.join(project_root, "results/utils/tables/qc02_cell_type_mgp_scores.csv")
 os.makedirs(os.path.dirname(out_path), exist_ok=True)
 df_mgp.to_csv(out_path, index=False)
 print(f"Saved MGP scores to: {out_path}\n")

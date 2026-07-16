@@ -5,26 +5,27 @@
 # Steps:
 #   1. Load dds RDS objects for RNA-seq (Input) and RIP-seq (IP)
 #   2. Load metadata from sample_sheet.csv and annotate dds objects (Gender, Subject, Fraction)
-#   3. Run Baseline DGE (Input/RNA-seq only) for:
+#   3. Apply a relaxed, peak-aware QC library size gate (2M floor) to protect sample pairings
+#   4. Run Baseline DGE (Input/RNA-seq only) for:
 #      - Male DGE (stratified)
 #      - Female DGE (stratified)
 #      - Sex Interaction Model (sex-differential response)
-#   4. Run Baseline DGE (IP/RIP-seq only) for:
+#   5. Run Baseline DGE (IP/RIP-seq only) for:
 #      - Male IP DGE (stratified)
 #      - Female IP DGE (stratified)
-#   5. Run Relative Methylation Interaction DGE for:
-#      - Male Relative Methylation (paired interaction)
-#      - Female Relative Methylation (paired interaction)
+#   6. Run Relative Methylation Interaction DGE on intersecting peaks for:
+#      - Male Relative Methylation (paired interaction with nested subjects)
+#      - Female Relative Methylation (paired interaction with nested subjects)
 #      - Three-Way Interaction (sex-specific methylation change)
-#   6. Shrink log fold changes using apeglm (with fallback to ashr or normal)
-#   7. Save results tables (full and significant) to results/02_dge_analysis/tables/ prefixed with 04_
-#   8. Save serialized dds and results objects to _data/RData/02_dge_analysis/ prefixed with 04_
+#   7. Shrink log fold changes globally using ashr to ensure statistical consistency across all phases
+#   8. Save results tables (full and significant) to results/02_dge_analysis/tables/ prefixed with 04_
+#   9. Save serialized dds and results objects to _data/RData/02_dge_analysis/ prefixed with 04_
 
 suppressPackageStartupMessages({
   library(DESeq2)
   library(dplyr)
   library(readr)
-  library(apeglm)
+  library(ashr)
 })
 
 # Dynamically resolve project root
@@ -106,24 +107,24 @@ message("[INFO] Loading and annotating input DDS objects...")
 dds_rnaseq <- annotate_dds(readRDS(dds_rnaseq_file))
 dds_ripseq <- annotate_dds(readRDS(dds_ripseq_file))
 
-# --- Dynamic QC Gating (Exclude low-quality subjects) ---
-# Minimum 12 Million exonic reads per library to match published cohort QC
-MIN_LIBRARY_SIZE <- 12e6 
+# --- Dynamic QC Gating (Exclude extreme outlier subjects) ---
+MIN_LIBRARY_SIZE <- 2e6 
 
-# Calculate total exonic counts for each sample
+# Calculate total peak-mapped counts for each sample
 rna_lib_sizes <- colSums(counts(dds_rnaseq))
 rip_lib_sizes <- colSums(counts(dds_ripseq))
 
-# Identify subjects where either Input or IP library falls below the gate
+# Identify subjects where either Input or IP library falls below the 2M floor
 low_qual_rna_subs <- colData(dds_rnaseq)$Subject[rna_lib_sizes < MIN_LIBRARY_SIZE]
 low_qual_rip_subs <- colData(dds_ripseq)$Subject[rip_lib_sizes < MIN_LIBRARY_SIZE]
 excluded_subjects <- unique(c(as.character(low_qual_rna_subs), as.character(low_qual_rip_subs)))
 
 if (length(excluded_subjects) > 0) {
-  message("[QC GATE] Excluding subjects with at least one sample < 10M counts: ", 
+  message("[QC GATE] Excluding subjects with at least one library < ", 
+          format(MIN_LIBRARY_SIZE, scientific = FALSE), " counts: ", 
           paste(excluded_subjects, collapse = ", "))
   
-  # Exclude from both datasets to maintain proper subject pairing
+  # Exclude from both datasets to maintain proper subject pairing for interaction models
   dds_rnaseq <- dds_rnaseq[, !colData(dds_rnaseq)$Subject %in% excluded_subjects]
   dds_ripseq <- dds_ripseq[, !colData(dds_ripseq)$Subject %in% excluded_subjects]
   
@@ -131,7 +132,8 @@ if (length(excluded_subjects) > 0) {
   colData(dds_rnaseq)$Subject <- droplevels(colData(dds_rnaseq)$Subject)
   colData(dds_ripseq)$Subject <- droplevels(colData(dds_ripseq)$Subject)
 } else {
-  message("[QC GATE] All subjects successfully passed the library size gate (", MIN_LIBRARY_SIZE, ").")
+  message("[QC GATE] All subjects successfully passed the library size gate (", 
+          format(MIN_LIBRARY_SIZE, scientific = FALSE), ").")
 }
 
 # Helper function to run DESeq2, shrink, and write tables
@@ -178,19 +180,13 @@ run_deseq_and_save <- function(dds_sub, design_formula, coef_regex, contrast_spe
     res_raw <- results(dds_sub, contrast = resolved_contrast, independentFiltering = FALSE)
   }
   
-  # Shrink log fold changes using apeglm with fallback
+  # Shrink log fold changes globally using ashr for perfect statistical consistency
   res <- tryCatch({
-    if (!is.na(actual_coef)) {
-      message("  [INFO] Shrinking with apeglm using coefficient: ", actual_coef)
-      lfcShrink(dds_sub, coef = actual_coef, type = "apeglm")
+    message("  [INFO] Shrinking log fold changes with ashr...")
+    if (use_model_matrix || !is.na(actual_coef)) {
+      lfcShrink(dds_sub, coef = actual_coef, type = "ashr")
     } else {
-      if (requireNamespace("ashr", quietly = TRUE)) {
-        message("  [INFO] Coefficient not found, shrinking with ashr using contrast")
-        lfcShrink(dds_sub, contrast = resolved_contrast, type = "ashr")
-      } else {
-        message("  [INFO] Coefficient not found and ashr not installed. Shrinking with 'normal' using contrast")
-        lfcShrink(dds_sub, contrast = resolved_contrast, type = "normal")
-      }
+      lfcShrink(dds_sub, contrast = resolved_contrast, type = "ashr")
     }
   }, error = function(e) {
     message("  [WARNING] Shrinkage failed. Falling back to default results: ", e$message)

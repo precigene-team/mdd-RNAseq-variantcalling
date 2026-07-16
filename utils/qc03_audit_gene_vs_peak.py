@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# [[04_peak_calling/02_audit_gene_vs_peak.py]]
+# [[utils/audit_gene_vs_peak.py]]
 # Goal: Audit gene-level vs peak-level resolution by mapping narrowPeak coordinates to genes
 #       and checking overlap/concordance with DESeq2 differential methylation results.
 
@@ -29,10 +29,16 @@ def parse_gtf(gtf_path):
         try:
             with open(cache_path, 'rb') as f:
                 gene_intervals, gene_id_to_name = pickle.load(f)
-            print(f"  [SUCCESS] Loaded {sum(len(v) for v in gene_intervals.values())} merged exons from cache.")
+            # After loading, each chrom value is {'intervals': [...], 'starts': [...]}.
+            # Count exon tuples from the nested list, not the dict keys.
+            n_exons = sum(len(v['intervals']) for v in gene_intervals.values())
+            if n_exons < 100_000:
+                print(f"  [WARN] Cache appears corrupt ({n_exons} exons < 100,000 expected). Re-parsing GTF...")
+                raise ValueError("corrupt cache")
+            print(f"  [SUCCESS] Loaded {n_exons} merged exons from cache.")
             return gene_intervals, gene_id_to_name
         except Exception as e:
-            print(f"  [WARN] Failed to load cache: {e}. Re-parsing GTF...")
+            print(f"  [WARN] Cache load failed: {e}. Re-parsing GTF...")
 
     print(f"[INFO] Parsing GTF annotation file: {gtf_path} ...")
     gene_exons = defaultdict(list)
@@ -203,11 +209,20 @@ def audit_peaks(peak_path, gene_intervals, dmg_path, output_report_path=None, qu
     mapped_peaks = 0
     
     with open(peak_path, 'r') as f:
-        # TRESS peaks.xls has a header starting with "chr" or similar
+        # TRESS peaks.xls: tab-separated, 10 columns:
+        # 0=chr, 1=start, 2=end, 3=strand, 4=summit, 5=input_counts,
+        # 6=ip_counts, 7=pvals, 8=p.adj, 9=lg.fc
+        # The first line is always a quoted header — skip it unconditionally.
         first_line = f.readline()
-        if not (first_line.startswith('"chr"') or first_line.startswith('chr') or first_line.startswith('"seqnames"')):
+        is_header = (
+            first_line.startswith('"chr"')
+            or first_line.startswith('chr')
+            or first_line.startswith('"seqnames"')
+        )
+        if not is_header:
+            # Not a header line — rewind so this data row is not lost
             f.seek(0)
-            
+
         for line in f:
             fields = line.strip().split('\t')
             if len(fields) < 3:
@@ -217,7 +232,7 @@ def audit_peaks(peak_path, gene_intervals, dmg_path, output_report_path=None, qu
             start = int(fields[1])
             end = int(fields[2])
             peak_name = f"peak_{total_peaks}"
-            # TRESS lg.fc is in column 9 (10th field)
+            # lg.fc is at index 9 in the TRESS peaks.xls format
             lg_fc = float(fields[9]) if len(fields) > 9 else 0.0
             fold_enrich = 2 ** abs(lg_fc)
             
@@ -323,10 +338,12 @@ def run_cohort_audit(peaks_dir, dmg_male, dmg_female, gene_intervals, output_bas
             sample_name = os.path.basename(peak_path).replace('_peaks.xls', '')
             
         name_lower = sample_name.lower()
-        if 'female' in name_lower:
+        # Check 'female' with startswith to prevent 'female' matching the
+        # 'male' substring check when order is reversed.
+        if name_lower.startswith('female') or '_female_' in name_lower:
             sex = 'female'
             dmg_path = dmg_female
-        elif 'male' in name_lower:
+        elif name_lower.startswith('male') or '_male_' in name_lower:
             sex = 'male'
             dmg_path = dmg_male
         else:

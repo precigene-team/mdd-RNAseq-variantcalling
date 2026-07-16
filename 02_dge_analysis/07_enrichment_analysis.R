@@ -39,14 +39,14 @@ if (!file.exists(mapper_file)) {
   stop("Gene mapper file not found: ", mapper_file)
 }
 
-# Load gene mapping (HGNC symbol to Ensembl ID mapping)
+# Load gene mapping (peak_id → gene_name mapping)
 message("[INFO] Loading gene mapper...")
 gene_mapper <- read_csv(mapper_file, show_col_types = FALSE)
 
-# Retrieve MSigDB Hallmark gene sets (ENSG keys)
+# Retrieve MSigDB Hallmark gene sets (gene symbol keys)
 message("[INFO] Preparing MSigDB Hallmark gene sets...")
 h_t2g <- msigdbr(species = "Homo sapiens", category = "H") %>%
-  dplyr::select(gs_name, ensembl_gene)
+  dplyr::select(gs_name, gene_symbol)
 
 # List of contrasts to analyze
 contrasts <- c(
@@ -74,34 +74,34 @@ for (contrast in contrasts) {
   res_df <- as.data.frame(res_obj)
   res_df$gene_name <- rownames(res_df)
   
-  # Join Ensembl IDs from the gene mapper
+  # Join gene_name; mapper already keyed by gene_name so this is a no-op but
+  # ensures consistent structure with future Ensembl-keyed mappers
   res_df <- res_df %>%
-    left_join(gene_mapper, by = "gene_name") %>%
-    filter(!is.na(gene_id))
+    filter(!is.na(gene_name), gene_name != "")
   
   # 1. Prepare Significant Genes for ORA (pvalue < 0.05 and |log2FoldChange| >= 0.2)
   sig_df <- res_df %>%
     filter(!is.na(pvalue), pvalue < 0.05, abs(log2FoldChange) >= 0.2)
   
-  sig_ensembl <- unique(sig_df$gene_id)
+  sig_symbols <- unique(sig_df$gene_name)
   
-  if (length(sig_ensembl) > 5) {
-    message("  Running Over-Representation Analysis (ORA) on ", length(sig_ensembl), " genes...")
+  if (length(sig_symbols) > 5) {
+    message("  Running Over-Representation Analysis (ORA) on ", length(sig_symbols), " genes...")
     
-    # Map Ensembl to Entrez ID for KEGG
+    # Map SYMBOL to Entrez ID for KEGG
     gene_map <- tryCatch({
-      bitr(sig_ensembl, fromType = "ENSEMBL", toType = c("ENTREZID", "SYMBOL"), OrgDb = org.Hs.eg.db)
+      bitr(sig_symbols, fromType = "SYMBOL", toType = c("ENTREZID", "ENSEMBL"), OrgDb = org.Hs.eg.db)
     }, error = function(e) return(NULL))
     
-    # A. GO Biological Process ORA
+    # A. GO Biological Process ORA (SYMBOL key)
     ego <- tryCatch({
       enrichGO(
-        gene = sig_ensembl,
-        OrgDb = org.Hs.eg.db,
-        keyType = "ENSEMBL",
-        ont = "BP",
+        gene          = sig_symbols,
+        OrgDb         = org.Hs.eg.db,
+        keyType       = "SYMBOL",
+        ont           = "BP",
         pAdjustMethod = "BH",
-        readable = TRUE
+        readable      = FALSE
       )
     }, error = function(e) {
       message("    [CAUTION] GO ORA failed: ", e$message)
@@ -113,11 +113,11 @@ for (contrast in contrasts) {
       message("    [SUCCESS] GO ORA results saved.")
     }
     
-    # B. KEGG ORA
+    # B. KEGG ORA (Entrez IDs)
     if (!is.null(gene_map)) {
       ekegg <- tryCatch({
         enrichKEGG(
-          gene = gene_map$ENTREZID,
+          gene     = gene_map$ENTREZID,
           organism = "hsa"
         )
       }, error = function(e) {
@@ -131,32 +131,32 @@ for (contrast in contrasts) {
       }
     }
   } else {
-    message("  [INFO] Too few significant genes (", length(sig_ensembl), ") for ORA. Skipping.")
+    message("  [INFO] Too few significant genes (", length(sig_symbols), ") for ORA. Skipping.")
   }
   
-  # 2. Prepare Ranked List for GSEA (Using Wald-statistic 'stat')
+  # 2. Prepare Ranked List for GSEA (Wald-statistic, named by gene symbol)
   res_clean <- res_df %>%
-    filter(!is.na(stat), !is.na(gene_id)) %>%
-    distinct(gene_id, .keep_all = TRUE)
+    filter(!is.na(stat), !is.na(gene_name)) %>%
+    distinct(gene_name, .keep_all = TRUE)
   
   ranked_genes <- res_clean$stat
-  names(ranked_genes) <- res_clean$gene_id
+  names(ranked_genes) <- res_clean$gene_name
   ranked_genes <- sort(ranked_genes, decreasing = TRUE)
   
   if (length(ranked_genes) > 10) {
     message("  Running Gene Set Enrichment Analysis (GSEA)...")
     
-    # A. GSEA GO Biological Process
+    # A. GSEA GO Biological Process (SYMBOL key)
     ego_gsea <- tryCatch({
       gseGO(
-        geneList = ranked_genes,
-        OrgDb = org.Hs.eg.db,
-        keyType = "ENSEMBL",
-        ont = "BP",
-        minGSSize = 10,
-        maxGSSize = 500,
+        geneList     = ranked_genes,
+        OrgDb        = org.Hs.eg.db,
+        keyType      = "SYMBOL",
+        ont          = "BP",
+        minGSSize    = 10,
+        maxGSSize    = 500,
         pvalueCutoff = 0.05,
-        verbose = FALSE
+        verbose      = FALSE
       )
     }, error = function(e) {
       message("    [CAUTION] GSEA GO failed: ", e$message)
