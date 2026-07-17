@@ -52,12 +52,15 @@ plot_contrast_results <- function(rds_prefix, volcano_name, ma_name, plot_title)
   res_df$padj <- res_raw$padj
   res_df$gene_name <- rownames(res_df)
   
+  # LFC threshold matching paper: FC > 1.2 => log2(1.2) ≈ 0.263
+  LFC_THRESH <- log2(1.2)
+
   # 1. Volcano Plot
   volcano_df <- res_df %>%
     mutate(
       Regulation = case_when(
-        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange >= 0.2 ~ "Upregulated",
-        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange <= -0.2 ~ "Downregulated",
+        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange >= LFC_THRESH ~ "Upregulated",
+        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange <= -LFC_THRESH ~ "Downregulated",
         TRUE ~ "Non-significant"
       ),
       Regulation = factor(Regulation, levels = c("Downregulated", "Non-significant", "Upregulated")),
@@ -72,7 +75,7 @@ plot_contrast_results <- function(rds_prefix, volcano_name, ma_name, plot_title)
   
   volcano_plot <- ggplot(volcano_df, aes(x = log2FoldChange, y = negLog10P)) +
     geom_point(aes(color = Regulation), alpha = 0.6, size = 1.5) +
-    geom_vline(xintercept = c(-0.2, 0.2), linetype = "dashed", color = "grey50") +
+    geom_vline(xintercept = c(-LFC_THRESH, LFC_THRESH), linetype = "dashed", color = "grey50") +
     geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "grey50") +
     geom_text_repel(
       data = top_labels,
@@ -111,8 +114,8 @@ plot_contrast_results <- function(rds_prefix, volcano_name, ma_name, plot_title)
   ma_df <- res_df %>%
     mutate(
       Regulation = case_when(
-        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange >= 0.2 ~ "Upregulated",
-        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange <= -0.2 ~ "Downregulated",
+        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange >= LFC_THRESH ~ "Upregulated",
+        !is.na(pvalue) & pvalue < 0.05 & log2FoldChange <= -LFC_THRESH ~ "Downregulated",
         TRUE ~ "Non-significant"
       ),
       Regulation = factor(Regulation, levels = c("Downregulated", "Non-significant", "Upregulated"))
@@ -125,7 +128,7 @@ plot_contrast_results <- function(rds_prefix, volcano_name, ma_name, plot_title)
       labels = scales::trans_format("log10", scales::math_format(10^.x))
     ) +
     geom_hline(yintercept = 0, color = "#1f78b4", linetype = "dashed", linewidth = 0.8) +
-    geom_hline(yintercept = c(-0.2, 0.2), color = "grey50", linetype = "dotted") +
+    geom_hline(yintercept = c(-LFC_THRESH, LFC_THRESH), color = "grey50", linetype = "dotted") +
     scale_color_manual(
       values = c("Downregulated" = "#1f78b4", "Non-significant" = "grey70", "Upregulated" = "#e31a1c"),
       labels = c("Downregulated" = "Downregulated", "Non-significant" = "Non-significant", "Upregulated" = "Upregulated")
@@ -190,6 +193,18 @@ contrasts_list <- list(
     volcano = "05_volcano_female_meth.png",
     ma = "05_ma_female_meth.png",
     title = "Female Relative Methylation (Interaction)"
+  ),
+  list(
+    rds_prefix = "deg_sex_interaction_input",
+    volcano = "05_volcano_sex_interaction_input.png",
+    ma = "05_ma_sex_interaction_input.png",
+    title = "Sex-Specific MDD Response\n(Gender × Condition Interaction)"
+  ),
+  list(
+    rds_prefix = "meth_sex_interaction",
+    volcano = "05_volcano_sex_interaction_meth.png",
+    ma = "05_ma_sex_interaction_meth.png",
+    title = "Sex-Specific m⁶A Methylation\n(Gender × Condition × Fraction)"
   )
 )
 

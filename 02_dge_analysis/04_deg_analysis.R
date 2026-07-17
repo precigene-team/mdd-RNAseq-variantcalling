@@ -210,12 +210,13 @@ run_deseq_and_save <- function(dds_sub, design_formula, coef_regex, contrast_spe
     quote = FALSE
   )
   
-  # Primary Significance Filter: pvalue < 0.05 and |log2FC| >= 0.2
+  # Primary Significance Filter: pvalue < 0.05 and |log2FC| >= log2(1.2) (FC > 1.2, paper standard)
+  LFC_THRESHOLD <- log2(1.2)  # ≈ 0.263
   sig_df <- res_df %>%
     filter(
       !is.na(pvalue),
       pvalue < 0.05,
-      abs(log2FoldChange) >= 0.2
+      abs(log2FoldChange) >= LFC_THRESHOLD
     )
   
   # Save sig table with prefix 04_
