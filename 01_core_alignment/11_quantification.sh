@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[01_core_alignment/10_quantification.sh]]
+# [[01_core_alignment/11_quantification.sh]]
 # Goal: Run featureCounts on aligned BAM files.
 
 # Steps:
