@@ -147,6 +147,52 @@ while [ "$#" -gt 0 ]; do
                         echo "  -> Submitted Step $step_num ($name) - Job ID: $PREV_JOB_ID (Dependent on $dep_arg)"
                     fi
                 done
+
+                # --- Steps 06-10: Downstream VC Analysis (HPC only) ---
+                mkdir -p "$PROJECT_ROOT/_data/logs/ase" \
+                         "$PROJECT_ROOT/_data/logs/asm" \
+                         "$PROJECT_ROOT/_data/logs/drach"
+
+                # Step 06: GATK ASEReadCounter (depends on step 05)
+                echo ""
+                echo "[INFO] Submitting Step 6 (ASE ReadCounter)..."
+                ASE_JOB_ID=$(sbatch --parsable \
+                    --dependency=afterok:$PREV_JOB_ID \
+                    --job-name="vc_ase" \
+                    --array="0-38%${VC_ARRAY_CONCURRENCY}" \
+                    "$PROJECT_ROOT/03_variant_calling/06_ase_readcounter.sbatch")
+                echo "  -> Submitted Step 6 (ASE ReadCounter) - Job ID: $ASE_JOB_ID"
+
+                # Step 07: M6Allele ASM (depends on step 06)
+                echo "[INFO] Submitting Step 7 (M6Allele ASM)..."
+                ASM_JOB_ID=$(sbatch --parsable \
+                    --dependency=afterok:$ASE_JOB_ID \
+                    --job-name="vc_asm" \
+                    --array="0-38%${VC_ARRAY_CONCURRENCY}" \
+                    "$PROJECT_ROOT/03_variant_calling/07_m6allele_asm.sh")
+                echo "  -> Submitted Step 7 (M6Allele ASM) - Job ID: $ASM_JOB_ID"
+
+                # Steps 08-10: DRACH annotation (single job, depends on step 07)
+                echo "[INFO] Submitting Steps 8-10 (DRACH annotation)..."
+                DRACH_JOB_ID=$(sbatch --parsable \
+                    --dependency=afterok:$ASM_JOB_ID \
+                    --job-name="vc_drach" \
+                    --cpus-per-task=2 \
+                    --mem=8G \
+                    --time=02:00:00 \
+                    --output="$PROJECT_ROOT/_data/logs/drach/job_%j.log" \
+                    --error="$PROJECT_ROOT/_data/logs/drach/job_%j.err" \
+                    --export="PROJECT_ROOT=$PROJECT_ROOT" \
+                    --wrap="cd $PROJECT_ROOT && \
+                        python3 03_variant_calling/08_find_drach_sites.py && \
+                        bash 03_variant_calling/09_intersect_drach_snps.sh && \
+                        python3 03_variant_calling/10_annotate_drach_disruption.py")
+                echo "  -> Submitted Steps 8-10 (DRACH annotation) - Job ID: $DRACH_JOB_ID"
+                echo ""
+                echo "========================================================="
+                echo "   All VC steps submitted. Pipeline is running."
+                echo "   Monitor with: squeue -u \$USER"
+                echo "========================================================="
                 exit 0
             fi
             ;;
