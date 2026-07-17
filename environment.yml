@@ -24,6 +24,7 @@ dependencies:
   # Python Stack
   - python=3.9
   - pandas
+  - matplotlib
   - tqdm
   - pip
   
