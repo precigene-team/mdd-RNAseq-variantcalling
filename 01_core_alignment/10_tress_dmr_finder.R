@@ -126,7 +126,7 @@ DMR.fit <- TRESS_DMRfit(
   variable           = variable_df,
   model              = model,
   binsize            = 50,
-  WhichThreshold     = "p_lfc",
+  WhichThreshold     = "pval_lfc",
   pval.cutoff        = 0.05,
   fdr.cutoff         = 0.05,
   lfc.cutoff         = log2(1.2),
