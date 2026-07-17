@@ -220,9 +220,14 @@ if [ "$RUN_CORE" = true ]; then
         echo ">>> Merging TRESS Peaks into Cohort Consensus..."
         Rscript 09_merge_tress_peaks.R
 
-        bash 10_quantification.sh
-        bash 11_counts_qc.sh
-        bash 12_multiqc.sh
+        echo ">>> Running TRESS DMR Finder (male + female in parallel)..."
+        bash 10_tress_dmr_finder.sh male &
+        bash 10_tress_dmr_finder.sh female &
+        wait
+
+        bash 11_quantification.sh
+        bash 12_counts_qc.sh
+        bash 13_multiqc.sh
     ) || { echo "Core Alignment failed. Exiting."; exit 1; }
     echo "CORE ALIGNMENT COMPLETE."
     echo ""
@@ -233,11 +238,16 @@ if [ "$RUN_DGE" = true ]; then
     echo ">>> Running DGE ANALYSIS Module..."
     (
         cd 02_dge_analysis/
-        Rscript 01_gene_mapping.R
-        Rscript 02_rna_processing.R
-        Rscript 03_pca_analysis.R
+        # Rscript 01_gene_mapping.R
+        # Rscript 02_rna_processing.R
+        # Rscript 03_pca_analysis.R
         Rscript 04_deg_analysis.R
         Rscript 05_dge_plotting.R
+        Rscript 06_annotate_results.R
+        Rscript 07_enrichment_analysis.R
+        Rscript 08_enrichment_plotting.R
+        Rscript 09_heatmap_pathway.R
+        Rscript 10_rrho2_sex_comparison.R
     ) || { echo "DGE Analysis failed. Exiting."; exit 1; }
     echo "DGE ANALYSIS COMPLETE."
     echo ""
