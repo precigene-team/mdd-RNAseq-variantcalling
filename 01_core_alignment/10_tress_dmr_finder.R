@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # [[01_core_alignment/10_tress_dmr_finder.R]]
-# Goal: Run TRESS_DMRfinder for a sex-stratified cohort (male or female)
+# Goal: Run TRESS DMR analysis for a sex-stratified cohort (male or female)
 #       to identify differentially methylated regions (DMRs) between MDD and ctrl.
 
 # Steps:
@@ -9,7 +9,7 @@
 #   3. Build IP.file and Input.file vectors for the cohort.
 #   4. Assert BAM files exist on the HPC path.
 #   5. Build variable data.frame (SampleType: ctrl/mdd).
-#   6. Run TRESS_DMRfinder with paper-matched thresholds.
+#   6. Run TRESS_DMRfit + TRESS_DMRtest with paper-matched thresholds.
 #   7. Save full results table and significant DMR table.
 
 if (!requireNamespace("TRESS", quietly = TRUE)) {
@@ -31,7 +31,7 @@ sex <- tolower(args[1])
 if (!sex %in% c("male", "female")) {
   stop("ERROR: sex must be 'male' or 'female', got: ", sex)
 }
-message("[INFO] Running TRESS_DMRfinder for sex: ", sex)
+message("[INFO] Running TRESS DMR analysis for sex: ", sex)
 
 # --- 2. Resolve project root ---
 project_root <- Sys.getenv("PROJECT_ROOT")
@@ -112,48 +112,48 @@ variable_df <- data.frame(
 message("[INFO] Sample variable table:")
 print(variable_df)
 
-# --- 8. Run TRESS_DMRfinder ---
+# --- 8. Run TRESS_DMRfit (model fitting) ---
 # Paper-matched thresholds: p < 0.05, FC > 1.2
-message("[INFO] Running TRESS_DMRfinder (this may take 30–90 min on HPC)...")
-TRESS_DMRfinder(
+model <- ~ SampleType
+message("[INFO] Running TRESS_DMRfit (this may take 30–90 min on HPC)...")
+DMR.fit <- TRESS_DMRfit(
   IP.file            = ip_files,
   Input.file         = input_files,
   Path_To_AnnoSqlite = sqlite_file,
   InputDir           = bam_dir,
-  OutDir             = out_dir,
+  OutputDir          = out_dir,
+  experimentName     = "DMRfit",
   variable           = variable_df,
-  varOfInterest      = "SampleType",
-  filter             = FALSE,
-  cutoff             = 0.5,
+  model              = model,
   binsize            = 50,
   WhichThreshold     = "p_lfc",
   pval.cutoff        = 0.05,
   fdr.cutoff         = 0.05,
-  lfc.cutoff         = log2(1.2),    # FC > 1.2 — paper standard
+  lfc.cutoff         = log2(1.2),
   filetype           = "bam",
-  IncludeIntron      = FALSE
+  IncludeIntron      = FALSE,
+  filterRegion       = FALSE
 )
-message("[INFO] TRESS_DMRfinder complete.")
+message("[INFO] TRESS_DMRfit complete.")
 
-# --- 9. Load results and save tables ---
-dmr_file <- file.path(out_dir, "DMRs.RData")
-if (!file.exists(dmr_file)) {
-  stop("ERROR: Expected DMRs.RData not found at: ", dmr_file)
-}
+# --- 9. Run TRESS_DMRtest (hypothesis testing, mdd vs ctrl) ---
+message("[INFO] Running TRESS_DMRtest...")
+DMR.test <- TRESS_DMRtest(DMR = DMR.fit, contrast = c(0, 1))
+message("[INFO] TRESS_DMRtest complete.")
 
-load(dmr_file)   # loads object named 'DMRs' or 'allDMRs'
-dmr_obj <- if (exists("DMRs")) DMRs else allDMRs
+# --- 10. Save results ---
+# Save full fit object (for potential downstream loading)
+save(DMR.fit, file = file.path(out_dir, "DMRs.RData"))
 
-dmr_df <- as.data.frame(dmr_obj)
-
-# Save full results
+# Save full test results as CSV
+dmr_df <- as.data.frame(DMR.test)
 out_full <- file.path(results_dir, paste0("10_dmr_", sex, "_full.csv"))
 write.csv(dmr_df, out_full, row.names = FALSE, quote = FALSE)
 message("[INFO] Full DMR results saved: ", out_full)
 
-# Save significant DMRs (p < 0.05, |LFC| >= log2(1.2))
+# Save significant DMRs (p < 0.05, |logOR| >= log2(1.2))
 sig_dmr_df <- dmr_df %>%
-  filter(!is.na(pvalue), pvalue < 0.05, abs(log2FC) >= log2(1.2))
+  filter(!is.na(pvalue), pvalue < 0.05, abs(logOR) >= log2(1.2))
 out_sig <- file.path(results_dir, paste0("10_dmr_", sex, "_sig.csv"))
 write.csv(sig_dmr_df, out_sig, row.names = FALSE, quote = FALSE)
 message("[INFO] Significant DMRs (", nrow(sig_dmr_df), "): ", out_sig)
