@@ -31,6 +31,9 @@ _data/logs/
 _data/rrna_databases/
 _data/variant/
 _data/peaks/
+_data/ase/
+_data/dmr/
+_data/dsm/
 _data/tmp/
 
 # --- Keep _metadata and logs tracked (small, important) ---
