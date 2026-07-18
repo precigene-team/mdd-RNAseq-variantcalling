@@ -66,8 +66,9 @@ run_subject_asm() {
     INPUT_BAM="$SPLIT_DIR/${SUBJ}_input.split.bam"
     IP_BAM="$SPLIT_DIR/${SUBJ}_m6A.split.bam"
     VCF_FILE="$VCF_DIR/${SUBJ}_input.filtered.vcf.gz"
-    ASM_TMP_DIR="$ASM_DIR/tmp/${SUBJ}"
+    ASM_TMP="$ASM_DIR/tmp"
     ASM_OUT="$ASM_DIR/${SUBJ}_asmPeak.txt"
+    FIXED_VCF="$ASM_TMP/${SUBJ}_fixed_input.vcf"
 
     # Resolve BAI files (can be named .split.bai or .split.bam.bai)
     INPUT_BAI="$SPLIT_DIR/${SUBJ}_input.split.bai"
@@ -84,7 +85,7 @@ run_subject_asm() {
         fi
     done
 
-    mkdir -p "$ASM_TMP_DIR"
+    mkdir -p "$ASM_TMP"
 
     # Skip if outputs already exist and are non-empty
     if [ -s "$ASM_OUT" ]; then
@@ -95,7 +96,6 @@ run_subject_asm() {
     # --- Decompress VCF for M6Allele ---
     # M6Allele's FileInputStream does not handle gzipped files.
     # Reading compressed binary produces single-element split lines → crash.
-    FIXED_VCF="$ASM_TMP_DIR/fixed_input.vcf"
     echo ">>> Decompressing VCF for M6Allele..."
     gunzip -c "$VCF_FILE" > "$FIXED_VCF"
 
@@ -108,18 +108,17 @@ run_subject_asm() {
         -inputBai "$INPUT_BAI" \
         -ipBam "$IP_BAM" \
         -ipBai "$IP_BAI" \
-        -o "$ASM_TMP_DIR"
+        -o "$ASM_OUT"
 
-    # Validate and flatten output
-    if [ ! -s "$ASM_TMP_DIR/asmPeak.txt" ]; then
+    # Validate output
+    if [ ! -s "$ASM_OUT" ]; then
         echo "Assertion Error: M6Allele did not generate non-empty output for $SUBJ." >&2
         return 1
     fi
-    mv "$ASM_TMP_DIR/asmPeak.txt" "$ASM_OUT"
     echo ">>> Completed ASM for $SUBJ → $ASM_OUT"
 
-    # Clean up temp dir and decompressed VCF
-    rm -rf "$ASM_TMP_DIR"
+    # Clean up decompressed VCF
+    rm -f "$FIXED_VCF"
 }
 
 # --- Execution ---
