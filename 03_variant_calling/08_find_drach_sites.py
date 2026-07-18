@@ -13,6 +13,7 @@
 
 import os
 import re
+import subprocess
 import sys
 
 # --- Dynamic Pathing ---
@@ -60,9 +61,19 @@ print(f"[INFO] Loaded {len(peak_coords)} peaks.")
 # --- Step 2: Parse FASTA ---
 print("[INFO] Scanning peak FASTA for DRACH motifs...")
 if not os.path.isfile(PEAKS_FA):
-    print(f"Assertion Error: consensus_peaks.fa not found at {PEAKS_FA}")
-    print("Run 04_validation/01_ame_motif_enrichment.sh first (or bedtools getfasta manually).")
-    sys.exit(1)
+    print(f"[INFO] consensus_peaks.fa not found. Generating with bedtools getfasta...")
+    REF_FA = os.path.join(project_root, "_data", "genome", "Homo_sapiens.GRCh38.dna.primary_assembly.fa")
+    if not os.path.isfile(REF_FA):
+        print(f"Assertion Error: Reference genome missing: {REF_FA}", file=sys.stderr)
+        sys.exit(1)
+    result = subprocess.run(
+        ["bedtools", "getfasta", "-fi", REF_FA, "-bed", PEAKS_BED, "-name", "-fo", PEAKS_FA],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        print(f"Assertion Error: bedtools getfasta failed:\n{result.stderr}", file=sys.stderr)
+        sys.exit(1)
+    print(f"[INFO] Generated {PEAKS_FA}")
 
 def iter_fasta(path):
     """Yield (header, sequence) pairs from a FASTA file."""
