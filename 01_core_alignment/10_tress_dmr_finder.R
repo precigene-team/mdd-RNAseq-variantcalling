@@ -51,7 +51,7 @@ csv_file    <- file.path(project_root, "_data/_metadata/sample_sheet.csv")
 bam_dir     <- file.path(project_root, "_data/bam")
 sqlite_file <- file.path(project_root, "_data/genome/Homo_sapiens.GRCh38.115.sqlite")
 out_dir     <- file.path(project_root, "_data/dmr", sex)
-results_dir <- file.path(project_root, "results/tables")
+results_dir <- file.path(project_root, "results/02_dge_analysis/tables")
 dir.create(out_dir,     recursive = TRUE, showWarnings = FALSE)
 dir.create(results_dir, recursive = TRUE, showWarnings = FALSE)
 

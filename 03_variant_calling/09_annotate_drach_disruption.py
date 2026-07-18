@@ -20,8 +20,7 @@ project_root = os.environ.get("PROJECT_ROOT") or os.path.normpath(
 )
 
 intersect = os.path.join(project_root, "_data", "logs", "drach", "tmp", "snp_drach_intersect.bed")
-out_table = os.path.join(project_root, "results", "tables", "13_drach_disrupting_snps.csv")
-
+out_table = os.path.join(project_root, "results", "03_variant_calling", "tables", "09_drach_disrupting_snps.csv")
 # --- Input Assertion ---
 if not os.path.isfile(intersect):
     print(f"Assertion Error: Intersection BED not found: {intersect}", file=sys.stderr)

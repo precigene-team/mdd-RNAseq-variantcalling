@@ -24,11 +24,11 @@ fi
 # --- Paths ---
 DRACH_BED="$PROJECT_ROOT/_data/peaks/drach_sites.bed"
 VCF_DIR="$PROJECT_ROOT/_data/variant/filtered_vcf"
-OUT_TABLES="$PROJECT_ROOT/results/tables"
-OUT_FIGURES="$PROJECT_ROOT/results/figures"
+OUT_TABLES="$PROJECT_ROOT/results/03_variant_calling/tables"
+OUT_FIGURES="$PROJECT_ROOT/results/03_variant_calling/figures"
 LOG_DIR="$PROJECT_ROOT/_data/logs/drach"
 TMP_DIR="$PROJECT_ROOT/_data/logs/drach/tmp"
-DRACH_ANNO="$OUT_TABLES/13_drach_disrupting_snps.csv"
+DRACH_ANNO="$OUT_TABLES/09_drach_disrupting_snps.csv"
 
 mkdir -p "$LOG_DIR" "$TMP_DIR" "$OUT_TABLES" "$OUT_FIGURES"
 

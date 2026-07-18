@@ -41,7 +41,7 @@ BAM_DIR="$PROJECT_ROOT/_data/bam"
 ASE_DIR="$PROJECT_ROOT/_data/ase"
 LOG_DIR="$PROJECT_ROOT/_data/logs/ase"
 CSV_DIR="$PROJECT_ROOT/_data/metadata"
-SAMPLE_SHEET="$PROJECT_ROOT/_data/_metadata/sample_sheet_original.csv"
+SAMPLE_SHEET="$PROJECT_ROOT/_data/_metadata/sample_sheet.csv"
 
 mkdir -p "$ASE_DIR" "$LOG_DIR"
 

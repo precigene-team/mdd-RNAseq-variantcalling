@@ -13,8 +13,8 @@
 #SBATCH --error=_data/logs/asm/%x_%A_%a.err
 #SBATCH --array=0-38
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=8G
-#SBATCH --time=02:00:00
+#SBATCH --mem=16G
+#SBATCH --time=24:00:00
 
 set -e
 set -o pipefail
@@ -36,9 +36,9 @@ PEAKS_BED="$PROJECT_ROOT/_data/peaks/consensus_peaks.bed"
 GTF_FILE="$PROJECT_ROOT/_data/genome/Homo_sapiens.GRCh38.115.gtf"
 VCF_DIR="$PROJECT_ROOT/_data/variant/filtered_vcf"
 SPLIT_DIR="$PROJECT_ROOT/_data/variant/split_n_cigar"
-ASM_DIR="$PROJECT_ROOT/results/tables/12_asm"
+ASM_DIR="$PROJECT_ROOT/results/03_variant_calling/tables"
 LOG_DIR="$PROJECT_ROOT/_data/logs/asm"
-SAMPLE_SHEET="$PROJECT_ROOT/_data/_metadata/sample_sheet_original.csv"
+SAMPLE_SHEET="$PROJECT_ROOT/_data/_metadata/sample_sheet.csv"
 
 mkdir -p "$ASM_DIR" "$LOG_DIR"
 
@@ -91,11 +91,18 @@ run_subject_asm() {
         return 0
     fi
 
+    # --- Decompress VCF for M6Allele ---
+    # M6Allele's FileInputStream does not handle gzipped files.
+    # Reading compressed binary produces single-element split lines → crash.
+    FIXED_VCF="$SUBJ_OUT_DIR/fixed_input.vcf"
+    echo ">>> Decompressing VCF for M6Allele..."
+    gunzip -c "$VCF_FILE" > "$FIXED_VCF"
+
     echo ">>> Running M6Allele.jar AsmPeakDetection..."
     java -jar "$M6ALLELE_JAR" AsmPeakDetection \
         -g "$GTF_FILE" \
         -bed "$PEAKS_BED" \
-        -vcf "$VCF_FILE" \
+        -vcf "$FIXED_VCF" \
         -inputBam "$INPUT_BAM" \
         -inputBai "$INPUT_BAI" \
         -ipBam "$IP_BAM" \
@@ -108,6 +115,9 @@ run_subject_asm() {
         return 1
     fi
     echo ">>> Completed ASM for $SUBJ."
+
+    # Clean up filtered VCF
+    rm -f "$FIXED_VCF" "$FIXED_VCF.tbi"
 }
 
 # --- Execution ---
