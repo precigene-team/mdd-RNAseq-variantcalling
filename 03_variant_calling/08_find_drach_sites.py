@@ -40,7 +40,7 @@ def rev_comp(seq: str) -> str:
 # --- Step 1: Parse BED to build coordinate lookup ---
 # BED format: chr  start  end  peak_name  (0-based start, end exclusive)
 print("[INFO] Loading consensus peaks BED...")
-peak_coords: dict[str, tuple[str, int, int, str]] = {}   # name → (chrom, start, end, strand)
+peak_coords = {}   # name → (chrom, start, end, strand)
 
 with open(PEAKS_BED) as fh:
     for line in fh:
