@@ -172,10 +172,10 @@ while [ "$#" -gt 0 ]; do
                     "$PROJECT_ROOT/03_variant_calling/07_m6allele_asm.sh")
                 echo "  -> Submitted Step 7 (M6Allele ASM) - Job ID: $ASM_JOB_ID"
 
-                # Steps 08-10: DRACH annotation (single job, depends on step 07)
+                # Steps 08-10: DRACH annotation (single job, depends on step 05 variant filtration)
                 echo "[INFO] Submitting Steps 8-10 (DRACH annotation)..."
                 DRACH_JOB_ID=$(sbatch --parsable \
-                    --dependency=afterok:$ASM_JOB_ID \
+                    --dependency=afterok:$PREV_JOB_ID \
                     --job-name="vc_drach" \
                     --cpus-per-task=2 \
                     --mem=8G \
@@ -185,8 +185,7 @@ while [ "$#" -gt 0 ]; do
                     --export="PROJECT_ROOT=$PROJECT_ROOT" \
                     --wrap="cd $PROJECT_ROOT && \
                         python3 03_variant_calling/08_find_drach_sites.py && \
-                        bash 03_variant_calling/09_intersect_drach_snps.sh && \
-                        python3 03_variant_calling/10_annotate_drach_disruption.py")
+                        bash 03_variant_calling/09_intersect_drach_snps.sh")
                 echo "  -> Submitted Steps 8-10 (DRACH annotation) - Job ID: $DRACH_JOB_ID"
                 echo ""
                 echo "========================================================="

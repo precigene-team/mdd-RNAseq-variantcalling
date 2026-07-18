@@ -85,7 +85,7 @@ fi
 
 # --- Step 3: Annotate disruption type ---
 echo ">>> Step 3: Annotating motif disruption type (delegating to 10_annotate_drach_disruption.py)..."
-python3 "$PROJECT_ROOT/03_variant_calling/10_annotate_drach_disruption.py"
+python3 "$PROJECT_ROOT/03_variant_calling/09_annotate_drach_disruption.py"
 
 
 # --- Output Assertion ---
