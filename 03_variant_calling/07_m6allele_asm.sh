@@ -69,6 +69,7 @@ run_subject_asm() {
     ASM_TMP="$ASM_DIR/tmp"
     ASM_OUT="$ASM_DIR/${SUBJ}_asmPeak.txt"
     FIXED_VCF="$ASM_TMP/${SUBJ}_fixed_input.vcf"
+    WORK_DIR="$ASM_TMP/${SUBJ}_work"
 
     # Resolve BAI files (can be named .split.bai or .split.bam.bai)
     INPUT_BAI="$SPLIT_DIR/${SUBJ}_input.split.bai"
@@ -85,7 +86,7 @@ run_subject_asm() {
         fi
     done
 
-    mkdir -p "$ASM_TMP"
+    mkdir -p "$ASM_TMP" "$WORK_DIR"
 
     # Skip if outputs already exist and are non-empty
     if [ -s "$ASM_OUT" ]; then
@@ -99,7 +100,8 @@ run_subject_asm() {
     echo ">>> Decompressing VCF for M6Allele..."
     gunzip -c "$VCF_FILE" > "$FIXED_VCF"
 
-    echo ">>> Running M6Allele.jar AsmPeakDetection..."
+    echo ">>> Running M6Allele.jar AsmPeakDetection (workdir: $WORK_DIR)..."
+    cd "$WORK_DIR"
     java -jar "$M6ALLELE_JAR" AsmPeakDetection \
         -g "$GTF_FILE" \
         -bed "$PEAKS_BED" \
@@ -117,8 +119,9 @@ run_subject_asm() {
     fi
     echo ">>> Completed ASM for $SUBJ → $ASM_OUT"
 
-    # Clean up decompressed VCF
+    # Clean up decompressed VCF and work dir
     rm -f "$FIXED_VCF"
+    rm -rf "$WORK_DIR"
 }
 
 # --- Execution ---
