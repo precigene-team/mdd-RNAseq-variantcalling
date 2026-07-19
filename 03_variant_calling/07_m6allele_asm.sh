@@ -42,6 +42,13 @@ SAMPLE_SHEET="$PROJECT_ROOT/_data/_metadata/sample_sheet.csv"
 
 mkdir -p "$ASM_DIR" "$LOG_DIR"
 
+# --- Compute Java heap (75% of Slurm allocation, default 8G locally) ---
+if [ -n "${SLURM_MEM_PER_NODE:-}" ]; then
+    JAVA_HEAP_MB=$(( SLURM_MEM_PER_NODE * 3 / 4 ))
+else
+    JAVA_HEAP_MB=8192
+fi
+
 # --- Validate M6Allele.jar exists ---
 if [ ! -f "$M6ALLELE_JAR" ]; then
     echo "Assertion Error: M6Allele.jar was not found at: $M6ALLELE_JAR" >&2
@@ -109,7 +116,7 @@ run_subject_asm() {
 
     echo ">>> Running M6Allele.jar AsmPeakDetection (workdir: $WORK_DIR)..."
     cd "$WORK_DIR"
-    if java -Xmx24G -jar "$M6ALLELE_JAR" AsmPeakDetection \
+    if java -Xmx${JAVA_HEAP_MB}M -jar "$M6ALLELE_JAR" AsmPeakDetection \
         -g "$GTF_FILE" \
         -bed "$PEAKS_BED" \
         -vcf "$FIXED_VCF" \
