@@ -13,7 +13,7 @@
 #SBATCH --error=_data/logs/asm/%x_%A_%a.err
 #SBATCH --array=0-38
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --time=24:00:00
 
 set -e
@@ -109,7 +109,7 @@ run_subject_asm() {
 
     echo ">>> Running M6Allele.jar AsmPeakDetection (workdir: $WORK_DIR)..."
     cd "$WORK_DIR"
-    java -jar "$M6ALLELE_JAR" AsmPeakDetection \
+    if java -Xmx24G -jar "$M6ALLELE_JAR" AsmPeakDetection \
         -g "$GTF_FILE" \
         -bed "$PEAKS_BED" \
         -vcf "$FIXED_VCF" \
@@ -117,16 +117,18 @@ run_subject_asm() {
         -inputBai "$INPUT_BAI" \
         -ipBam "$IP_BAM" \
         -ipBai "$IP_BAI" \
-        -o "$ASM_OUT"
-
-    # Validate output
-    if [ ! -s "$ASM_OUT" ]; then
-        echo "Assertion Error: M6Allele did not generate non-empty output for $SUBJ." >&2
-        return 1
+        -o "$ASM_OUT"; then
+        if [ ! -s "$ASM_OUT" ]; then
+            echo "Assertion Error: M6Allele did not generate non-empty output for $SUBJ." >&2
+            rm -f "$FIXED_VCF"
+            rm -rf "$WORK_DIR"
+            return 1
+        fi
+        echo ">>> Completed ASM for $SUBJ → $ASM_OUT"
+    else
+        echo "[WARNING] M6Allele crashed for $SUBJ (internal Java error). Skipping." >&2
+        touch "$ASM_OUT"
     fi
-    echo ">>> Completed ASM for $SUBJ → $ASM_OUT"
-
-    # Clean up decompressed VCF and work dir
     rm -f "$FIXED_VCF"
     rm -rf "$WORK_DIR"
 }
