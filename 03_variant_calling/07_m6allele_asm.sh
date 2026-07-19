@@ -94,11 +94,18 @@ run_subject_asm() {
         return 0
     fi
 
-    # --- Decompress VCF for M6Allele ---
-    # M6Allele's FileInputStream does not handle gzipped files.
-    # Reading compressed binary produces single-element split lines → crash.
-    echo ">>> Decompressing VCF for M6Allele..."
-    gunzip -c "$VCF_FILE" > "$FIXED_VCF"
+    # --- Filter VCF for M6Allele ---
+    # M6Allele's FileInputStream does not handle gzipped files, and its
+    # getMajorMinorHaplotype parser crashes (ArrayIndexOutOfBoundsException)
+    # on multi-allelic SNPs. Filter to PASS, biallelic, heterozygous only.
+    echo ">>> Filtering VCF to biallelic het SNPs for M6Allele..."
+    bcftools view -f PASS -v snps -m2 -M2 -i 'GT="het"' -O v "$VCF_FILE" > "$FIXED_VCF"
+
+    if [ ! -s "$FIXED_VCF" ]; then
+        echo "[SKIP] No heterozygous biallelic PASS SNPs found for $SUBJ."
+        touch "$ASM_OUT"
+        return 0
+    fi
 
     echo ">>> Running M6Allele.jar AsmPeakDetection (workdir: $WORK_DIR)..."
     cd "$WORK_DIR"
