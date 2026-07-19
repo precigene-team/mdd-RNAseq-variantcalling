@@ -33,7 +33,7 @@ _data/variant/
 _data/peaks/
 _data/ase/
 _data/dmr/
-_data/dsm/
+_data/asm/
 _data/tmp/
 
 # --- Keep _metadata and logs tracked (small, important) ---
