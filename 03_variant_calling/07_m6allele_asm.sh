@@ -74,8 +74,6 @@ run_subject_asm() {
     IP_BAM="$SPLIT_DIR/${SUBJ}_m6A.split.bam"
     VCF_FILE="$VCF_DIR/${SUBJ}_input.filtered.vcf.gz"
     ASM_TMP="$ASM_DIR/tmp"
-    ASM_OUT="$ASM_DIR/${SUBJ}_asmPeak.txt"
-    FIXED_VCF="$ASM_TMP/${SUBJ}_fixed_input.vcf"
     WORK_DIR="$ASM_TMP/${SUBJ}_work"
 
     # Resolve BAI files (can be named .split.bai or .split.bam.bai)
@@ -93,10 +91,21 @@ run_subject_asm() {
         fi
     done
 
-    mkdir -p "$ASM_TMP" "$WORK_DIR"
+    mkdir -p "$WORK_DIR"
 
-    # Skip if outputs already exist and are non-empty
-    if [ -s "$ASM_OUT" ]; then
+    # All outputs inside unique WORK_DIR to prevent cross-subject overwrites:
+    # M6Allele writes aseRes.txt, peak_with_snp.txt, snp_location.txt to the
+    # same directory as -o. If -o pointed to a shared dir, parallel array jobs
+    # would corrupt each other.
+    ASM_OUT="$WORK_DIR/${SUBJ}_asmPeak.txt"
+    FIXED_VCF="$WORK_DIR/${SUBJ}_fixed.vcf"
+
+    # Always clean up WORK_DIR on exit (skip, success, crash)
+    trap 'rm -rf "$WORK_DIR"' EXIT
+
+    # Skip if final output already exists
+    FINAL_OUT="$ASM_DIR/${SUBJ}_asmPeak.txt"
+    if [ -s "$FINAL_OUT" ]; then
         echo "[SKIP] ASM analysis for $SUBJ already completed."
         return 0
     fi
@@ -110,7 +119,7 @@ run_subject_asm() {
 
     if [ ! -s "$FIXED_VCF" ]; then
         echo "[SKIP] No heterozygous biallelic PASS SNPs found for $SUBJ."
-        touch "$ASM_OUT"
+        touch "$FINAL_OUT"
         return 0
     fi
 
@@ -127,17 +136,14 @@ run_subject_asm() {
         -o "$ASM_OUT"; then
         if [ ! -s "$ASM_OUT" ]; then
             echo "Assertion Error: M6Allele did not generate non-empty output for $SUBJ." >&2
-            rm -f "$FIXED_VCF"
-            rm -rf "$WORK_DIR"
             return 1
         fi
-        echo ">>> Completed ASM for $SUBJ → $ASM_OUT"
+        mv "$ASM_OUT" "$FINAL_OUT"
+        echo ">>> Completed ASM for $SUBJ → $FINAL_OUT"
     else
         echo "[WARNING] M6Allele crashed for $SUBJ (internal Java error). Skipping." >&2
-        touch "$ASM_OUT"
+        touch "$FINAL_OUT"
     fi
-    rm -f "$FIXED_VCF"
-    rm -rf "$WORK_DIR"
 }
 
 # --- Execution ---
