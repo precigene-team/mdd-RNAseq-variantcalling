@@ -66,7 +66,7 @@ This document lists the completed and remaining tasks for the MDD RNA-seq and Me
 - [x] Fix: graceful `if` wrap for Java crashes (IndexOutOfBounds, NumberFormatException)
 - [x] Fix: auto-scale `-Xmx` from `SLURM_MEM_PER_NODE` (not hardcoded)
 - [x] Fix: `--mem=16G` → `32G` for java heap headroom
-- [ ] **RUNNING** — array re-submitted, ~8hr/subject, 3 already skipped (completed)
+- [ ] **IN PROGRESS** — fix committed, re-submission pending on HPC
 - [ ] Count final success/failure and re-run any problematic subjects individually
 
 ### Steps 08-09 — DRACH Annotation
@@ -110,3 +110,51 @@ This document lists the completed and remaining tasks for the MDD RNA-seq and Me
 - [ ] PPI network of shared DMR-DEG clusters (STRING + Cytoscape)
 - [ ] RRHO analysis (male vs female methylation rank concordance)
 
+
+---
+# SNP Downstream
+
+* [x] Re-check metadata, ensure each subject has correct Input/m6A-IP pair.
+* [x] Use STAR-aligned BAMs from both Input and IP. (Steps 01-02 on HPC)
+* [x] Run MarkDuplicates. (Step 02)
+* [x] Run SplitNCigarReads separately for each BAM: (Step 03)
+    * [x] All Input samples.
+    * [x] All m6A-IP samples.
+* [x] Verify split BAMs: no corruption, .bai index exists, correct read group and sample names.
+* [x] Use only Input RNA-seq for SNP calling: (Steps 04-05)
+    * [x] Run HaplotypeCaller for each Input sample. (per-sample, - GVCF mode)
+    * [ ] Joint genotyping across all Input samples. (not implemented — per-sample SNPs used directly)
+    * [x] Keep only biallelic SNPs.
+    * [x] Filter low-quality SNPs.
+    * [x] Extract heterozygous 0/1 SNPs per individual.
+    * [x] Prioritize SNPs with DP ≥ 10, GQ ≥ 20, and sufficient reads supporting both REF and ALT.
+* [x] Call m6A peaks by comparing m6A-IP with Input:
+    * [x] Each IP sample must be paired with the correct Input from the same individual.
+    * [x] Used exomePeak2 per-subject.
+    * [x] Export peak list in BED format.
+    * [x] Create consensus peaks (`consensus_peaks.bed`, 33,123 peaks).
+* [x] Intersect Input heterozygous SNP list with m6A peak regions: (Steps 08-09)
+    * [x] Keep only het SNPs located within or near m6A-enriched regions.
+    * [x] Do not call SNPs independently from IP data. (note: also annotated DRACH motifs — 211K SNP×motif overlaps, `09_drach_disrupting_snps.csv`)
+* [x] At selected SNPs, count alleles in both BAMs from the same individual: (Step 06 — ASEReadCounter)
+    * [x] REF count and ALT count in Input.
+    * [x] REF count and ALT count in IP.
+    * [x] Used GATK ASEReadCounter.
+* [x] Calculate per-SNP metrics:
+    * [x] REF fraction = REF / (REF + ALT).
+    * [x] ALT fraction can be calculated similarly.
+    * [x] Compare REF/ALT ratios between IP and Input for the same individual.
+* [~] Only consider as allele-specific m6A candidate when: (Step 07 — M6Allele, in progress)
+    * [ ] SNP is a reliable heterozygous call in Input.
+    * [ ] Sufficient coverage in both Input and IP.
+    * [ ] Allele ratio in IP is significantly skewed relative to Input.
+    * [ ] SNP lies within an m6A peak region.
+    * [ ] Not dominated by mapping bias, strand bias, or a handful of outlier reads.
+* [ ] After obtaining per-subject ASm6A:
+    * [ ] Compare allele imbalance levels between MDD and control groups.
+    * [ ] Statistical model must adjust for at least sex.
+    * [ ] Use ~ sex + condition; to test sex-specific differences, use ~ sex * condition.
+* [ ] Interpretation notes:
+    * [ ] A SNP lying in an m6A peak does NOT mean that SNP is the methylated nucleotide.
+    * [ ] Only conclude that the allele carrying the SNP has a different enrichment level in the m6A region compared to the other allele.
+    * [ ] Do not take a SNP that appears only in IP and conclude it is an m6A-associated SNP.

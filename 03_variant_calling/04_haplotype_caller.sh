@@ -29,7 +29,13 @@ if [ ! -f "$input_bam" ]; then
     exit 1
 fi
 
-out_vcf="$OUTPUT_DIR/${SAMPLE_NAME}.raw.vcf.gz"
+# SNP calling from Input RNA-seq only — skip IP samples
+if [[ "$SAMPLE_NAME" == *_m6A* ]]; then
+    echo "[SKIP] $SAMPLE_NAME is an IP sample — HaplotypeCaller runs on Input only."
+    exit 0
+fi
+
+out_gvcf="$OUTPUT_DIR/${SAMPLE_NAME}.g.vcf.gz"
 sample_log="$LOG_DIR/${SAMPLE_NAME}.hc.log"
 
 # Check if local workstation is processing this sample (lock file exists)
@@ -39,8 +45,8 @@ if [ -f "$lock_file" ]; then
     exit 0
 fi
 
-if [ -s "$out_vcf" ]; then
-    echo "[Skip] $SAMPLE_NAME (Raw VCF already exists)"
+if [ -s "$out_gvcf" ]; then
+    echo "[Skip] $SAMPLE_NAME (GVCF already exists)"
     exit 0
 fi
 
@@ -50,10 +56,11 @@ if [ ! -f "${input_bam}.bai" ] && [ ! -f "${input_bam%.bam}.bai" ]; then
     samtools index "$input_bam" >> "$sample_log" 2>&1
 fi
 
-echo ">>> Running HaplotypeCaller: $SAMPLE_NAME"
+echo ">>> Running HaplotypeCaller (GVCF mode): $SAMPLE_NAME"
 gatk --java-options "-Xmx${MEM} -Dsamjdk.use_async_io_read_samtools=true -Dsamjdk.use_async_io_write_samtools=true -XX:ParallelGCThreads=${CPUS}" HaplotypeCaller \
     -R "$FASTA_FILE" \
     -I "$input_bam" \
-    -O "$out_vcf" \
+    -O "$out_gvcf" \
+    -ERC GVCF \
     --dont-use-soft-clipped-bases \
     -stand-call-conf 20.0 > "$sample_log" 2>&1
