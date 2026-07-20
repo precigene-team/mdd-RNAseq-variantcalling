@@ -59,3 +59,13 @@ This document outlines potential technical and biological confounders in the MDD
   2. Because no spike-ins were sequenced, absolute methylation stoichiometric fractions (the exact percentage of methylated copies for a given transcript) cannot be calculated.
   3. **Conclusion:** All DGE and interaction results represents **relative abundance shifts** (ratios) between MDD and Controls, which is standard for clinical human postmortem cohorts. We have documented this parameter limitation.
 * **Status:** Resolved. Relative ratios are the standard and final output of this pipeline.
+
+### 🧪 QC-05: Missing Individual Covariates for TRESS DMR Analysis
+* **The Risk:** The Mitsuhashi et al. 2024 paper included RIN and age as covariates in their TRESS DMR model (`~ SampleType + RIN + Age`), producing 239 male / 696 female DMRs. Without these covariates, our model (`~ SampleType`) may call many more regions as significant.
+* **Findings:**
+  1. The paper's Supplementary Table S1 (mmc1.pdf) only publishes **group-level means ± SEM** for RIN, age, pH, and PMI — not per-subject values.
+  2. GEO submission (GSE275676) and BioSample records also lack individual RIN/age metadata, likely withheld for donor privacy.
+  3. Our unadjusted TRESS model found 8,508 male / 3,669 female significant DMRs — ~35× and ~5× the paper's counts respectively.
+  4. Post-hoc `lowcount=15` filtering (via `utils/filter_dmr_lowcount.sh`) had negligible effect (< 2% reduction), confirming the discrepancy is driven by covariates, not low-count filtering.
+* **Resolution:** The unadjusted DMR set is our best possible output given data constraints. Comparisons to the paper's DMR lists should note the covariate difference. Integration with m6A-SNPs (DRACH) and downstream GO/network analysis remains valid as relative comparisons within our model.
+* **Status:** Documented. DMR counts are inflated vs. the paper due to missing RIN/age covariates.

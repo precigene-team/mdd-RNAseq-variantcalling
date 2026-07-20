@@ -26,11 +26,9 @@ This document lists the completed and remaining tasks for the MDD RNA-seq and Me
 
 ### 🧬 4. Variant Calling (GATK Best Practices)
 * [x] Write GATK processing scripts under `03_variant_calling/` (ReadGroups, MarkDuplicates, SplitNCigarReads, HaplotypeCaller, VariantFiltration).
-* [x] Execute local worker pipeline script (`scratch/local_worker_pipeline.sh`) to run CPU-heavy SplitNCigarReads on aligned BAMs.
-  * **Current State**: Active. Two local workers are currently processing SplitNCigarReads for the remaining cohort samples.
-* [x] Execute HaplotypeCaller (`04_haplotype_caller.sh`) on the split BAMs to identify raw SNPs. 
-* [ ] Apply VariantFiltration (`05_variant_filtration.sh`) to identify high-confidence m6A-SNPs and allele-specific methylation (ASM) patterns.
-* **Status**: **In Progress** (HaplotypeCalling processing).
+* [x] Execute GATK pipeline (Steps 01-05) for all 78 BAMs on HPC via Slurm array.
+* [x] Step 06 ASE ReadCounter completed for all 39 subjects.
+* **Status**: **Completed**.
 
 ### 📊 5. Centralized MultiQC Aggregation
 * [x] Create the centralized configuration [multiqc_config.yaml](multiqc_config.yaml) to organize reports chronologically.
@@ -39,8 +37,7 @@ This document lists the completed and remaining tasks for the MDD RNA-seq and Me
 
 ### 🛠️ 6. Pipeline Refinements & Reorganization
 * [x] Move cell-type deconvolution script from `scratch/cell_type_deconvolution.py` to `utils/cell_type_deconvolution.py` and redirect output scores to `results/utils/tables/cell_type_mgp_scores.csv`.
-* [ ] Update Peak Calling in README.
-* [ ] Reaudit DGE analysis (specifically inspect `05_ma_male_meth.png` for potential cloud tilting or normalization biases).
+* [FAILED/DELEGATED_TO_DMR] Reaudit DGE analysis (specifically inspect `05_ma_male_meth.png` for potential cloud tilting or normalization biases).
 * [ ] Refactor `02_dge_analysis/08_enrichment_plotting.R` to show divided facet headers for Activated/Suppressed pathways.
 * [x] Format and clean up the TODO list.
 
@@ -60,4 +57,56 @@ This document lists the completed and remaining tasks for the MDD RNA-seq and Me
     * [ ] Review m6A biology fundamentals (Writers, Erasers, Readers)
     * [ ] Extract and log key methodologies/comparison tables verbatim
 
+---
+
+## 🧬 Active Workstream (July 2026)
+
+### Step 07 — M6Allele ASM
+- [x] Fix: bcftools filter to biallelic het SNPs (crashed on multi-allelic)
+- [x] Fix: graceful `if` wrap for Java crashes (IndexOutOfBounds, NumberFormatException)
+- [x] Fix: auto-scale `-Xmx` from `SLURM_MEM_PER_NODE` (not hardcoded)
+- [x] Fix: `--mem=16G` → `32G` for java heap headroom
+- [ ] **RUNNING** — array re-submitted, ~8hr/subject, 3 already skipped (completed)
+- [ ] Count final success/failure and re-run any problematic subjects individually
+
+### Steps 08-09 — DRACH Annotation
+- [x] DRACH sites identified: 602,657 sites from 33,123 peaks
+- [x] SNP×DRACH overlap: 211,284 total, 122,959 motif-disrupting
+- [x] DRACH CSV pulled locally: `results/03_variant_calling/tables/09_drach_disrupting_snps.csv` (22 MB, 211K rows)
+
+### TRESS DMR Analysis
+- [x] Male DMR: 8,508 significant DMRs (completed)
+- [x] Female DMR: 3,669 significant DMRs (completed)
+- [x] `lowcount=15` post-hoc filter script: `utils/filter_dmr_lowcount.sh`
+- [x] Filtered outputs: `results/utils/tables/10_dmr_{male,female}_filtered.csv` (8,495 / 3,590 DMRs)
+- [x] QC-05 documented: missing RIN/age covariates inflate DMR counts vs paper (239/696)
+
+### Downstream Integration (for presentation)
+- [ ] Overlap m6A-SNPs (DRACH CSV) with DMR regions (male/female)
+- [ ] Write integration script / summary table
+- [ ] Prepare figures for mid-internship presentation
+
+---
+
+## 📋 Paper Replication Tracker (Mitsuhashi et al. 2024, iScience)
+
+### DMR Parameter Alignment
+| Parameter         | Paper                 | Ours                          | Match?                                  |
+| ----------------- | --------------------- | ----------------------------- | --------------------------------------- |
+| Tool              | TRESS                 | TRESS                         | ✅                                       |
+| Binsize           | 50                    | 50                            | ✅                                       |
+| lowcount          | 15                    | default (~10)                 | ⚠️ post-hoc filtered (negligible effect) |
+| Covariates        | RIN + age             | None                          | ❌ not publicly available                |
+| Threshold         | p<0.05, FC>1.2        | p<0.05, FC>1.2                | ✅                                       |
+| Within-sex male   | 239 DMRs              | 8,495 (our unfiltered: 8,508) | ❌ covariate-driven gap                  |
+| Within-sex female | 696 DMRs              | 3,590 (our unfiltered: 3,669) | ❌ covariate-driven gap                  |
+| Interaction       | 629 DMRs (152M, 477F) | —                             | ❓ not run yet                           |
+
+### Replication Steps
+- [ ] Understand paper's DEG pipeline (DESeq2 + Subread, see STAR Methods)
+- [ ] Run paper's sex-disease interaction DMR contrast
+- [ ] Compare our DMR gene lists to paper's Supplementary Tables S3/S5
+- [ ] GO enrichment on DMR genes (clusterProfiler, ViSEAGO)
+- [ ] PPI network of shared DMR-DEG clusters (STRING + Cytoscape)
+- [ ] RRHO analysis (male vs female methylation rank concordance)
 

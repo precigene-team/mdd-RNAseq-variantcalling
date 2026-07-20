@@ -49,12 +49,23 @@ else
     JAVA_HEAP_MB=8192
 fi
 
-# --- Validate M6Allele.jar exists ---
+# --- Auto-build M6Allele.jar if missing ---
 if [ ! -f "$M6ALLELE_JAR" ]; then
-    echo "Assertion Error: M6Allele.jar was not found at: $M6ALLELE_JAR" >&2
-    echo "Please clone the official repository to download it first:" >&2
-    echo "  git clone https://github.com/RenLabBioinformatics/M6Allele.git $PROJECT_ROOT/_data/tools/M6Allele" >&2
-    exit 1
+    TOOLS_DIR="$(dirname "$M6ALLELE_JAR")"
+    if [ ! -d "$TOOLS_DIR" ]; then
+        echo ">>> Cloning M6Allele repository..."
+        git clone https://github.com/RenLabBioinformatics/M6Allele.git "$TOOLS_DIR"
+    fi
+    echo ">>> Building M6Allele.jar with Maven..."
+    cd "$TOOLS_DIR"
+    mvn clean package -DskipTests -q
+    BUILT_JAR=$(find target -name "M6Allele-*-jar-with-dependencies.jar" 2>/dev/null | head -1)
+    if [ -z "$BUILT_JAR" ]; then
+        echo "Error: Maven build completed but no fat JAR found in target/." >&2
+        exit 1
+    fi
+    cp "$BUILT_JAR" "$M6ALLELE_JAR"
+    echo ">>> M6Allele.jar built and placed at $M6ALLELE_JAR"
 fi
 
 # --- Resolve subject(s) to process ---
