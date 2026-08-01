@@ -11,7 +11,7 @@
 #SBATCH --job-name=m6allele_asm
 #SBATCH --output=_data/logs/asm/%x_%A_%a.log
 #SBATCH --error=_data/logs/asm/%x_%A_%a.err
-#SBATCH --array=0-38
+#SBATCH --array=0-38%5
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00

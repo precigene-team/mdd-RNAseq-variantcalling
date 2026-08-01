@@ -11,7 +11,7 @@
 #SBATCH --job-name=ase_readcounter
 #SBATCH --output=_data/logs/ase/%x_%A_%a.log
 #SBATCH --error=_data/logs/ase/%x_%A_%a.err
-#SBATCH --array=0-38
+#SBATCH --array=0-38%5
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=04:00:00

@@ -25,7 +25,7 @@ export PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pw
 # 1. Slurm Job Array Submission Config
 export VC_ARRAY_CONCURRENCY=5    # Max concurrent array tasks running in parallel
 export VC_TASK_CPUS=1            # CPUs per task in Slurm Job Array
-export VC_TASK_MEM="16G"         # Memory per task in Slurm Job Array (must fit all tools)
+export VC_TASK_MEM="32G"         # Memory per task in Slurm Job Array (must fit all tools)
 export VC_TASK_TIME="48:00:00"   # Max walltime per task in Slurm Job Array
 
 # 2. Local/Single-Batch Mode Config (e.g. hpc_run.sbatch)
@@ -37,7 +37,7 @@ VC_STEPS=(
     "01_read_groups.sh|Read Groups|8G|1"
     "02_mark_duplicates.sh|Mark Duplicates|12G|1"
     "03_split_n_cigar.sh|Split N Cigar|12G|4"
-    "04_haplotype_caller.sh|Haplotype Caller|12G|4"
+    "04_haplotype_caller.sh|Haplotype Caller|24G|4"
 )
 # --------------------------------------
 
@@ -68,12 +68,22 @@ echo "---------------------------------------------------------"
 
 # 1. Environment Check
 if [[ "$CONDA_DEFAULT_ENV" != "mdd" ]]; then
-    echo "WARNING: The 'mdd' environment is not active."
-    echo ""
-    read -p "Do you want to proceed using system tools? [y/N]: " confirm
-    if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-        echo "Aborting. Please activate the environment."
-        exit 1
+    # Auto-activate mdd environment in batch/Slurm execution mode or attempt hook activation
+    eval "$(micromamba shell hook --shell bash 2>/dev/null || mamba shell hook --shell bash 2>/dev/null || conda shell.bash hook 2>/dev/null)"
+    micromamba activate mdd 2>/dev/null || mamba activate mdd 2>/dev/null || conda activate mdd 2>/dev/null || true
+fi
+
+if [[ "$CONDA_DEFAULT_ENV" != "mdd" ]]; then
+    if [ -n "${SLURM_JOB_ID:-}" ]; then
+        echo "WARNING: Running in Slurm job but 'mdd' environment could not be auto-activated."
+    else
+        echo "WARNING: The 'mdd' environment is not active."
+        echo ""
+        read -p "Do you want to proceed using system tools? [y/N]: " confirm
+        if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+            echo "Aborting. Please activate the environment."
+            exit 1
+        fi
     fi
 fi
 
@@ -116,6 +126,13 @@ while [ "$#" -gt 0 ]; do
                     # Parse script name, step label, and CPUs
                     script=$(echo "$step_info" | cut -d'|' -f1)
                     name=$(echo "$step_info" | cut -d'|' -f2)
+                    
+                    # Skip already completed precursor steps (Steps 1-3)
+                    if [ "$step_num" -lt 4 ]; then
+                        echo "  [Skip] Step $step_num ($name) submission (already completed)"
+                        continue
+                    fi
+                    
                     step_cpus=$(echo "$step_info" | cut -d'|' -f4)
                     step_cpus="${step_cpus:-$VC_TASK_CPUS}"
                     
@@ -151,7 +168,7 @@ while [ "$#" -gt 0 ]; do
                 mkdir -p "$PROJECT_ROOT/_data/logs/combine_gvcfs" \
                          "$PROJECT_ROOT/_data/logs/genotype_gvcfs" \
                          "$PROJECT_ROOT/_data/logs/variant_filtration"
-
+                
                 echo ""
                 echo "[INFO] Submitting Step 4b (CombineGVCFs)..."
                 COMBINE_JOB_ID=$(sbatch --parsable \
@@ -159,26 +176,26 @@ while [ "$#" -gt 0 ]; do
                     --job-name="vc_combine_gvcfs" \
                     "$PROJECT_ROOT/03_variant_calling/04b_combine_gvcfs.sh")
                 echo "  -> Submitted Step 4b (CombineGVCFs) - Job ID: $COMBINE_JOB_ID"
-
+                
                 echo "[INFO] Submitting Step 4c (GenotypeGVCFs)..."
                 GENOTYPE_JOB_ID=$(sbatch --parsable \
                     --dependency=afterok:$COMBINE_JOB_ID \
                     --job-name="vc_genotype_gvcfs" \
                     "$PROJECT_ROOT/03_variant_calling/04c_genotype_gvcfs.sh")
                 echo "  -> Submitted Step 4c (GenotypeGVCFs) - Job ID: $GENOTYPE_JOB_ID"
-
+                
                 echo "[INFO] Submitting Step 5 (VariantFiltration + split)..."
                 FILTER_JOB_ID=$(sbatch --parsable \
                     --dependency=afterok:$GENOTYPE_JOB_ID \
                     --job-name="vc_variant_filtration" \
                     "$PROJECT_ROOT/03_variant_calling/05_variant_filtration.sh")
                 echo "  -> Submitted Step 5 (VariantFiltration + split) - Job ID: $FILTER_JOB_ID"
-
+                
                 # --- Steps 06-10: Downstream VC Analysis (HPC only) ---
                 mkdir -p "$PROJECT_ROOT/_data/logs/ase" \
                          "$PROJECT_ROOT/_data/logs/asm" \
                          "$PROJECT_ROOT/_data/logs/drach"
-
+                
                 # Step 06: GATK ASEReadCounter (depends on step 05)
                 echo ""
                 echo "[INFO] Submitting Step 6 (ASE ReadCounter)..."
@@ -188,7 +205,7 @@ while [ "$#" -gt 0 ]; do
                     --array="0-38%${VC_ARRAY_CONCURRENCY}" \
                     "$PROJECT_ROOT/03_variant_calling/06_ase_readcounter.sbatch")
                 echo "  -> Submitted Step 6 (ASE ReadCounter) - Job ID: $ASE_JOB_ID"
-
+                
                 # Step 07: M6Allele ASM (depends on step 06)
                 echo "[INFO] Submitting Step 7 (M6Allele ASM)..."
                 ASM_JOB_ID=$(sbatch --parsable \
@@ -197,7 +214,7 @@ while [ "$#" -gt 0 ]; do
                     --array="0-38%${VC_ARRAY_CONCURRENCY}" \
                     "$PROJECT_ROOT/03_variant_calling/07_m6allele_asm.sh")
                 echo "  -> Submitted Step 7 (M6Allele ASM) - Job ID: $ASM_JOB_ID"
-
+                
                 # Steps 08-09: DRACH annotation (single job, depends on step 05 variant filtration)
                 echo "[INFO] Submitting Steps 8-9 (DRACH annotation)..."
                 DRACH_JOB_ID=$(sbatch --parsable \
@@ -414,10 +431,17 @@ if [ "$RUN_VC" = true ]; then
 
             # Loop through centralized VC_STEPS to run cohort-wide locally
             for i in "${!VC_STEPS[@]}"; do
+                step_num=$((i + 1))
                 step_info="${VC_STEPS[$i]}"
                 script=$(echo "$step_info" | cut -d'|' -f1)
                 name=$(echo "$step_info" | cut -d'|' -f2)
                 mem_val=$(echo "$step_info" | cut -d'|' -f3)
+                
+                # Skip already completed precursor steps (Steps 1-3)
+                if [ "$step_num" -lt 4 ]; then
+                    echo ">>> [Local Skip] Step $step_num ($name) (already completed)"
+                    continue
+                fi
                 
                 run_local_step "$script" "$mem_val" "$name"
             done
@@ -425,10 +449,10 @@ if [ "$RUN_VC" = true ]; then
             # Post-array steps: CombineGVCFs → GenotypeGVCFs → VariantFiltration + split
             echo ">>> [Local] Running Step 4b: CombineGVCFs..."
             bash "$PROJECT_ROOT/03_variant_calling/04b_combine_gvcfs.sh" || exit 1
-
+            
             echo ">>> [Local] Running Step 4c: GenotypeGVCFs..."
             bash "$PROJECT_ROOT/03_variant_calling/04c_genotype_gvcfs.sh" || exit 1
-
+            
             echo ">>> [Local] Running Step 5: VariantFiltration + split..."
             bash "$PROJECT_ROOT/03_variant_calling/05_variant_filtration.sh" || exit 1
         fi

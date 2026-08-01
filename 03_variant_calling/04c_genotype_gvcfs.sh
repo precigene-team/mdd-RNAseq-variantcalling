@@ -7,7 +7,7 @@
 #SBATCH --error=_data/logs/genotype_gvcfs/%x_%j.err
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
-#SBATCH --time=06:00:00
+#SBATCH --time=48:00:00
 
 set -e
 set -o pipefail

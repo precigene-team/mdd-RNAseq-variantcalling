@@ -7,7 +7,7 @@
 #SBATCH --error=_data/logs/variant_filtration/%x_%j.err
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=04:00:00
+#SBATCH --time=12:00:00
 
 set -e
 set -o pipefail
@@ -56,6 +56,7 @@ gatk SelectVariants \
     -R "$FASTA_FILE" \
     -V "$JOINT_VCF" \
     -select-type SNP \
+    --restrict-alleles-to BIALLELIC \
     -O "$COHORT_SNPS" 2>&1 | tee "$LOG_DIR/select_snps.log"
 
 echo ">>> Hard-filtering SNPs..."
@@ -80,8 +81,8 @@ while IFS= read -r sample; do
         echo "  [SKIP] $sample already extracted"
         continue
     fi
-    echo "  Extracting $sample..."
-    bcftools view -s "$sample" -O z -o "$out_vcf" "$COHORT_FILTERED"
+    echo "  Extracting $sample (PASS, het, DP>=10, GQ>=20)..."
+    bcftools view -s "$sample" -f PASS -g het -i 'FMT/DP >= 10 && FMT/GQ >= 20' -O z -o "$out_vcf" "$COHORT_FILTERED"
     bcftools index -t "$out_vcf"
 done < "$LOG_DIR/sample_list.txt"
 

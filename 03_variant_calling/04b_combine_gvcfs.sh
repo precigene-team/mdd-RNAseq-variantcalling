@@ -7,7 +7,7 @@
 #SBATCH --error=_data/logs/combine_gvcfs/%x_%j.err
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
-#SBATCH --time=06:00:00
+#SBATCH --time=48:00:00
 
 set -e
 set -o pipefail
@@ -38,10 +38,14 @@ mapfile -t SUBJECTS < <(
 GVCFS=()
 for subj in "${SUBJECTS[@]}"; do
     gvcf="$RAW_VCF_DIR/${subj}_input.g.vcf.gz"
+    if [ ! -f "$gvcf" ]; then
+        gvcf="$RAW_VCF_DIR/${subj}.g.vcf.gz"
+    fi
+
     if [ -f "$gvcf" ]; then
         GVCFS+=("--variant $gvcf")
     else
-        echo "[WARNING] Missing GVCF for $subj: $gvcf" >&2
+        echo "[WARNING] Missing GVCF for $subj: checked ${subj}_input.g.vcf.gz and ${subj}.g.vcf.gz" >&2
     fi
 done
 

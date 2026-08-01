@@ -122,12 +122,12 @@ This document lists the completed and remaining tasks for the MDD RNA-seq and Me
     * [x] All m6A-IP samples.
 * [x] Verify split BAMs: no corruption, .bai index exists, correct read group and sample names.
 * [x] Use only Input RNA-seq for SNP calling: (Steps 04-05)
-    * [x] Run HaplotypeCaller for each Input sample. (per-sample, - GVCF mode)
-    * [ ] Joint genotyping across all Input samples. (not implemented — per-sample SNPs used directly)
-    * [x] Keep only biallelic SNPs.
-    * [x] Filter low-quality SNPs.
-    * [x] Extract heterozygous 0/1 SNPs per individual.
-    * [x] Prioritize SNPs with DP ≥ 10, GQ ≥ 20, and sufficient reads supporting both REF and ALT.
+    * [x] Run HaplotypeCaller for each Input sample. (per-sample GVCF mode — Step 04)
+    * [x] Joint genotyping across all Input samples. (CombineGVCFs 04b + GenotypeGVCFs 04c)
+    * [x] Keep only biallelic SNPs. (SelectVariants --restrict-alleles-to BIALLELIC — Step 05)
+    * [x] Filter low-quality SNPs. (VariantFiltration FS > 30.0, QD < 2.0, -f PASS — Step 05)
+    * [x] Extract heterozygous 0/1 SNPs per individual. (bcftools view -g het — Step 05)
+    * [x] Prioritize SNPs with DP ≥ 10, GQ ≥ 20, and sufficient reads supporting both REF and ALT. (bcftools view -i 'FMT/DP >= 10 && FMT/GQ >= 20' — Step 05, 2.25M het sites across 39 subjects)
 * [x] Call m6A peaks by comparing m6A-IP with Input:
     * [x] Each IP sample must be paired with the correct Input from the same individual.
     * [x] Used exomePeak2 per-subject.
