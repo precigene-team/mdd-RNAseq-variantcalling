@@ -39,6 +39,8 @@ dependencies:
   - r-ggtext
   - r-biocmanager
   - r-ashr
+  - r-glmmtmb
+  - r-lme4
   - bioconductor-deseq2
   - bioconductor-biomart
   - bioconductor-apeglm
