@@ -93,11 +93,8 @@ out_cols = [
 df[out_cols].to_csv(out_table, index=False)
 
 # --- Write cohort-level summary table (reproducible with the per-subject table) ---
-report_dir = os.path.join(
-    project_root, "results", "03_variant_calling", "tables", "report"
-)
-os.makedirs(report_dir, exist_ok=True)
-summary_table = os.path.join(report_dir, "13_drach_summary.csv")
+tables_dir = os.path.dirname(out_table)
+summary_table = os.path.join(tables_dir, "09_drach_summary.csv")
 
 # Per-subject rows: each subject's TRUE het SNP × overlapping DRACH motif overlaps
 df["snp_key"] = (
