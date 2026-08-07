@@ -45,6 +45,7 @@ _data/tmp/
 *_STARgenome/
 
 # --- R intermediate objects ---
+RData/
 *.RData
 *.rds
 *.RDS
