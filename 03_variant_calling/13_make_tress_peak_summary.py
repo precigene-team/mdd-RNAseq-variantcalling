@@ -4,8 +4,8 @@
 
 # Input : _data/RData/03_variant_calling/asm_matrix.tsv
 #         (one row per subject x consensus peak; n_peaks == 1 per row)
-# Output: results/03_variant_calling/tables/tress_peak_summary.csv
-#         results/03_variant_calling/tables/tress_peak_per_subject.csv
+# Output: results/tables/13_tress_peak_summary.csv
+#         results/tables/13_tress_peak_per_subject.csv
 
 import csv
 import os
@@ -18,9 +18,9 @@ PROJECT_ROOT = os.environ.get("PROJECT_ROOT") or os.path.normpath(
     os.path.join(SCRIPT_DIR, "..")
 )
 MATRIX = os.path.join(PROJECT_ROOT, "_data", "RData", "03_variant_calling", "asm_matrix.tsv")
-OUT_TABLES = os.path.join(PROJECT_ROOT, "results", "03_variant_calling", "tables")
-OUT_SUMMARY = os.path.join(OUT_TABLES, "tress_peak_summary.csv")
-OUT_PER_SUBJECT = os.path.join(OUT_TABLES, "tress_peak_per_subject.csv")
+OUT_TABLES = os.path.join(PROJECT_ROOT, "results", "tables")
+OUT_SUMMARY = os.path.join(OUT_TABLES, "13_tress_peak_summary.csv")
+OUT_PER_SUBJECT = os.path.join(OUT_TABLES, "13_tress_peak_per_subject.csv")
 
 if not os.path.isfile(MATRIX):
     print(f"Assertion Error: ASM matrix not found: {MATRIX}", file=sys.stderr)
