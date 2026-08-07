@@ -9,6 +9,7 @@
 #   4. Print summary statistics.
 #   5. Write the fully annotated table to results/tables/13_drach_disrupting_snps.csv.
 
+import csv
 import os
 import sys
 import pandas as pd
@@ -91,9 +92,57 @@ out_cols = [
 ]
 df[out_cols].to_csv(out_table, index=False)
 
+# --- Write cohort-level summary table (reproducible with the per-subject table) ---
+report_dir = os.path.join(
+    project_root, "results", "03_variant_calling", "tables", "report"
+)
+os.makedirs(report_dir, exist_ok=True)
+summary_table = os.path.join(report_dir, "13_drach_summary.csv")
+
+# Per-subject rows: each subject's TRUE het SNP × overlapping DRACH motif overlaps
+df["snp_key"] = (
+    df["snp_chr"].astype(str) + ":" + df["snp_pos"].astype(str)
+    + ":" + df["ref"] + ":" + df["alt"]
+)
+df["ov_key"] = df["snp_key"] + "@" + df["drach_name"]
+
+rows             = len(df)
+subjects         = df["subject"].nunique()
+distinct_snps    = df["snp_key"].nunique()
+distinct_motifs  = df["drach_name"].nunique()
+distinct_overlap = df["ov_key"].nunique()
+
+disrupting  = df.loc[df["disruption_status"] == "DISRUPTS_DRACH", "ov_key"].nunique()
+preserving  = df.loc[df["disruption_status"] == "PRESERVES_DRACH", "ov_key"].nunique()
+both        = len(df.groupby("ov_key")["disruption_status"].nunique(
+).loc[lambda s: s == 2])
+
+summary_rows = [
+    ("cohort_subjects", subjects, "number of unique subjects carrying >=1 overlapping SNP"),
+    ("subject_x_snp_x_motif_het_rows", rows, "total per-subject het SNP x DRACH motif rows"),
+    ("distinct_snp_sites_het", distinct_snps, "distinct (chr,pos,ref,alt) heterozygous sites"),
+    ("distinct_drach_motif_instances", distinct_motifs, "distinct DRACH motif instances (bed_names)"),
+    ("distinct_snp_x_motif_overlaps", distinct_overlap, "deduplicated (chr,pos,ref,alt + drach_name)"),
+    ("disrupts_drach_overlaps", disrupting, "deduplicated overlaps where SNP DISRUPTS the DRACH motif"),
+    ("preserves_drach_overlaps", preserving, "deduplicated overlaps where SNP PRESERVES the motif"),
+    ("overlaps_both", both, "overlaps where a SNP disrupts one motif and preserves another"),
+]
+
+with open(summary_table, "w", newline="") as fh:
+    writer = csv.writer(fh)
+    writer.writerow(["metric", "value", "note"])
+    writer.writerows(summary_rows)
+
+print(f"  Cohort summary table -> {summary_table}")
+
 # --- Output Assertion ---
 if not os.path.isfile(out_table) or os.path.getsize(out_table) == 0:
     print(f"Assertion Error: Output table empty or not written: {out_table}", file=sys.stderr)
     sys.exit(1)
 
 print(f"  Annotated table → {out_table}")
+
+# --- Console echoes of cohort summary ---
+print(f"  Cohort summary:")
+for metric, value, note in summary_rows:
+    print(f"    {metric}: {value}  ({note})")

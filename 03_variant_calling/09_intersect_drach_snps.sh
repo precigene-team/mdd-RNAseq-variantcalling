@@ -50,8 +50,8 @@ MERGED_SNP_BED="$TMP_DIR/all_snps.bed"
 for vcf in "$VCF_DIR"/*.filtered.vcf.gz; do
     [ -f "$vcf" ] || continue
     subj=$(basename "$vcf" .filtered.vcf.gz)
-    # Extract PASS-only biallelic SNPs → BED (chr, pos-1, pos, subj, REF, ALT)
-    bcftools view -f PASS -v snps -m2 -M2 "$vcf" | \
+    # Extract PASS-only, biallelic, heterozygous (0/1) SNPs → BED (chr, pos-1, pos, subj, REF, ALT)
+    bcftools view -f PASS,.;TYPE=snp -v snps -m2 -M2 -g het "$vcf" | \
     bcftools query -f '%CHROM\t%POS0\t%POS\t'"$subj"'\t%REF\t%ALT\n' >> "$MERGED_SNP_BED"
 done
 

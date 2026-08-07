@@ -76,10 +76,13 @@ include_obs <- function(d, skew_cut) {
 }
 
 # --- Model fitter with engine fallback. Returns list(coef, se, p, phi) for a term. ---
-fit_locus <- function(d, term, offset_ok = TRUE) {
-  formula_glmmtmb <- as.formula(sprintf("cbind(ip_ref, ip_b) ~ %s + offset(off)", term))
-  formula_glmer   <- as.formula(sprintf("cbind(ip_ref, ip_b) ~ %s + (1|subject) + offset(off)", term))
-  formula_glm     <- as.formula(sprintf("cbind(ip_ref, ip_b) ~ %s + offset(off)", term))
+# adj_sex = TRUE adds sex as a covariate to the "condition" formula (pooled primary);
+# within-sex sub-contrasts must keep adj_sex = FALSE (sex is constant in the subset).
+fit_locus <- function(d, term, offset_ok = TRUE, adj_sex = FALSE) {
+  eff <- if (adj_sex && term == "condition") "condition + sex" else term
+  formula_glmmtmb <- as.formula(sprintf("cbind(ip_ref, ip_b) ~ %s + offset(off)", eff))
+  formula_glmer   <- as.formula(sprintf("cbind(ip_ref, ip_b) ~ %s + (1|subject) + offset(off)", eff))
+  formula_glm     <- as.formula(sprintf("cbind(ip_ref, ip_b) ~ %s + offset(off)", eff))
   coef_name <- switch(term,
                       "condition" = "conditionmdd",
                       "condition * sex" = "conditionmdd:sexfemale",
@@ -133,7 +136,7 @@ analyze <- function(skew_cut, min_subjects) {
     n_mdd <- sum(dd$condition == "mdd")
     n_ctrl <- sum(dd$condition == "ctrl")
     if (n_mdd < 2 || n_ctrl < 2) next
-    prim <- fit_locus(dd, "condition")
+    prim <- fit_locus(dd, "condition", adj_sex = length(unique(as.character(dd$sex))) > 1)
     # within-sex (exploratory)
     dm <- dd[dd$sex == "male", , drop = FALSE]
     df_ <- dd[dd$sex == "female", , drop = FALSE]
@@ -184,6 +187,11 @@ analyze <- function(skew_cut, min_subjects) {
   out$male_fdr <- p.adjust(out$male_p, method = "BH")
   out$female_fdr <- p.adjust(out$female_p, method = "BH")
   if (input_available) out$mwu_fdr <- p.adjust(out$mwu_p, method = "BH")
+  # Confidence grade for the primary contrast: High requires balanced groups AND a
+  # sex-specific FDR<0.05 signal; otherwise Low (control-poor / no sex-replicated hit).
+  sex_hit <- !is.na(out$male_fdr) & out$male_fdr < FDR_CUT |
+             !is.na(out$female_fdr) & out$female_fdr < FDR_CUT
+  out$confidence <- ifelse(out$n_ctrl >= 5 & sex_hit, "High", "Low")
   out
 }
 
