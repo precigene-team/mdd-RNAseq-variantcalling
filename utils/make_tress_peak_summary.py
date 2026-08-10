@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-# [[03_variant_calling/13_make_tress_peak_summary.py]]
+# [[utils/make_tress_peak_summary.py]]
 # Goal: Generate TRESS peak-count summary tables from the ASM input matrix.
 
 # Input : _data/RData/03_variant_calling/asm_matrix.tsv
-#         (one row per subject x consensus peak; n_peaks == 1 per row)
-# Output: results/tables/13_tress_peak_summary.csv
-#         results/tables/13_tress_peak_per_subject.csv
+# Output: results/utils/tables/tress_peak_summary.csv
+#         results/utils/tables/tress_peak_per_subject.csv
 
 import csv
 import os
@@ -18,9 +17,12 @@ PROJECT_ROOT = os.environ.get("PROJECT_ROOT") or os.path.normpath(
     os.path.join(SCRIPT_DIR, "..")
 )
 MATRIX = os.path.join(PROJECT_ROOT, "_data", "RData", "03_variant_calling", "asm_matrix.tsv")
-OUT_TABLES = os.path.join(PROJECT_ROOT, "results", "tables")
-OUT_SUMMARY = os.path.join(OUT_TABLES, "13_tress_peak_summary.csv")
-OUT_PER_SUBJECT = os.path.join(OUT_TABLES, "13_tress_peak_per_subject.csv")
+
+OUT_TABLES_UTILS = os.path.join(PROJECT_ROOT, "results", "utils", "tables")
+os.makedirs(OUT_TABLES_UTILS, exist_ok=True)
+
+OUT_SUMMARY     = os.path.join(OUT_TABLES_UTILS, "tress_peak_summary.csv")
+OUT_PER_SUBJECT = os.path.join(OUT_TABLES_UTILS, "tress_peak_per_subject.csv")
 
 if not os.path.isfile(MATRIX):
     print(f"Assertion Error: ASM matrix not found: {MATRIX}", file=sys.stderr)
@@ -32,8 +34,6 @@ def cohort_of(condition, sex):
 
 
 def main():
-    os.makedirs(OUT_TABLES, exist_ok=True)
-
     with open(MATRIX, newline="") as fh:
         reader = csv.DictReader(fh, delimiter="\t")
 

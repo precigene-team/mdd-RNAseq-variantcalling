@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# [[03_variant_calling/10_annotate_drach_disruption.py]]
+# [[03_variant_calling/09_annotate_drach_disruption.py]]
 # Goal: Annotate which overlapping SNPs disrupt the DRACH motif pattern.
 
 # Steps:
@@ -7,7 +7,7 @@
 #   2. Compute 0-based motif offset for each overlapping SNP.
 #   3. Check whether the ALT allele is allowed at that IUPAC position.
 #   4. Print summary statistics.
-#   5. Write the fully annotated table to results/tables/13_drach_disrupting_snps.csv.
+#   5. Write the fully annotated table to results/03_variant_calling/tables/09_drach_disrupting_snps.csv.
 
 import csv
 import os
@@ -21,7 +21,12 @@ project_root = os.environ.get("PROJECT_ROOT") or os.path.normpath(
 )
 
 intersect = os.path.join(project_root, "_data", "logs", "drach", "tmp", "snp_drach_intersect.bed")
-out_table = os.path.join(project_root, "results", "03_variant_calling", "tables", "09_drach_disrupting_snps.csv")
+out_dir   = os.path.join(project_root, "results", "03_variant_calling", "tables")
+os.makedirs(out_dir, exist_ok=True)
+
+out_table     = os.path.join(out_dir, "09_drach_disrupting_snps.csv")
+summary_table = os.path.join(out_dir, "09_drach_summary.csv")
+
 # --- Input Assertion ---
 if not os.path.isfile(intersect):
     print(f"Assertion Error: Intersection BED not found: {intersect}", file=sys.stderr)
@@ -43,83 +48,65 @@ df["drach_end"]   = df["drach_end"].astype(int)
 
 # Assertion: data loaded
 if df.empty:
-    print("Assertion Error: Intersection BED is empty. No SNPs overlap DRACH sites.")
+    print("Assertion Error: Intersection dataframe is empty.", file=sys.stderr)
     sys.exit(1)
 
-# --- Compute motif offset (0-indexed position within the 5-mer) ---
-# snp_pos is 1-based; drach_start is 0-based → offset = (snp_pos - 1) - drach_start
-df["motif_offset"] = (df["snp_pos"] - 1) - df["drach_start"]
+# --- IUPAC Definition ---
+IUPAC_ALLOWED = {
+    0: set("AGT"), # D = A/G/T (non-C)
+    1: set("AG"),  # R = A/G (Purine)
+    2: set("A"),   # A = A (central m6A site)
+    3: set("C"),   # C = C (Cytosine)
+    4: set("ACT"), # H = A/C/T (non-G)
+}
 
-# DRACH IUPAC: D=[AGT], R=[AG], A=[A], C=[C], H=[ACT]
-DRACH_IUPAC = [
-    frozenset("AGT"),   # position 0: D
-    frozenset("AG"),    # position 1: R
-    frozenset("A"),     # position 2: A ← m6A methylation site
-    frozenset("C"),     # position 3: C
-    frozenset("ACT"),   # position 4: H
-]
+def is_allowed(offset: int, allele: str) -> bool:
+    allowed = IUPAC_ALLOWED.get(offset)
+    if allowed is None:
+        return False
+    return allele.upper() in allowed
 
-def check_disruption(row):
-    alt = str(row["alt"]).upper()
-    if len(alt) != 1:
-        return "INDEL_NOT_SCORED"
-    offset = int(row["motif_offset"])
-    if offset < 0 or offset >= 5:
-        return "OUT_OF_RANGE"
-    return "DISRUPTS_DRACH" if alt not in DRACH_IUPAC[offset] else "PRESERVES_DRACH"
-
-df["disruption_status"] = df.apply(check_disruption, axis=1)
-
-# --- Summary ---
-total       = len(df)
-disrupting  = (df["disruption_status"] == "DISRUPTS_DRACH").sum()
-preserving  = (df["disruption_status"] == "PRESERVES_DRACH").sum()
-methyl_hits = (df["motif_offset"] == 2).sum()
-methyl_disrupt = ((df["motif_offset"] == 2) & (df["disruption_status"] == "DISRUPTS_DRACH")).sum()
-
-print(f"  Total SNP-DRACH overlaps:              {total}")
-print(f"  Motif-disrupting variants:             {disrupting}")
-print(f"  Motif-preserving variants:             {preserving}")
-print(f"  SNPs at methylation A (offset=2):      {methyl_hits}")
-print(f"  Disrupting at methylation A:           {methyl_disrupt}")
-
-# --- Write output ---
-os.makedirs(os.path.dirname(out_table), exist_ok=True)
-out_cols = [
-    "snp_chr", "snp_pos", "subject", "ref", "alt",
-    "drach_start", "drach_end", "drach_name", "strand",
-    "motif_offset", "disruption_status", "methyl_pos"
-]
-df[out_cols].to_csv(out_table, index=False)
-
-# --- Write cohort-level summary table (reproducible with the per-subject table) ---
-tables_dir = os.path.dirname(out_table)
-summary_table = os.path.join(tables_dir, "09_drach_summary.csv")
-
-# Per-subject rows: each subject's TRUE het SNP × overlapping DRACH motif overlaps
-df["snp_key"] = (
-    df["snp_chr"].astype(str) + ":" + df["snp_pos"].astype(str)
-    + ":" + df["ref"] + ":" + df["alt"]
+# Calculate motif offset:
+df["motif_offset"] = df.apply(
+    lambda r: (r["snp_pos"] - 1) - r["drach_start"]
+    if r["strand"] == "+"
+    else r["drach_end"] - r["snp_pos"],
+    axis=1
 )
-df["ov_key"] = df["snp_key"] + "@" + df["drach_name"]
 
-rows             = len(df)
-subjects         = df["subject"].nunique()
-distinct_snps    = df["snp_key"].nunique()
-distinct_motifs  = df["drach_name"].nunique()
-distinct_overlap = df["ov_key"].nunique()
+df["ref_allowed"] = df.apply(lambda r: is_allowed(r["motif_offset"], r["ref"]), axis=1)
+df["alt_allowed"] = df.apply(lambda r: is_allowed(r["motif_offset"], r["alt"]), axis=1)
+
+df["disruption_status"] = df["alt_allowed"].map(
+    {True: "PRESERVES_DRACH", False: "DISRUPTS_DRACH"}
+)
+
+df["ov_key"] = (
+    df["snp_chr"].astype(str) + ":" +
+    df["snp_pos"].astype(str) + ":" +
+    df["ref"] + ":" + df["alt"] + "__" +
+    df["drach_name"]
+)
+
+# Output fully annotated table
+df.to_csv(out_table, index=False)
+
+subjects        = df["subject"].nunique()
+rows            = len(df)
+distinct_snps   = df.groupby(["snp_chr", "snp_pos", "ref", "alt"]).ngroups
+distinct_motifs = df["drach_name"].nunique()
+distinct_overlap= df["ov_key"].nunique()
 
 disrupting  = df.loc[df["disruption_status"] == "DISRUPTS_DRACH", "ov_key"].nunique()
 preserving  = df.loc[df["disruption_status"] == "PRESERVES_DRACH", "ov_key"].nunique()
-both        = len(df.groupby("ov_key")["disruption_status"].nunique(
-).loc[lambda s: s == 2])
+both        = len(df.groupby("ov_key")["disruption_status"].nunique().loc[lambda s: s == 2])
 
 summary_rows = [
     ("cohort_subjects", subjects, "number of unique subjects carrying >=1 overlapping SNP"),
     ("subject_x_snp_x_motif_het_rows", rows, "total per-subject het SNP x DRACH motif rows"),
-    ("distinct_snp_sites_het", distinct_snps, "distinct (chr,pos,ref,alt) heterozygous sites"),
+    ("distinct_snp_sites_het", distinct_snps, "distinct (chr:pos:ref:alt) heterozygous sites"),
     ("distinct_drach_motif_instances", distinct_motifs, "distinct DRACH motif instances (bed_names)"),
-    ("distinct_snp_x_motif_overlaps", distinct_overlap, "deduplicated (chr,pos,ref,alt + drach_name)"),
+    ("distinct_snp_x_motif_overlaps", distinct_overlap, "deduplicated (chr:pos:ref:alt + drach_name)"),
     ("disrupts_drach_overlaps", disrupting, "deduplicated overlaps where SNP DISRUPTS the DRACH motif"),
     ("preserves_drach_overlaps", preserving, "deduplicated overlaps where SNP PRESERVES the motif"),
     ("overlaps_both", both, "overlaps where a SNP disrupts one motif and preserves another"),
@@ -130,16 +117,9 @@ with open(summary_table, "w", newline="") as fh:
     writer.writerow(["metric", "value", "note"])
     writer.writerows(summary_rows)
 
+print(f"  Annotated table -> {out_table}")
 print(f"  Cohort summary table -> {summary_table}")
 
-# --- Output Assertion ---
 if not os.path.isfile(out_table) or os.path.getsize(out_table) == 0:
     print(f"Assertion Error: Output table empty or not written: {out_table}", file=sys.stderr)
     sys.exit(1)
-
-print(f"  Annotated table → {out_table}")
-
-# --- Console echoes of cohort summary ---
-print(f"  Cohort summary:")
-for metric, value, note in summary_rows:
-    print(f"    {metric}: {value}  ({note})")

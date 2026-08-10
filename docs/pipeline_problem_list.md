@@ -73,7 +73,7 @@ Mitsuhashi et al. (2024) does not perform any variant-level or genetic analysis.
 - **What it is**: At each heterozygous SNP position within an m6A peak, test whether the maternal and paternal alleles carry different m6A methylation levels. A SNP that disrupts a `DRACH` motif on one allele will selectively eliminate METTL3 recognition on that allele, producing a measurable asymmetric IP/Input allele ratio.
 - **Why it is novel**: Mitsuhashi et al. report only *average* methylation across subjects. ASM operates at the allele level within individuals, distinguishing *genetically encoded* methylation changes from *environmentally driven* ones. No postmortem MDD study has published allele-specific m6A analysis.
 - **What you already have**: GATK HaplotypeCaller VCFs on all 36 Input samples from `03_variant_calling/`. The remaining step is running `GATK ASEReadCounter` on the IP BAMs at heterozygous SNP positions to extract allelic IP read counts.
-- **Tool**: M6Allele (Zhu et al., 2022, Bioinformatics, DOI: [10.1093/bioinformatics/btac388](https://doi.org/10.1093/bioinformatics/btac388)) provides a Bayesian model specifically for this, accepting GATK VCF + IP/Input BAM pairs as input.
+- **Tool**: M6Allele (Zhang, Z., Tang, K., et al., 2025, GigaScience 14:giaf040, DOI: [10.1093/gigascience/giaf040](https://doi.org/10.1093/gigascience/giaf040)) provides a Bayesian model specifically for this, accepting GATK VCF + IP/Input BAM pairs as input.
 - **Caveats**: RNA-seq-derived SNPs have ~5–10% higher FDR than matched WGS. Filter strictly: PASS filter, biallelic, heterozygous only. m6A-QTL (genotype → peak intensity) requires 100+ samples — **do not attempt with n=36.**
 
 ### 8. m6A-SNP Motif Disruption Analysis

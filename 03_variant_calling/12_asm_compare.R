@@ -1,13 +1,14 @@
 # [[03_variant_calling/12_asm_compare.R]]
 # Goal: Group-level comparison of allele-specific m6A (ASM) between MDD and Control.
-#       Statistical analysis ONLY — the per-(locus,subject) allele-count matrix is built by
-#       03_variant_calling/11_asm_build_matrix.py.
+#       STATISTICAL COMPUTE ONLY. Long-running. Results are saved to asm_results.rds;
+#       visualisation is deferred to 13_asm_compare_viz.R (reads the RDS, no recompute).
+#       Per-(locus,subject) allele-count matrix is built by 11_asm_build_matrix.py.
 #
 # Model (established machinery, per docs/asm_analysis_methodology.md §4):
 #   Per locus: beta-binomial regression of IP allele counts on condition + sex, with
 #   logit(Input allelic fraction) as offset (Input-as-null; 0.5 null when Input absent).
 #   Primary engine: glmmTMB (betabinomial)  -> fallback lme4::glmer (binomial, (1|subject))
-#   -> fallback stats::glm (quasibinomial). All are published, maintained implementations.
+#   -> fallback stats::glm (quasibinomial).
 #   Cross-check: per-subject fisher.test(IP vs Input) log-OR, then wilcox.test across groups.
 #   Multiple testing: p.adjust(..., "BH") per contrast. Sensitivity sweeps over skew/min-subjects.
 
@@ -27,21 +28,19 @@ project_root <- get_project_root()
 
 mat_file    <- file.path(project_root, "_data/RData/03_variant_calling/asm_matrix.tsv")
 tables_dir  <- file.path(project_root, "results/03_variant_calling/tables")
-fig_dir     <- file.path(project_root, "results/03_variant_calling/figures")
 out_rds     <- file.path(project_root, "_data/RData/03_variant_calling/asm_results.rds")
 dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 
 # --- Parameters ---
-Q_CUT          <- 0.05
-SKEW_CUT       <- 0.20
-MIN_SUBJECTS   <- 8
-MIN_IP_READS   <- 10
-MIN_ALLELE     <- 2
-MIN_INPUT_READS<- 8
-FDR_CUT        <- 0.05
-SWEEP_SKEW     <- c(0.1, 0.2, 0.3)
-SWEEP_MINSUBJ  <- c(6, 8, 12)
+Q_CUT           <- 0.05
+SKEW_CUT        <- 0.20
+MIN_SUBJECTS    <- 8
+MIN_IP_READS    <- 10
+MIN_ALLELE      <- 2
+MIN_INPUT_READS <- 8
+FDR_CUT         <- 0.05
+SWEEP_SKEW      <- c(0.1, 0.2, 0.3)
+SWEEP_MINSUBJ   <- c(6, 8, 12)
 
 logit <- function(p) log(p / (1 - p))
 
@@ -107,15 +106,8 @@ fit_locus <- function(d, term, offset_ok = TRUE, adj_sex = FALSE) {
   }
   if (is.null(fit)) return(list(coef = NA, se = NA, p = NA, phi = NA, engine = NA))
   s <- summary(fit)
-  if (engine == "glmmTMB") {
-    ct <- s$coefficients$cond
-  } else {
-    ct <- s$coefficients
-  }
-  if (!coef_name %in% rownames(ct)) {
-    # fall back to the last row of the fixed-effect table
-    coef_name <- tail(rownames(ct), 1)
-  }
+  ct <- if (engine == "glmmTMB") s$coefficients$cond else s$coefficients
+  if (!coef_name %in% rownames(ct)) coef_name <- tail(rownames(ct), 1)
   phi <- NA_real_
   if (engine == "glm") phi <- s$dispersion
   list(coef = ct[coef_name, 1], se = ct[coef_name, 2],
@@ -137,13 +129,12 @@ analyze <- function(skew_cut, min_subjects) {
     n_ctrl <- sum(dd$condition == "ctrl")
     if (n_mdd < 2 || n_ctrl < 2) next
     prim <- fit_locus(dd, "condition", adj_sex = length(unique(as.character(dd$sex))) > 1)
-    # within-sex (exploratory)
-    dm <- dd[dd$sex == "male", , drop = FALSE]
-    df_ <- dd[dd$sex == "female", , drop = FALSE]
-    male <- if (sum(dm$condition == "mdd") >= 2 && sum(dm$condition == "ctrl") >= 2)
-      fit_locus(dm, "condition") else list(coef = NA, se = NA, p = NA, phi = NA, engine = NA)
-    female <- if (sum(df_$condition == "mdd") >= 2 && sum(df_$condition == "ctrl") >= 2)
-      fit_locus(df_, "condition") else list(coef = NA, se = NA, p = NA, phi = NA, engine = NA)
+    dd_male   <- dd[dd$sex == "male",   , drop = FALSE]
+    dd_female <- dd[dd$sex == "female", , drop = FALSE]
+    male <- if (sum(dd_male$condition == "mdd") >= 2 && sum(dd_male$condition == "ctrl") >= 2)
+      fit_locus(dd_male, "condition") else list(coef = NA, se = NA, p = NA, phi = NA, engine = NA)
+    female <- if (sum(dd_female$condition == "mdd") >= 2 && sum(dd_female$condition == "ctrl") >= 2)
+      fit_locus(dd_female, "condition") else list(coef = NA, se = NA, p = NA, phi = NA, engine = NA)
     inter <- fit_locus(dd, "condition * sex")
     # cross-check: per-subject Fisher log-OR (IP vs Input), then Wilcoxon between groups
     mwu_p <- NA_real_
@@ -187,15 +178,15 @@ analyze <- function(skew_cut, min_subjects) {
   out$male_fdr <- p.adjust(out$male_p, method = "BH")
   out$female_fdr <- p.adjust(out$female_p, method = "BH")
   if (input_available) out$mwu_fdr <- p.adjust(out$mwu_p, method = "BH")
-  # Confidence grade for the primary contrast: High requires balanced groups AND a
-  # sex-specific FDR<0.05 signal; otherwise Low (control-poor / no sex-replicated hit).
+  # Confidence grade: High requires balanced groups AND a sex-specific FDR<0.05 hit;
+  # otherwise Low (control-poor / no sex-replicated hit).
   sex_hit <- !is.na(out$male_fdr) & out$male_fdr < FDR_CUT |
              !is.na(out$female_fdr) & out$female_fdr < FDR_CUT
   out$confidence <- ifelse(out$n_ctrl >= 5 & sex_hit, "High", "Low")
   out
 }
 
-# --- Main run (default thresholds) ---
+# --- Primary run (default thresholds) ---
 message("[INFO] Primary analysis: skew=", SKEW_CUT, ", min_subjects=", MIN_SUBJECTS)
 res <- analyze(SKEW_CUT, MIN_SUBJECTS)
 if (is.null(res)) stop("No loci passed filters at the default thresholds.")
@@ -220,38 +211,18 @@ sweep$n_loci <- sweep$n_primary_sig <- sweep$n_male_sig <- sweep$n_female_sig <-
 for (i in seq_len(nrow(sweep))) {
   r <- analyze(sweep$skew_cut[i], sweep$min_subjects[i])
   if (!is.null(r)) {
-    sweep$n_loci[i] <- nrow(r)
-    sweep$n_primary_sig[i] <- sum(r$fdr < FDR_CUT, na.rm = TRUE)
-    sweep$n_male_sig[i] <- sum(r$male_fdr < FDR_CUT, na.rm = TRUE)
-    sweep$n_female_sig[i] <- sum(r$female_fdr < FDR_CUT, na.rm = TRUE)
+    sweep$n_loci[i]         <- nrow(r)
+    sweep$n_primary_sig[i]  <- sum(r$fdr < FDR_CUT, na.rm = TRUE)
+    sweep$n_male_sig[i]     <- sum(r$male_fdr < FDR_CUT, na.rm = TRUE)
+    sweep$n_female_sig[i]   <- sum(r$female_fdr < FDR_CUT, na.rm = TRUE)
   }
 }
 write.csv(sweep, file.path(tables_dir, "12_asm_sensitivity.csv"), row.names = FALSE)
 message("[INFO] wrote sensitivity: ", file.path(tables_dir, "12_asm_sensitivity.csv"))
-
-# --- Figures (base R) ---
-pdf(file.path(fig_dir, "12_asm_volcano.pdf"), width = 6, height = 6)
-x <- res$coef
-y <- -log10(res$fdr)
-plot(x, y, pch = 20, col = ifelse(res$fdr < FDR_CUT, "firebrick", "grey60"),
-     xlab = "condition log-OR (IP allelic fraction, MDD vs Ctrl)",
-     ylab = "-log10(FDR)", main = paste0("ASM group comparison (n loci = ", nrow(res), ")"))
-abline(h = -log10(FDR_CUT), lty = 2, col = "grey40")
-legend("topright", legend = c("FDR<0.05", "ns"), pch = 20, col = c("firebrick", "grey60"))
-dev.off()
-
-pdf(file.path(fig_dir, "12_asm_sensitivity.pdf"), width = 7, height = 5)
-bp <- matrix(sweep$n_primary_sig, nrow = length(SWEEP_SKEW), byrow = TRUE,
-             dimnames = list(paste0("skew=", SWEEP_SKEW), paste0("minSubj=", SWEEP_MINSUBJ)))
-barplot(bp, beside = TRUE, legend.text = TRUE, col = c("steelblue", "grey70", "firebrick"),
-        xlab = "minimum subjects per locus", ylab = "significant loci (FDR<0.05)",
-        main = "ASM sensitivity: significant loci")
-dev.off()
-message("[INFO] wrote figures to ", fig_dir)
 
 saveRDS(list(results = res, sensitivity = sweep, params = list(
   q_cut = Q_CUT, skew_cut = SKEW_CUT, min_subjects = MIN_SUBJECTS, min_ip_reads = MIN_IP_READS,
   min_allele = MIN_ALLELE, min_input_reads = MIN_INPUT_READS, fdr_cut = FDR_CUT,
   input_available = input_available)), out_rds)
 message("[INFO] wrote RDS: ", out_rds)
-message("[INFO] done.")
+message("[INFO] done. Run 13_asm_compare_viz.R to generate figures from ", out_rds, ".")
