@@ -2,7 +2,7 @@ name: mdd
 channels:
   - conda-forge
   - bioconda
-  - defaults
+  # - defaults
 dependencies:
   # Upstream Core Tools
   - star
@@ -26,6 +26,7 @@ dependencies:
   - pandas
   - matplotlib
   - tqdm
+  - pygenometracks
   - pip
   
   # R Stack
