@@ -55,6 +55,21 @@ Below is the layout of the analysis workspace:
   * [`04_haplotype_caller.sh`](03_variant_calling/04_haplotype_caller.sh): Call raw variants using HaplotypeCaller.
   * *HaplotypeCalling Audit*: Verification step for called raw SNPs.
   * [`05_variant_filtration.sh`](03_variant_calling/05_variant_filtration.sh): Filter variants to identify high-confidence m6A-SNPs.
+  * [`06_ase_readcounter.sbatch`](03_variant_calling/06_ase_readcounter.sbatch): GATK ASEReadCounter on IP BAMs.
+  * [`07_m6allele_asm.sh`](03_variant_calling/07_m6allele_asm.sh): M6Allele statistical ASM detection per subject.
+  * [`08_find_drach_sites.py`](03_variant_calling/08_find_drach_sites.py): Identify reference DRACH motifs in consensus peaks.
+  * [`09_annotate_drach_disruption.py`](03_variant_calling/09_annotate_drach_disruption.py) & [`09_intersect_drach_snps.sh`](03_variant_calling/09_intersect_drach_snps.sh): Annotate SNPs disrupting DRACH motifs.
+  * [`10_input_ase_readcounter.sbatch`](03_variant_calling/10_input_ase_readcounter.sbatch): ASEReadCounter on Input (baseline) BAMs.
+  * [`11_asm_build_matrix.py`](03_variant_calling/11_asm_build_matrix.py): Build tidy per-(locus, subject) allele count matrix.
+  * [`12_asm_compare.R`](03_variant_calling/12_asm_compare.R): Beta-binomial GLMM group comparison (MDD vs. Ctrl, sex-stratified).
+  * [`13_asm_compare_viz.R`](03_variant_calling/13_asm_compare_viz.R): Visualizations and diagnostic plots for ASM.
+  * [`14_plot_drach_disruption.R`](03_variant_calling/14_plot_drach_disruption.R): Cohort-wide DRACH motif disruption overview.
+  * [`15_plot_sig_asm_drach.R`](03_variant_calling/15_plot_sig_asm_drach.R): Fine-mapping figure of significant ASM DRACH loci.
+  * [`16_plot_igv_track_bin3.sh`](03_variant_calling/16_plot_igv_track_bin3.sh): pyGenomeTracks and IGV report for BIN3 locus.
+  * [`17_annotate_vep_dbsnp.py`](03_variant_calling/17_annotate_vep_dbsnp.py): Layer 1 & 2 Ensembl VEP and dbSNP functional annotation.
+  * [`18_audit_gtex.py`](03_variant_calling/18_audit_gtex.py): Layer 3 GTEx Portal Brain BA9 eQTL/sQTL audit.
+  * [`19_crossref_gwas.py`](03_variant_calling/19_crossref_gwas.py): Layer 4 GWAS Catalog psychiatric trait cross-referencing.
+  * [`20_compile_functional_summary.py`](03_variant_calling/20_compile_functional_summary.py): Layer 5 literature curation & consolidated multi-layer summary compiler.
 * **[`docs/`](docs)**: Documentation and background theory.
   * [`cohort_limitations_and_resolutions.md`](docs/cohort_limitations_and_resolutions.md): Gating thresholds and deconvolution results.
 * **[`_data/`](_data)**: Reference annotation files, genome indices, and temporary directories.
@@ -104,6 +119,22 @@ bash 03_variant_calling/04_haplotype_caller.sh
 
 # Filter variants
 bash 03_variant_calling/05_variant_filtration.sh
+```
+
+### 4. Allele-Specific Methylation (ASM) & Multi-Layer Functional Annotation
+Run ASM counting, statistical modeling, fine-mapping, and multi-layer functional annotation:
+```bash
+# ASM quantification & group testing
+python3 03_variant_calling/11_asm_build_matrix.py
+Rscript 03_variant_calling/12_asm_compare.R
+Rscript 03_variant_calling/13_asm_compare_viz.R
+Rscript 03_variant_calling/15_plot_sig_asm_drach.R
+
+# Multi-Layer Functional Annotation (Layers 1-5)
+python3 03_variant_calling/17_annotate_vep_dbsnp.py        # Layer 1 (VEP) & Layer 2 (dbSNP)
+python3 03_variant_calling/18_audit_gtex.py                # Layer 3 (GTEx Brain BA9 eQTL/sQTL)
+python3 03_variant_calling/19_crossref_gwas.py             # Layer 4 (GWAS Catalog)
+python3 03_variant_calling/20_compile_functional_summary.py # Layer 5 & Consolidated Deliverable
 ```
 
 ---

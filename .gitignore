@@ -91,5 +91,6 @@ img/
 
 _data/featurecounts
 _data/multiqc
+_data/tools/
 
 docs/report

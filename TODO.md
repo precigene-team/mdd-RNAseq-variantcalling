@@ -266,3 +266,15 @@ This document lists the completed and remaining tasks for the MDD RNA-seq and Me
   * [ ] Appendix: no page numbers
 * [ ] Subsections numbered by chapter (max 4 levels: 1 → 1.1 → 1.1.1 → 1.1.1.1)
 * [ ] Figures and tables numbered by chapter (e.g., Figure 3.1, Table 3.2)
+
+---
+
+## 🧬 Candidate Loci Functional Annotation (Mentor Task)
+
+* [ ] Multi-layer functional annotation for 5 significant ASM candidate loci (**MGAT5**, **BIN3**, **IER2**, **TENM3**, **MTCH1**):
+  * [x] **Layer 1 (Ensembl VEP)**: Map coordinates, variant consequences (coding/intronic/UTR), and affected transcripts
+  * [x] **Layer 2 (dbSNP)**: Retrieve rsIDs, minor allele frequencies (MAF), and variant info
+  * [ ] **Layer 3 (GTEx Portal)**: Audit tissue-specific eQTL and sQTL associations (prioritize Frontal Cortex BA9 / Brain)
+  * [ ] **Layer 4 (GWAS Catalog)**: Cross-reference associations with MDD, psychiatric traits, and neurological phenotypes
+  * [ ] **Layer 5 (Literature Curation)**: Query PubMed/Google Scholar (`[Gene] + MDD/depression/brain/stress/m6A`)
+  * [ ] **Deliverable**: Compile summary table (`Gene | SNP/rsID | Variant Consequence | eQTL/sQTL | Brain/MDD Evidence | m6A Evidence | Reference`)

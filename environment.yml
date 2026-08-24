@@ -27,6 +27,7 @@ dependencies:
   - matplotlib
   - tqdm
   - pygenometracks
+  - igv-reports
   - pip
   
   # R Stack
