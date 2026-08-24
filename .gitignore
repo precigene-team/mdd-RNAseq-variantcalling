@@ -93,4 +93,5 @@ _data/featurecounts
 _data/multiqc
 _data/tools/
 
-docs/report
+puppeteer-config.json
+_report
