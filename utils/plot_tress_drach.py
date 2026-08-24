@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # [[utils/plot_tress_drach.py]]
-# Goal: Visualize TRESS peak calling and DRACH motif sequence logo with vertically stretched letters on probability axis for Slide 7.
+# Goal: Visualize TRESS peak calling normalization (Non-Normalized False Positives vs TRESS Normalized True Peaks) and DRACH motif logo for Slide 7 / Manuscript.
 
 import os
 import numpy as np
@@ -49,50 +49,92 @@ def add_stretched_letter(ax, char, x_center, y_bottom, height, width, color, zor
     ax.add_patch(patch)
 
 # --- 2. Figure Setup ---
-fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(13.5, 5.8), dpi=300, facecolor="#ffffff")
+fig = plt.figure(figsize=(14.5, 6.2), dpi=300, facecolor="#ffffff")
 plt.rcParams['font.sans-serif'] = 'DejaVu Sans'
 
-plt.subplots_adjust(left=0.06, right=0.96, bottom=0.15, top=0.88, wspace=0.26)
+# Create GridSpec: Left side = Panel A (Top: Non-normalized, Bottom: TRESS Normalized), Right side = Panel B (DRACH Motif)
+gs = fig.add_gridspec(2, 2, width_ratios=[1.25, 1.0], height_ratios=[1.0, 1.0], wspace=0.30, hspace=0.35,
+                       left=0.06, right=0.96, bottom=0.12, top=0.90)
+
+ax_a1 = fig.add_subplot(gs[0, 0]) # Non-normalized
+ax_a2 = fig.add_subplot(gs[1, 0]) # TRESS Normalized
+ax_b  = fig.add_subplot(gs[:, 1]) # DRACH Motif
 
 # ==============================================================================
-# PANEL A: Peak Calling (IP vs Input)
+# PANEL A1: Non-Normalized / Naive Peak Calling (False Positive Artifacts)
 # ==============================================================================
-ax_a.set_facecolor('#ffffff')
-
+ax_a1.set_facecolor('#ffffff')
 x = np.linspace(0, 100, 500)
 
-input_cov = 15 + 10 * np.exp(-((x - 75) / 15)**2)
-ip_cov = 18 + 80 * np.exp(-((x - 40) / 10)**2) + 12 * np.exp(-((x - 75) / 15)**2)
+# Region 1 (x=25): High Gene Expression (Both IP and Input are high)
+# Region 2 (x=75): True m6A Peak (IP high, Input low)
+input_cov = 10 + 60 * np.exp(-((x - 25) / 8)**2) + 5 * np.exp(-((x - 75) / 8)**2)
+ip_cov    = 12 + 65 * np.exp(-((x - 25) / 8)**2) + 70 * np.exp(-((x - 75) / 8)**2)
 
-# IP Track (Navy)
-ax_a.plot(x, ip_cov, color='#1f4e79', lw=3.0, label='IP (m6A RNA)')
-ax_a.fill_between(x, 0, ip_cov, color='#1f4e79', alpha=0.15)
+ax_a1.plot(x, ip_cov, color='#1f4e79', lw=2.2, label='IP (m6A Pool)')
+ax_a1.fill_between(x, 0, ip_cov, color='#1f4e79', alpha=0.15)
 
-# Input Track (Teal Dashed)
-ax_a.plot(x, input_cov, color='#16a085', lw=2.5, linestyle='--', label='Input (Total RNA)')
-ax_a.fill_between(x, 0, input_cov, color='#16a085', alpha=0.10)
+ax_a1.plot(x, input_cov, color='#16a085', lw=2.0, linestyle='--', label='Input (Total RNA)')
+ax_a1.fill_between(x, 0, input_cov, color='#16a085', alpha=0.10)
 
-# Highlight Peak Region
-ax_a.axvspan(30, 50, color='#f39c12', alpha=0.22, zorder=0)
+# Naive peak caller highlights BOTH as peaks
+ax_a1.axvspan(15, 35, color='#e74c3c', alpha=0.18, zorder=0)
+ax_a1.axvspan(65, 85, color='#27ae60', alpha=0.18, zorder=0)
 
-ax_a.text(40, 92, "IP-Enriched Peak\n(Normalized by Input)", 
-          fontsize=10, fontweight='bold', color='#d35400', ha='center', va='bottom',
-          bbox=dict(boxstyle="round,pad=0.4", fc="#fef9e7", ec="#f39c12", lw=1.2))
+ax_a1.text(25, 75, "[FALSE POSITIVE]\n(High Expression)", fontsize=8.5, fontweight='bold', color='#c0392b', ha='center',
+           bbox=dict(boxstyle="round,pad=0.4", fc="#fadbd8", ec="#e74c3c", lw=1.0))
 
-# Minimal Exon Line
-ax_a.plot([5, 95], [-12, -12], color='#7f8c8d', lw=2)
-ax_a.add_patch(patches.Rectangle((20, -17), 60, 10, facecolor="#34495e", edgecolor="none"))
-ax_a.text(50, -28, "Exon / Transcript Region", fontsize=9, color="#7f8c8d", ha="center")
+ax_a1.text(75, 75, "[TRUE PEAK]\n(High IP Enrichment)", fontsize=8.5, fontweight='bold', color='#1e8449', ha='center',
+           bbox=dict(boxstyle="round,pad=0.4", fc="#d4efdf", ec="#27ae60", lw=1.0))
 
-ax_a.set_ylim(-35, 115)
-ax_a.set_xlim(0, 100)
-ax_a.set_title("1. Peak Calling (IP / Input Normalization)", fontsize=12.5, fontweight='bold', color='#1a252f', pad=12)
-ax_a.set_ylabel("Read Depth", fontsize=10.5, fontweight='bold', color='#2c3e50')
-ax_a.legend(loc='upper right', frameon=True, facecolor='#ffffff', edgecolor='#d0d7de', fontsize=9.5)
+ax_a1.set_ylim(0, 95)
+ax_a1.set_xlim(0, 100)
+ax_a1.set_title("A. Non-Normalized Peak Calling (Naive IP Depth Only)", fontsize=11, fontweight='bold', color='#1a252f', pad=6)
+ax_a1.set_ylabel("Raw Read Depth", fontsize=9.5, fontweight='bold', color='#2c3e50')
+ax_a1.legend(loc='upper center', bbox_to_anchor=(0.5, 1.25), ncol=2, frameon=False, fontsize=9)
 
-ax_a.spines['top'].set_visible(False)
-ax_a.spines['right'].set_visible(False)
-ax_a.set_xticks([])
+ax_a1.spines['top'].set_visible(False)
+ax_a1.spines['right'].set_visible(False)
+ax_a1.set_xticks([])
+
+# ==============================================================================
+# PANEL A2: TRESS Normalized Model (Input Baseline Normalization)
+# ==============================================================================
+ax_a2.set_facecolor('#ffffff')
+
+# Normalized Signal = IP / Input (or log2 fold enrichment)
+norm_ratio = ip_cov / np.maximum(input_cov, 1)
+
+ax_a2.plot(x, norm_ratio, color='#8e44ad', lw=2.5, label='TRESS Model Ratio (IP / Input)')
+ax_a2.fill_between(x, 0, norm_ratio, color='#8e44ad', alpha=0.20)
+
+# Significance Cutoff Line
+ax_a2.axhline(2.5, color='#d35400', linestyle=':', lw=1.5, label='TRESS Threshold')
+
+# Highlight correctly rejected vs confirmed
+ax_a2.axvspan(15, 35, color='#bdc3c7', alpha=0.25, zorder=0)
+ax_a2.axvspan(65, 85, color='#f39c12', alpha=0.22, zorder=0)
+
+ax_a2.text(25, 4.2, "[REJECTED]\n(Ratio ≈ 1.0)", fontsize=8.5, fontweight='bold', color='#7f8c8d', ha='center',
+           bbox=dict(boxstyle="round,pad=0.4", fc="#f2f4f4", ec="#bdc3c7", lw=1.0))
+
+ax_a2.text(75, 8.5, "[CONFIRMED PEAK]\n(Enrichment Ratio >> 1.0)", fontsize=8.5, fontweight='bold', color='#d35400', ha='center',
+           bbox=dict(boxstyle="round,pad=0.4", fc="#fef9e7", ec="#f39c12", lw=1.0))
+
+# Transcript annotation line below
+ax_a2.plot([5, 95], [-2.5, -2.5], color='#7f8c8d', lw=2)
+ax_a2.add_patch(patches.Rectangle((15, -3.8), 70, 2.6, facecolor="#34495e", edgecolor="none"))
+ax_a2.text(50, -6.5, "High-Expression Gene Transcript", fontsize=8.5, color="#7f8c8d", ha="center")
+
+ax_a2.set_ylim(-8, 12)
+ax_a2.set_xlim(0, 100)
+ax_a2.set_title("B. TRESS Model (Input Normalized Enrichment Ratio)", fontsize=11, fontweight='bold', color='#1a252f', pad=6)
+ax_a2.set_ylabel("Normalized Fold Enrichment", fontsize=9.5, fontweight='bold', color='#2c3e50')
+ax_a2.legend(loc='upper left', frameon=False, fontsize=8.5)
+
+ax_a2.spines['top'].set_visible(False)
+ax_a2.spines['right'].set_visible(False)
+ax_a2.set_xticks([])
 
 # ==============================================================================
 # PANEL B: DRACH Motif with Stretched Letter Sequence Logo
@@ -146,7 +188,7 @@ ax_b.set_xticklabels(x_labels, fontsize=10, fontweight='bold', color='#2c3e50')
 # Highlight position 3 label
 ax_b.get_xticklabels()[2].set_color('#d35400')
 
-ax_b.set_title("2. DRACH Consensus Motif (Sequence Logo)", fontsize=12.5, fontweight='bold', color='#1a252f', pad=12)
+ax_b.set_title("C. DRACH Consensus Motif (Sequence Logo)", fontsize=12, fontweight='bold', color='#1a252f', pad=12)
 
 # Clean spines & grid
 ax_b.spines['top'].set_visible(False)
@@ -157,17 +199,17 @@ ax_b.grid(axis='y', linestyle='--', alpha=0.3, color='#bdc3c7')
 
 # Bottom Callout Box with text wrapping
 callout_text = (
-    "Genome-wide Candidate m6A Sites\n"
-    "Scanning TRESS peak islands for DRACH motif matches pinpoints target m6A loci."
+    "Genome-wide Candidate m6A Loci\n"
+    "Scanning TRESS peak islands for DRACH motif matches pinpoints target m6A sites."
 )
 
-ax_b.text(3.0, -0.32, callout_text, fontsize=9.5, color='#117864', ha='center', va='top',
+ax_b.text(3.0, -0.34, callout_text, fontsize=9.2, color='#117864', ha='center', va='top',
           transform=ax_b.transData, clip_on=False,
-          bbox=dict(boxstyle="round,pad=0.6", fc="#e8f8f5", ec="#17a589", lw=1.5))
+          bbox=dict(boxstyle="round,pad=0.5", fc="#e8f8f5", ec="#17a589", lw=1.4))
 
 # Save PNG and PDF
 plt.savefig(out_png, dpi=300, bbox_inches='tight')
 plt.savefig(out_pdf, bbox_inches='tight')
 plt.close()
 
-print(f"[SUCCESS] Figure saved to:\n  PNG: {out_png}\n  PDF: {out_pdf}")
+print(f"[SUCCESS] Updated Figure saved to:\n  PNG: {out_png}\n  PDF: {out_pdf}")

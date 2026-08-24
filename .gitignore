@@ -92,4 +92,5 @@ img/
 _data/featurecounts
 _data/multiqc
 
-docs/report
+puppeteer-config.json
+_report

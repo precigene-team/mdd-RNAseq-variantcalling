@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # [[utils/plot_allele_counting_workflow.py]]
-# Goal: Visualize allele counting workflow with LaTeX formula rendering for Slide 9.
+# Goal: Minimalist, clean 3-step ASm6A workflow diagram with worked numerical example in Card 3 based on Card 2 counts for Slide 9.
 
 import os
 import numpy as np
@@ -9,7 +9,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-# Enable LaTeX mathtext formatting in matplotlib
+# Enable Matplotlib text formatting
 plt.rcParams['mathtext.fontset'] = 'dejavusans'
 
 # --- 1. Dynamic Pathing ---
@@ -27,158 +27,147 @@ out_png = os.path.join(output_dir, "allele_counting_workflow.png")
 out_pdf = os.path.join(output_dir, "allele_counting_workflow.pdf")
 
 # --- 2. Figure Setup ---
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15.5, 5.6), dpi=300, facecolor="#ffffff")
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15.5, 5.2), dpi=300, facecolor="#ffffff")
 plt.rcParams['font.sans-serif'] = 'DejaVu Sans'
-plt.subplots_adjust(left=0.04, right=0.96, bottom=0.06, top=0.90, wspace=0.22)
+plt.subplots_adjust(left=0.03, right=0.97, bottom=0.06, top=0.88, wspace=0.22)
 
 # ==============================================================================
-# PANEL 1: Spatial Intersection (Enhanced with Peak Curve & Clean Genomic Axis)
+# CARD 1: 1. Spatial Intersection
 # ==============================================================================
 ax1.set_facecolor('#ffffff')
 ax1.set_xlim(0, 10)
 ax1.set_ylim(0, 10)
 ax1.axis('off')
-ax1.set_title("1. Spatial Intersection", fontsize=12.5, fontweight='bold', color='#1a252f', pad=12)
+ax1.set_title("1. Spatial Intersection", fontsize=13, fontweight='bold', color='#1a252f', pad=12)
 
-# Outer box
-box1 = patches.FancyBboxPatch((0.3, 0.4), 9.4, 8.8, boxstyle="round,pad=0.15",
-                              facecolor="#fafbfc", edgecolor="#d0d7de", lw=1.2)
-ax1.add_patch(box1)
+# Outer Card
+card1 = patches.FancyBboxPatch((0.4, 0.4), 9.2, 9.0, boxstyle="round,pad=0.15",
+                              facecolor="#ffffff", edgecolor="#d0d7de", lw=1.4)
+ax1.add_patch(card1)
 
-ax1.text(5.0, 8.5, "TRESS Peak Calling & Intersect", fontsize=10, fontweight="bold", color="#d35400", ha="center")
+# INPUT Pill
+in_pill1 = patches.FancyBboxPatch((1.0, 8.0), 8.0, 0.85, boxstyle="round,pad=0.05",
+                                  facecolor="#eef2f7", edgecolor="#5c6b73", lw=1.2)
+ax1.add_patch(in_pill1)
+ax1.text(5.0, 8.42, "INPUT: Het SNPs (VCF) + m6A Peaks (BED)", fontsize=8.5, fontweight="bold", color="#2c3e50", ha="center", va="center")
 
-# Draw Peak Curve
-x_peak = np.linspace(1.0, 9.0, 300)
-y_curve = 5.8 + 2.2 * np.exp(-((x_peak - 5.0) / 1.4)**2)
+# Peak Curve Visual
+x_peak = np.linspace(1.5, 8.5, 200)
+y_curve = 5.0 + 2.0 * np.exp(-((x_peak - 5.0) / 1.3)**2)
 
 ax1.plot(x_peak, y_curve, color="#d35400", lw=2.2, zorder=3)
-ax1.fill_between(x_peak, 5.8, y_curve, color="#f39c12", alpha=0.25, zorder=2)
+ax1.fill_between(x_peak, 5.0, y_curve, color="#f39c12", alpha=0.25, zorder=2)
 
-# Highlighted TRESS Peak Interval Shading
-ax1.axvspan(3.2, 6.8, ymin=0.42, ymax=0.82, color="#fef9e7", alpha=0.5, zorder=1)
-ax1.plot([3.2, 6.8], [5.8, 5.8], color="#d35400", lw=2, zorder=3)
-ax1.text(5.0, 6.1, "m6A Peak Region (350 bp)", fontsize=8.5, fontweight="bold", color="#d35400", ha="center")
+# Genomic Axis Line & SNP
+ax1.plot([1.0, 9.0], [4.0, 4.0], color="#34495e", lw=2.2, zorder=3)
+ax1.plot(5.0, 4.0, marker="o", markersize=10, color="#27ae60", zorder=5)
+ax1.text(5.0, 4.4, "Het SNP inside Peak", fontsize=8.5, fontweight="bold", color="#27ae60", ha="center")
 
-# Clean Vertical Projection lines dropping from peak to genomic axis
-ax1.plot([3.2, 3.2], [4.2, 5.8], color="#f39c12", linestyle="--", lw=1.2, zorder=2)
-ax1.plot([6.8, 6.8], [4.2, 5.8], color="#f39c12", linestyle="--", lw=1.2, zorder=2)
+# PROCESS Text
+ax1.text(5.0, 2.6, "bedtools intersect", fontsize=9, fontweight="bold", color="#117864", ha="center",
+         bbox=dict(boxstyle="round,pad=0.3", fc="#e8f8f5", ec="#17a589", lw=1.0))
 
-# Genomic Axis Track (Solid line at y = 4.2)
-ax1.plot([0.8, 9.2], [4.2, 4.2], color="#34495e", lw=2.2, zorder=3)
-
-for tick_x in [1.5, 3.2, 5.0, 6.8, 8.5]:
-    ax1.plot([tick_x, tick_x], [4.1, 4.3], color="#34495e", lw=1.5, zorder=3)
-
-ax1.text(5.0, 3.5, "Genomic Axis (chr12: 52,140,000 - 52,141,000)", 
-         fontsize=8.5, fontweight="bold", color="#2c3e50", ha="center")
-
-# Het SNPs on Genomic Axis
-ax1.plot(4.0, 4.2, marker="o", markersize=9, color="#27ae60", zorder=5)
-ax1.plot(6.0, 4.2, marker="o", markersize=9, color="#27ae60", zorder=5)
-ax1.text(5.0, 4.5, "Het SNPs (Inside Peak)", fontsize=8, fontweight="bold", color="#27ae60", ha="center")
-
-ax1.plot(1.5, 4.2, marker="o", markersize=8, color="#95a5a6", zorder=5)
-ax1.plot(8.5, 4.2, marker="o", markersize=8, color="#95a5a6", zorder=5)
-
-# Bottom Callout Box
-res_badge1 = patches.FancyBboxPatch((0.8, 0.7), 8.4, 2.1, boxstyle="round,pad=0.1",
-                                    facecolor="#e8f8f5", edgecolor="#17a589", lw=1.4)
-ax1.add_patch(res_badge1)
-ax1.text(5.0, 2.2, "bedtools intersect", fontsize=9.5, fontweight="bold", color="#117864", ha="center")
-ax1.text(5.0, 1.3, "Isolates Candidate ASm6A Sites\nOnly retains Het SNPs sitting inside TRESS m6A peaks", 
-         fontsize=8.5, color="#148f77", ha="center", va="center")
+# OUTPUT Pill
+out_pill1 = patches.FancyBboxPatch((1.0, 0.8), 8.0, 0.9, boxstyle="round,pad=0.05",
+                                   facecolor="#d4efdf", edgecolor="#27ae60", lw=1.4)
+ax1.add_patch(out_pill1)
+ax1.text(5.0, 1.25, "OUTPUT: Candidate m6A-SNPs", fontsize=9, fontweight="bold", color="#1e8449", ha="center", va="center")
 
 # ==============================================================================
-# PANEL 2: Pileup Allele Counting (ASEReadCounter)
+# CARD 2: 2. Pileup Allele Counting
 # ==============================================================================
 ax2.set_facecolor('#ffffff')
 ax2.set_xlim(0, 10)
 ax2.set_ylim(0, 10)
 ax2.axis('off')
-ax2.set_title("2. Pileup Allele Counting", fontsize=12.5, fontweight='bold', color='#1a252f', pad=12)
+ax2.set_title("2. Pileup Allele Counting", fontsize=13, fontweight='bold', color='#1a252f', pad=12)
 
-box2 = patches.FancyBboxPatch((0.3, 0.4), 9.4, 8.8, boxstyle="round,pad=0.15",
-                              facecolor="#fafbfc", edgecolor="#d0d7de", lw=1.2)
-ax2.add_patch(box2)
+card2 = patches.FancyBboxPatch((0.4, 0.4), 9.2, 9.0, boxstyle="round,pad=0.15",
+                              facecolor="#ffffff", edgecolor="#d0d7de", lw=1.4)
+ax2.add_patch(card2)
 
-ax2.text(5.0, 8.5, "GATK ASEReadCounter", fontsize=10, fontweight="bold", color="#1b4f72", ha="center")
+# INPUT Pill
+in_pill2 = patches.FancyBboxPatch((1.0, 8.0), 8.0, 0.85, boxstyle="round,pad=0.05",
+                                  facecolor="#eef2f7", edgecolor="#5c6b73", lw=1.2)
+ax2.add_patch(in_pill2)
+ax2.text(5.0, 8.42, "INPUT: Paired Input & IP BAMs", fontsize=8.5, fontweight="bold", color="#2c3e50", ha="center", va="center")
 
-qc_badge = patches.FancyBboxPatch((1.5, 7.3), 7.0, 0.85, boxstyle="round,pad=0.05",
-                                  facecolor="#ebf5fb", edgecolor="#2980b9", lw=1.2)
-ax2.add_patch(qc_badge)
-ax2.text(5.0, 7.7, "Quality Filters: MapQ >= 20, BaseQ >= 20", fontsize=8.5, fontweight="bold", color="#1b4f72", ha="center", va="center")
-
-# Input Fraction Pileup Box
-b_in = patches.Rectangle((0.8, 3.4), 4.0, 3.4, facecolor="#ffffff", edgecolor="#16a085", lw=1.2)
+# Input Box
+b_in = patches.FancyBboxPatch((0.9, 4.0), 3.9, 3.4, boxstyle="round,pad=0.05", facecolor="#f4f6f7", edgecolor="#16a085", lw=1.2)
 ax2.add_patch(b_in)
-ax2.text(2.8, 6.4, "Input BAM (Total)", fontsize=9, fontweight="bold", color="#16a085", ha="center")
-ax2.text(2.8, 5.5, "REF (A): 15 reads", fontsize=8.5, color="#27ae60", ha="center")
-ax2.text(2.8, 4.7, "ALT (G): 14 reads", fontsize=8.5, color="#d35400", ha="center")
-ax2.text(2.8, 3.8, "Ratio ~ 50:50", fontsize=8.5, fontweight="bold", color="#566573", ha="center")
+ax2.text(2.85, 6.7, "Input (Total)", fontsize=9, fontweight="bold", color="#16a085", ha="center")
+ax2.text(2.85, 5.6, "REF: 15 reads\nALT: 14 reads", fontsize=8, color="#2c3e50", ha="center")
+ax2.text(2.85, 4.5, "48.3% ALT", fontsize=8.5, fontweight="bold", color="#566573", ha="center")
 
-# IP Fraction Pileup Box
-b_ip = patches.Rectangle((5.2, 3.4), 4.0, 3.4, facecolor="#ffffff", edgecolor="#1f4e79", lw=1.2)
+# IP Box
+b_ip = patches.FancyBboxPatch((5.2, 4.0), 3.9, 3.4, boxstyle="round,pad=0.05", facecolor="#fef9e7", edgecolor="#d35400", lw=1.2)
 ax2.add_patch(b_ip)
-ax2.text(7.2, 6.4, "IP BAM (m6A Pool)", fontsize=9, fontweight="bold", color="#1f4e79", ha="center")
-ax2.text(7.2, 5.5, "REF (A):  4 reads", fontsize=8.5, color="#27ae60", ha="center")
-ax2.text(7.2, 4.7, "ALT (G): 28 reads", fontsize=8.5, color="#d35400", ha="center")
-ax2.text(7.2, 3.8, "Ratio = 87.5% ALT", fontsize=8.5, fontweight="bold", color="#d35400", ha="center")
+ax2.text(7.15, 6.7, "IP (m6A Pool)", fontsize=9, fontweight="bold", color="#d35400", ha="center")
+ax2.text(7.15, 5.6, "REF:  4 reads\nALT: 28 reads", fontsize=8, color="#2c3e50", ha="center")
+ax2.text(7.15, 4.5, "87.5% ALT", fontsize=8.5, fontweight="bold", color="#d35400", ha="center")
 
-# Result Box
-res_badge2 = patches.FancyBboxPatch((0.8, 0.7), 8.4, 2.1, boxstyle="round,pad=0.1",
-                                    facecolor="#fef9e7", edgecolor="#f39c12", lw=1.4)
-ax2.add_patch(res_badge2)
-ax2.text(5.0, 2.2, "Allele Count Extraction", fontsize=9.5, fontweight="bold", color="#d35400", ha="center")
-ax2.text(5.0, 1.3, "Extracts REF and ALT counts per subject\nPaired Input baseline & IP methylated reads", 
-         fontsize=8.5, color="#7e5109", ha="center", va="center")
+# PROCESS Text
+ax2.text(5.0, 2.6, "GATK ASEReadCounter", fontsize=9, fontweight="bold", color="#1b4f72", ha="center",
+         bbox=dict(boxstyle="round,pad=0.3", fc="#ebf5fb", ec="#2980b9", lw=1.0))
+
+# OUTPUT Pill
+out_pill2 = patches.FancyBboxPatch((1.0, 0.8), 8.0, 0.9, boxstyle="round,pad=0.05",
+                                   facecolor="#fdebd0", edgecolor="#d35400", lw=1.4)
+ax2.add_patch(out_pill2)
+ax2.text(5.0, 1.25, "OUTPUT: Paired Count Matrix", fontsize=9, fontweight="bold", color="#a04000", ha="center", va="center")
 
 # ==============================================================================
-# PANEL 3: Allelic Ratio Testing (Rendered with LaTeX Math Formula)
+# CARD 3: 3. Allelic Ratio Testing (Worked Example from Card 2)
 # ==============================================================================
 ax3.set_facecolor('#ffffff')
 ax3.set_xlim(0, 10)
 ax3.set_ylim(0, 10)
 ax3.axis('off')
-ax3.set_title("3. Allelic Ratio Testing", fontsize=12.5, fontweight='bold', color='#1a252f', pad=12)
+ax3.set_title("3. Allelic Ratio Testing", fontsize=13, fontweight='bold', color='#1a252f', pad=12)
 
-box3 = patches.FancyBboxPatch((0.3, 0.4), 9.4, 8.8, boxstyle="round,pad=0.15",
-                              facecolor="#fafbfc", edgecolor="#d0d7de", lw=1.2)
-ax3.add_patch(box3)
+card3 = patches.FancyBboxPatch((0.4, 0.4), 9.2, 9.0, boxstyle="round,pad=0.15",
+                              facecolor="#ffffff", edgecolor="#d0d7de", lw=1.4)
+ax3.add_patch(card3)
 
-# Formula Box with rendered LaTeX math
-ax3.text(5.0, 8.5, "ALT Allele Fraction Formula", fontsize=10, fontweight="bold", color="#6c3483", ha="center")
-f_box = patches.FancyBboxPatch((1.2, 6.7), 7.6, 1.4, boxstyle="round,pad=0.1",
-                               facecolor="#f5eef8", edgecolor="#8e44ad", lw=1.4)
+# INPUT Pill
+in_pill3 = patches.FancyBboxPatch((1.0, 8.0), 8.0, 0.85, boxstyle="round,pad=0.05",
+                                  facecolor="#eef2f7", edgecolor="#5c6b73", lw=1.2)
+ax3.add_patch(in_pill3)
+ax3.text(5.0, 8.42, "INPUT: Allele Count Matrix", fontsize=8.5, fontweight="bold", color="#2c3e50", ha="center", va="center")
+
+# LaTeX Worked Example Box
+f_box = patches.FancyBboxPatch((0.9, 4.0), 8.2, 3.5, boxstyle="round,pad=0.08",
+                               facecolor="#f5eef8", edgecolor="#8e44ad", lw=1.2)
 ax3.add_patch(f_box)
 
-# Render crisp LaTeX formula
-latex_formula = r"$\mathrm{ALT}_{\mathrm{af}} = \frac{\mathrm{ALT}}{\mathrm{REF} + \mathrm{ALT}}$"
-ax3.text(5.0, 7.4, latex_formula, fontsize=14, color="#6c3483", ha="center", va="center")
+ax3.text(5.0, 7.0, "Example Calculation:", fontsize=9, fontweight="bold", color="#6c3483", ha="center")
 
-# Statistical Test Box
-ax3.text(5.0, 6.1, "IP vs. Input Binomial Test", fontsize=9.5, fontweight="bold", color="#2c3e50", ha="center")
+# Formula & Calculation
+latex_calc = r"$\mathrm{IP}_{\mathrm{af}} = \frac{28}{4 + 28} = \mathbf{0.875\ (87.5\%)}$"
+ax3.text(5.0, 6.0, latex_calc, fontsize=11, color="#6c3483", ha="center", va="center")
 
-test_box = patches.Rectangle((0.8, 3.4), 8.4, 2.3, facecolor="#ffffff", edgecolor="#bdc3c7", lw=1.0)
-ax3.add_patch(test_box)
-ax3.text(5.0, 5.1, "Binomial Test on IP vs. Input Ratios", fontsize=8.5, fontweight="bold", color="#2c3e50", ha="center")
+latex_skew = r"$\Delta\mathrm{Skew} = |0.875 - 0.483| = \mathbf{39.2\% > 20\%}$"
+ax3.text(5.0, 4.8, latex_skew, fontsize=10, color="#d35400", ha="center", va="center")
 
-latex_q = r"$\text{Significance: } q < 0.05$"
-ax3.text(5.0, 4.3, latex_q, fontsize=9, color="#27ae60", ha="center")
+# PROCESS Text
+ax3.text(5.0, 2.6, "Binomial Test (q < 0.05)", fontsize=9, fontweight="bold", color="#27ae60", ha="center",
+         bbox=dict(boxstyle="round,pad=0.3", fc="#e8f8f5", ec="#27ae60", lw=1.0))
 
-latex_eff = r"$\text{Effect Size: } |\mathrm{IP}_{\mathrm{af}} - 0.5| \geq 0.2$"
-ax3.text(5.0, 3.7, latex_eff, fontsize=9, color="#d35400", ha="center")
+# OUTPUT Pill
+out_pill3 = patches.FancyBboxPatch((1.0, 0.8), 8.0, 0.9, boxstyle="round,pad=0.05",
+                                   facecolor="#e8daef", edgecolor="#7d3c98", lw=1.4)
+ax3.add_patch(out_pill3)
+ax3.text(5.0, 1.25, "OUTPUT: Candidate ASm6A Loci", fontsize=9, fontweight="bold", color="#512e5f", ha="center", va="center")
 
-# Prioritization Box
-res_badge3 = patches.FancyBboxPatch((0.8, 0.7), 8.4, 2.1, boxstyle="round,pad=0.1",
-                                    facecolor="#f5eef8", edgecolor="#8e44ad", lw=1.4)
-ax3.add_patch(res_badge3)
-ax3.text(5.0, 2.2, "Candidate ASm6A Prioritization", fontsize=9.5, fontweight="bold", color="#6c3483", ha="center")
-ax3.text(5.0, 1.3, "Filters loci with significant allelic imbalance\nPrioritizes high effect size m6A methylation sites", 
-         fontsize=8.5, color="#512e5f", ha="center", va="center")
+# ==============================================================================
+# CONNECTING ARROWS BETWEEN CARDS
+# ==============================================================================
+fig.text(0.352, 0.50, "➔", fontsize=22, fontweight="bold", color="#34495e", ha="center", va="center")
+fig.text(0.665, 0.50, "➔", fontsize=22, fontweight="bold", color="#34495e", ha="center", va="center")
 
 # Save PNG and PDF
 plt.savefig(out_png, dpi=300, bbox_inches='tight')
 plt.savefig(out_pdf, bbox_inches='tight')
 plt.close()
 
-print(f"[SUCCESS] Allele counting workflow figure with LaTeX math saved to:\n  PNG: {out_png}\n  PDF: {out_pdf}")
+print(f"[SUCCESS] Worked calculation example figure saved to:\n  PNG: {out_png}\n  PDF: {out_pdf}")
