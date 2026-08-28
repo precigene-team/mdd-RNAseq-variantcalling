@@ -102,39 +102,47 @@ ax_b.axis('off')
 ax_b.set_title("B. Sequential Variant Filtering Cascade", 
                fontsize=12.5, fontweight='bold', color='#1a252f', pad=12)
 
-# Dynamic counts
-raw_vcf_count = f"{metrics['raw_vcf']:,} raw calls (39 GVCFs)"
-pass_hard_count = f"{metrics['pass_hard']:,} pass variants"
-het_obs_count = f"{metrics['het_obs']:,} observation rows"
-loci_count = f"{metrics['distinct_loci']:,} distinct loci ({metrics['subject_snp_obs']:,} observations)"
+# Dynamic exact counts
+raw_vcf_count = f"{metrics['raw_vcf']:,} raw variant loci"
+pass_hard_count = f"{metrics['pass_hard']:,} pass variant loci"
+transcriptome_het_count = "1,601,183 Obs  |  813,969 Loci"
+peak_het_count = f"{metrics['het_obs']:,} Obs  |  15,351 Loci"
+loci_count = f"{metrics['subject_snp_obs']:,} Obs  |  {metrics['distinct_loci']:,} Loci"
 
-# Symmetrical arrow text definitions
+# 5-Stage Symmetrical Cascade (Observations | Loci)
 stages = [
     {
         "title": "1. Raw Cohort Joint VCF", 
         "count": raw_vcf_count, 
-        "w": 9.0, "y": 8.0, "fc": "#ebf5fb", "ec": "#2980b9", "tc": "#1b4f72",
+        "w": 9.2, "y": 8.3, "h": 1.15, "fc": "#ebf5fb", "ec": "#2980b9", "tc": "#1b4f72",
         "left_criterion": "Hard Filters: FS <= 30, QD >= 2.0",
         "right_removed": f"- {metrics['artifacts_removed']:,} artifacts"
     },
     {
         "title": "2. Hard-Filtered Variants", 
         "count": pass_hard_count, 
-        "w": 7.6, "y": 5.6, "fc": "#e8f8f5", "ec": "#17a589", "tc": "#117864",
-        "left_criterion": "Het Genotype: 0/1 & DP >= 10, GQ >= 20",
-        "right_removed": f"- {metrics['homs_low_qual_removed']:,} homs & low-qual"
+        "w": 8.2, "y": 6.35, "h": 1.15, "fc": "#e8f8f5", "ec": "#17a589", "tc": "#117864",
+        "left_criterion": "Het Genotype: 0/1, DP >= 10, GQ >= 20",
+        "right_removed": "- Non-het / low-qual"
     },
     {
-        "title": "3. Biallelic Het SNPs (0/1)", 
-        "count": het_obs_count, 
-        "w": 6.2, "y": 3.2, "fc": "#fef9e7", "ec": "#f39c12", "tc": "#d35400",
-        "left_criterion": "Cohort Clustering",
-        "right_removed": "Collapse 39 subjects"
+        "title": "3. Transcriptome Het SNPs", 
+        "count": transcriptome_het_count, 
+        "w": 7.2, "y": 4.4, "h": 1.15, "fc": "#fef9e7", "ec": "#f39c12", "tc": "#d35400",
+        "left_criterion": "TRESS m6A Peak Overlap",
+        "right_removed": "- 798,618 non-peak loci"
     },
     {
-        "title": "4. Candidate Het SNP Loci", 
+        "title": "4. Peak-Overlapping Het SNPs", 
+        "count": peak_het_count, 
+        "w": 6.2, "y": 2.45, "h": 1.15, "fc": "#fef5e7", "ec": "#e67e22", "tc": "#b9770e",
+        "left_criterion": "m6A Motif Overlap (DRACH)",
+        "right_removed": "- 3,809 non-motif loci"
+    },
+    {
+        "title": "5. Motif-Overlapping Het Loci", 
         "count": loci_count, 
-        "w": 4.8, "y": 0.8, "fc": "#f5eef8", "ec": "#8e44ad", "tc": "#6c3483",
+        "w": 5.2, "y": 0.5, "h": 1.15, "fc": "#f5eef8", "ec": "#8e44ad", "tc": "#6c3483",
         "left_criterion": None,
         "right_removed": None
     }
@@ -142,31 +150,31 @@ stages = [
 
 for idx, stg in enumerate(stages):
     x_left = 5.0 - stg["w"] / 2.0
-    box = patches.FancyBboxPatch((x_left, stg["y"]), stg["w"], 1.35, boxstyle="round,pad=0.12",
-                                 facecolor=stg["fc"], edgecolor=stg["ec"], lw=1.5)
+    box = patches.FancyBboxPatch((x_left, stg["y"]), stg["w"], stg["h"], boxstyle="round,pad=0.10",
+                                 facecolor=stg["fc"], edgecolor=stg["ec"], lw=1.4)
     ax_b.add_patch(box)
     
-    ax_b.text(5.0, stg["y"] + 0.88, stg["title"], fontsize=10, fontweight="bold", color=stg["tc"], ha="center")
-    ax_b.text(5.0, stg["y"] + 0.40, stg["count"], fontsize=9, color="#2c3e50", ha="center")
+    ax_b.text(5.0, stg["y"] + 0.72, stg["title"], fontsize=9.5, fontweight="bold", color=stg["tc"], ha="center")
+    ax_b.text(5.0, stg["y"] + 0.30, stg["count"], fontsize=8.5, color="#2c3e50", ha="center")
     
     # Down Arrow with Criteria on LEFT and Counts on RIGHT
     if stg["left_criterion"] is not None:
-        next_y = stages[idx+1]["y"] + 1.35
+        next_y = stages[idx+1]["y"] + stages[idx+1]["h"]
         y_mid = (stg["y"] + next_y) / 2.0
         
         # Arrow down at X = 5.0
-        ax_b.annotate("", xy=(5.0, next_y + 0.04), xytext=(5.0, stg["y"] - 0.04),
-                    arrowprops=dict(arrowstyle="->", color="#e74c3c" if "-" in stg["right_removed"] else "#34495e", lw=2.0))
+        ax_b.annotate("", xy=(5.0, next_y + 0.03), xytext=(5.0, stg["y"] - 0.03),
+                    arrowprops=dict(arrowstyle="->", color="#e74c3c" if "-" in stg["right_removed"] else "#34495e", lw=1.8))
         
         # Quality Criterion on LEFT side of arrow (ha="right", x = 4.82)
         ax_b.text(4.82, y_mid, stg["left_criterion"], 
-                  fontsize=8.5, fontweight="bold", color="#2c3e50", 
+                  fontsize=8.0, fontweight="bold", color="#2c3e50", 
                   ha="right", va="center")
         
         # Removed Count on RIGHT side of arrow (ha="left", x = 5.18)
         right_col = "#c0392b" if "-" in stg["right_removed"] else "#16a085"
         ax_b.text(5.18, y_mid, stg["right_removed"], 
-                  fontsize=8.5, fontweight="bold", color=right_col, 
+                  fontsize=8.0, fontweight="bold", color=right_col, 
                   ha="left", va="center")
 
 # Save PNG and PDF

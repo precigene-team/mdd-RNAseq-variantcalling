@@ -104,16 +104,72 @@ else:
 
 print(f"[INFO] Extracted {len(cand_df)} unique candidate variant(s) for VEP querying.")
 
-# --- Step 4: Dynamic Ensembl VEP & dbSNP REST API Queries ---
-print("[INFO] Querying Ensembl VEP REST API...")
-annotated_rows = []
+# --- Step 4: Batched Ensembl VEP & dbSNP REST API Queries ---
+print(f"[INFO] Querying Ensembl VEP REST API in batch for {len(cand_df)} variant(s)...")
 
-for _, row in cand_df.iterrows():
-    c   = row['snp_chr']
-    pos = row['snp_pos']
-    ref = row['ref']
-    alt = row['alt']
+# Prepare batch input: format "chr:pos-pos:1/alt" or VCF format
+variant_map = {}
+batch_variants = []
+
+for idx, row in cand_df.iterrows():
+    c   = str(row['snp_chr']).replace('chr', '')
+    pos = int(row['snp_pos'])
+    ref = str(row['ref'])
+    alt = str(row['alt'])
+    
+    if ref != 'N' and alt != 'N':
+        var_str = f"{c}:{pos}-{pos}:1/{alt}"
+        batch_variants.append(var_str)
+        variant_map[var_str] = row
+
+vep_results = {}
+if batch_variants:
+    # Query in chunks of up to 50 variants
+    chunk_size = 50
+    for i in range(0, len(batch_variants), chunk_size):
+        chunk = batch_variants[i:i+chunk_size]
+        url = "https://rest.ensembl.org/vep/human/region"
+        payload = json.dumps({"variants": chunk}).encode('utf-8')
+        
+        req = urllib.request.Request(
+            url, 
+            data=payload,
+            headers={
+                "Content-Type": "application/json", 
+                "Accept": "application/json",
+                "User-Agent": "MDD_RNAseq_Pipeline/1.0"
+            }
+        )
+        
+        success = False
+        for attempt in range(1, 4):
+            try:
+                print(f"[INFO] Sending batch request {i//chunk_size + 1} ({len(chunk)} variants), attempt {attempt}...")
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read().decode('utf-8'))
+                    if data and isinstance(data, list):
+                        for item in data:
+                            inp = item.get('input')
+                            if inp:
+                                vep_results[inp] = item
+                    success = True
+                    break
+            except Exception as e:
+                print(f"[WARNING] Batch query attempt {attempt} failed: {e}")
+                time.sleep(2 * attempt)
+        
+        if not success:
+            print(f"[ERROR] Failed to retrieve VEP batch after 3 attempts.")
+
+# Parse results
+annotated_rows = []
+for idx, row in cand_df.iterrows():
+    c   = str(row['snp_chr']).replace('chr', '')
+    pos = int(row['snp_pos'])
+    ref = str(row['ref'])
+    alt = str(row['alt'])
     g   = row['gene']
+    var_str = f"{c}:{pos}-{pos}:1/{alt}"
     
     rsid = "N/A"
     consequence = "N/A"
@@ -124,49 +180,39 @@ for _, row in cand_df.iterrows():
     protein_pos = "N/A"
     maf = "N/A"
     
-    if ref != 'N' and alt != 'N':
-        url = f"https://rest.ensembl.org/vep/human/region/{c}:{pos}-{pos}:1/{alt}?content-type=application/json"
-        req = urllib.request.Request(url, headers={"Content-Type": "application/json", "User-Agent": "MDD_RNAseq_Pipeline/1.0"})
+    item = vep_results.get(var_str)
+    if item:
+        consequence = item.get('most_severe_consequence', 'N/A')
         
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode('utf-8'))
-                if data and isinstance(data, list):
-                    item = data[0]
-                    consequence = item.get('most_severe_consequence', 'N/A')
-                    
-                    # Extract dbSNP rsIDs
-                    coloc = item.get('colocated_variants', [])
-                    rs_ids = [cv.get('id') for cv in coloc if cv.get('id', '').startswith('rs')]
-                    if rs_ids:
-                        rsid = ", ".join(rs_ids)
-                    
-                    # Extract MAF if present
-                    maf_list = []
-                    for cv in coloc:
-                        for k, v_maf in cv.items():
-                            if 'maf' in k.lower() or 'frequency' in k.lower():
-                                maf_list.append(f"{k}:{v_maf}")
-                    if maf_list:
-                        maf = "; ".join(maf_list)
-                    
-                    # Match transcript consequences
-                    for tc in item.get('transcript_consequences', []):
-                        if tc.get('gene_symbol') == g or tc.get('gene_symbol'):
-                            transcript_id = tc.get('transcript_id', 'N/A')
-                            biotype = tc.get('biotype', 'N/A')
-                            if tc.get('consequence_terms'):
-                                consequence = ", ".join(tc.get('consequence_terms'))
-                            if tc.get('cdna_start'):
-                                cdna_pos = str(tc.get('cdna_start'))
-                            if tc.get('cds_start'):
-                                cds_pos = str(tc.get('cds_start'))
-                            if tc.get('protein_start'):
-                                protein_pos = str(tc.get('protein_start'))
-                            break
-            time.sleep(0.1)  # API polite rate-limiting
-        except Exception as e:
-            print(f"[WARNING] VEP query error for {c}:{pos} ({ref}>{alt}): {e}")
+        # Extract dbSNP rsIDs
+        coloc = item.get('colocated_variants', [])
+        rs_ids = [cv.get('id') for cv in coloc if cv.get('id', '').startswith('rs')]
+        if rs_ids:
+            rsid = ", ".join(rs_ids)
+        
+        # Extract MAF if present
+        maf_list = []
+        for cv in coloc:
+            for k, v_maf in cv.items():
+                if 'maf' in k.lower() or 'frequency' in k.lower():
+                    maf_list.append(f"{k}:{v_maf}")
+        if maf_list:
+            maf = "; ".join(maf_list)
+        
+        # Match transcript consequences
+        for tc in item.get('transcript_consequences', []):
+            if tc.get('gene_symbol') == g or tc.get('gene_symbol'):
+                transcript_id = tc.get('transcript_id', 'N/A')
+                biotype = tc.get('biotype', 'N/A')
+                if tc.get('consequence_terms'):
+                    consequence = ", ".join(tc.get('consequence_terms'))
+                if tc.get('cdna_start'):
+                    cdna_pos = str(tc.get('cdna_start'))
+                if tc.get('cds_start'):
+                    cds_pos = str(tc.get('cds_start'))
+                if tc.get('protein_start'):
+                    protein_pos = str(tc.get('protein_start'))
+                break
 
     annotated_rows.append({
         'locus_id': row['locus_id'],

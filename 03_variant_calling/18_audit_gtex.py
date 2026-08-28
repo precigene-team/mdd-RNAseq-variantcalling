@@ -42,33 +42,46 @@ else:
 genes = list(var_df['gene'].dropna().unique())
 print(f"[INFO] Discovered {len(genes)} target candidate genes: {genes}")
 
-# --- Step 3: Dynamic Ensembl ID Resolution ---
-def get_ensembl_id(gene_symbol):
-    url = f"https://rest.ensembl.org/lookup/symbol/homo_sapiens/{gene_symbol}?content-type=application/json"
-    req = urllib.request.Request(url, headers={"Content-Type": "application/json", "User-Agent": "MDD_RNAseq_Pipeline/1.0"})
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-            return data.get('id', 'N/A')
-    except Exception as e:
-        print(f"[WARNING] Could not resolve Ensembl ID for {gene_symbol}: {e}")
-        return 'N/A'
+# --- Step 3: Dynamic GTEx v8 Reference Gene Resolution ---
+def get_gtex_gencode_id(gene_symbol):
+    url = f"https://gtexportal.org/api/v2/reference/gene?geneId={gene_symbol}&datasetId=gtex_v8"
+    req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"})
+    
+    for attempt in range(1, 4):
+        try:
+            with urllib.request.urlopen(req, timeout=25) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                ref_list = data.get('data', [])
+                if ref_list:
+                    # Match exact upper gene symbol if possible
+                    for item in ref_list:
+                        if item.get('geneSymbolUpper') == gene_symbol.upper():
+                            return item.get('gencodeId')
+                    return ref_list[0].get('gencodeId')
+        except Exception as e:
+            if attempt < 3:
+                time.sleep(2 * attempt)
+            else:
+                print(f"[WARNING] GTEx reference gene lookup timeout/error for {gene_symbol}: {e}")
+    return 'N/A'
 
-print("[INFO] Resolving Ensembl GENCODE IDs dynamically from Ensembl API...")
+print("[INFO] Resolving GTEx v8 GENCODE IDs dynamically from GTEx Reference API...")
 gene_to_ensg = {}
 for g in genes:
-    ensg = get_ensembl_id(g)
+    ensg = get_gtex_gencode_id(g)
     gene_to_ensg[g] = ensg
-    print(f"  -> Gene: {g} => Ensembl ID: {ensg}")
+    print(f"  -> Gene: {g} => GTEx GENCODE ID: {ensg}")
     time.sleep(0.1)
 
 # --- Step 4: Query GTEx Portal API v2 ---
 print("[INFO] Querying GTEx Portal API v2 for Brain Frontal Cortex (BA9) associations...")
+gtex_gene_cache = {}
+gtex_var_cache = {}
 gtex_records = []
 
 for _, row in var_df.iterrows():
     g   = row['gene']
-    c   = row.get('chr', row.get('locus_chr', 'N/A'))
+    c   = str(row.get('chr', row.get('locus_chr', 'N/A'))).replace('chr', '')
     pos = row.get('pos', row.get('start', 'N/A'))
     ref = row.get('ref', 'N/A')
     alt = row.get('alt', 'N/A')
@@ -82,42 +95,64 @@ for _, row in var_df.iterrows():
     top_ba9_nes = "N/A"
     pan_brain_tissues = []
     
-    # 1. Query by GENCODE ID for BA9 single-tissue eQTLs
+    # 1. Query by GENCODE ID for BA9 single-tissue eQTLs (cached per gene)
     if ensg != 'N/A':
-        url_gtex = f"https://gtexportal.org/api/v2/association/singleTissueEqtl?gencodeId={ensg}&tissueSiteDetailId=Brain_Frontal_Cortex_BA9&datasetId=gtex_v8"
-        req = urllib.request.Request(url_gtex, headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"})
-        try:
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode('utf-8'))
-                eqtls = data.get('singleTissueEqtl', [])
-                n_ba9_eqtls = len(eqtls)
-                if eqtls:
-                    top_eqtl = sorted(eqtls, key=lambda x: x.get('pValue', 1.0))[0]
-                    top_ba9_snp = top_eqtl.get('variantId', 'N/A')
-                    top_ba9_pval = top_eqtl.get('pValue', 'N/A')
-                    top_ba9_nes = top_eqtl.get('nes', 'N/A')
+        if ensg not in gtex_gene_cache:
+            url_gtex = f"https://gtexportal.org/api/v2/association/singleTissueEqtl?gencodeId={ensg}&tissueSiteDetailId=Brain_Frontal_Cortex_BA9&datasetId=gtex_v8"
+            req = urllib.request.Request(url_gtex, headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"})
+            gene_data = {"count": 0, "top_snp": "N/A", "top_pval": "N/A", "top_nes": "N/A"}
+            
+            for attempt in range(1, 4):
+                try:
+                    with urllib.request.urlopen(req, timeout=25) as resp:
+                        data = json.loads(resp.read().decode('utf-8'))
+                        eqtls = data.get('data', [])
+                        gene_data["count"] = len(eqtls)
+                        if eqtls:
+                            top_eqtl = sorted(eqtls, key=lambda x: x.get('pValue', 1.0))[0]
+                            gene_data["top_snp"] = top_eqtl.get('snpId', top_eqtl.get('variantId', 'N/A'))
+                            gene_data["top_pval"] = top_eqtl.get('pValue', 'N/A')
+                            gene_data["top_nes"] = top_eqtl.get('nes', 'N/A')
+                        break
+                except Exception as e:
+                    if attempt < 3:
+                        time.sleep(2 * attempt)
+                    else:
+                        print(f"[WARNING] GTEx query error for gene {g} ({ensg}): {e}")
+            gtex_gene_cache[ensg] = gene_data
             time.sleep(0.1)
-        except Exception as e:
-            print(f"[WARNING] GTEx query error for gene {g} ({ensg}): {e}")
+        
+        cached_g = gtex_gene_cache[ensg]
+        n_ba9_eqtls = cached_g["count"]
+        top_ba9_snp = cached_g["top_snp"]
+        top_ba9_pval = cached_g["top_pval"]
+        top_ba9_nes = cached_g["top_nes"]
 
-    # 2. Query by variant ID if specific variant is known
+    # 2. Query by variant ID if specific variant is known (cached per variant)
     variant_eqtl_count = 0
     if c != 'N/A' and pos != 'N/A' and ref not in ['N/A', 'N'] and alt not in ['N/A', 'N']:
         vid = f"chr{c}_{pos}_{ref}_{alt}_b38"
-        url_var = f"https://gtexportal.org/api/v2/association/singleTissueEqtl?variantId={vid}&datasetId=gtex_v8"
-        req_var = urllib.request.Request(url_var, headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"})
-        try:
-            with urllib.request.urlopen(req_var, timeout=10) as resp:
-                data_var = json.loads(resp.read().decode('utf-8'))
-                var_eqtls = data_var.get('singleTissueEqtl', [])
-                variant_eqtl_count = len(var_eqtls)
-                for ve in var_eqtls:
-                    tissue = ve.get('tissueSiteDetailId', '')
-                    if 'Brain' in tissue and tissue not in pan_brain_tissues:
-                        pan_brain_tissues.append(tissue)
-            time.sleep(0.1)
-        except Exception:
-            pass
+        if vid not in gtex_var_cache:
+            url_var = f"https://gtexportal.org/api/v2/association/singleTissueEqtl?variantId={vid}&datasetId=gtex_v8"
+            req_var = urllib.request.Request(url_var, headers={"Accept": "application/json", "User-Agent": "Mozilla/5.0"})
+            var_data = {"count": 0, "tissues": []}
+            try:
+                with urllib.request.urlopen(req_var, timeout=15) as resp:
+                    data_var = json.loads(resp.read().decode('utf-8'))
+                    var_eqtls = data_var.get('data', [])
+                    var_data["count"] = len(var_eqtls)
+                    for ve in var_eqtls:
+                        tissue = ve.get('tissueSiteDetailId', '')
+                        if 'Brain' in tissue and tissue not in var_data["tissues"]:
+                            var_data["tissues"].append(tissue)
+            except Exception:
+                pass
+            gtex_var_cache[vid] = var_data
+            time.sleep(0.05)
+        
+        cached_v = gtex_var_cache[vid]
+        variant_eqtl_count = cached_v["count"]
+        pan_brain_tissues = cached_v["tissues"]
 
     gtex_records.append({
         'gene': g,

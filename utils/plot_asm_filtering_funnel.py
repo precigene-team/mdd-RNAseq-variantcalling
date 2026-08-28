@@ -36,36 +36,36 @@ ax.axis('off')
 # Concise Inverted Pyramid Tiers with Left Filter Criteria & Right Drop Counts
 pyramid_tiers = [
     {
-        "y": 76.0, "h": 18.0, "w": 90.0,
-        "title": "1. Input Matrix",
-        "metrics": "118,245 Rows  |  15,351 Loci  (39 Subjects)",
+        "y": 76.0, "h": 18.0, "w": 92.0,
+        "title": "1. Paired ASM Matrix (Paired IP & Input Reads in Peaks)",
+        "metrics": "118,245 Observations  |  15,351 Consensus Peak Loci  (39 Subjects)",
         "fc": "#ebf5fb", "ec": "#1f4e79", "tc": "#1b4f72",
         "is_highlight": False,
         "left_criterion": "IP >= 10, allele >= 2, q < 0.05, |AF-0.5| >= 0.2",
         "right_removed": "- 101,800 rows"
     },
     {
-        "y": 52.0, "h": 16.0, "w": 70.0,
-        "title": "2. Observation-Filtered",
-        "metrics": "16,445 Rows Retained",
+        "y": 52.0, "h": 16.0, "w": 74.0,
+        "title": "2. Observation-Filtered (Quality & Skew Filters)",
+        "metrics": "16,445 Observations  |  7,268 Peak Loci",
         "fc": "#fef9e7", "ec": "#f39c12", "tc": "#d35400",
         "is_highlight": False,
-        "left_criterion": "Subjects >= 8 per locus (>= 2 MDD & >= 2 Ctrl)",
-        "right_removed": "- 15,046 loci"
+        "left_criterion": "Cohort Recurrence >= 8 Subjects (>= 2 MDD & >= 2 Ctrl)",
+        "right_removed": "- 6,963 loci"
     },
     {
-        "y": 28.0, "h": 16.0, "w": 52.0,
-        "title": "3. Locus-Filtered",
-        "metrics": "305 Loci Tested",
+        "y": 28.0, "h": 16.0, "w": 56.0,
+        "title": "3. Locus-Filtered (Recurrent Candidates)",
+        "metrics": "3,871 Observations  |  305 Peak Loci",
         "fc": "#e8f8f5", "ec": "#17a589", "tc": "#117864",
         "is_highlight": False,
         "left_criterion": "Sex-Adjusted Model (glmmTMB ~ Condition + Sex)",
         "right_removed": "FDR < 0.05"
     },
     {
-        "y": 3.0, "h": 17.0, "w": 38.0,
+        "y": 3.0, "h": 17.5, "w": 42.0,
         "title": "* 5 SIGNIFICANT DISCOVERIES *",
-        "metrics": "MGAT5, BIN3 + IER2, TENM3, MTCH1",
+        "metrics": "52 Obs | 5 Loci (22 SNPs)\nMGAT5, BIN3, TENM3, MTCH1, IER2",
         "fc": "#fef9e7", "ec": "#f1c40f", "tc": "#7d3c98",
         "is_highlight": True,
         "left_criterion": None,
