@@ -1,6 +1,6 @@
 #!/bin/bash
-# [[03_variant_calling/09_intersect_drach_snps.sh]]
-# Goal: Intersect GATK cohort SNPs with DRACH motif coordinates in TRESS peaks
+# [[04_allele_specific_methylation/06_intersect_drach_snps.sh]]
+# Goal: Intersect filtered per-sample SNPs with candidate DRACH motif sites and annotate motif disruption. TRESS peaks
 #       to identify candidate motif-disrupting variants.
 
 # Steps:
@@ -84,8 +84,8 @@ if [ "$OVERLAP_COUNT" -eq 0 ]; then
 fi
 
 # --- Step 3: Annotate disruption type ---
-echo ">>> Step 3: Annotating motif disruption type (delegating to 09_annotate_drach_disruption.py)..."
-python3 "$PROJECT_ROOT/03_variant_calling/09_annotate_drach_disruption.py"
+echo ">>> Step 3: Annotating motif disruption type (delegating to 05_annotate_drach_disruption.py)..."
+python3 "$PROJECT_ROOT/04_asm/05_annotate_drach_disruption.py"
 
 
 # --- Output Assertion ---

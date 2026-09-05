@@ -3,7 +3,7 @@
 # Goal: Ultra-clean, minimal single-panel volcano plot of GTEx Brain BA9 eQTL matches with enrichment counts in legend and criteria in subtitle.
 
 # Steps:
-#   1. Load GTEx eQTL match results from results/03_variant_calling/alt/tables/02_gtex_brain_eqtl_matches.csv
+#   1. Load GTEx eQTL match results from results/tables/07_gtex_brain_eqtl_matches.csv
 #   2. Filter validated BA9 eQTL hits and calculate log10 p-values
 #   3. Assign sub-threshold (< 1e-5) points to light gray
 #   4. Calculate significant loci counts for MDD-Enriched (N=39) and CTRL-Enriched (N=13)
@@ -24,20 +24,27 @@ get_project_root <- function() {
 }
 
 project_root <- Sys.getenv("PROJECT_ROOT", unset = get_project_root())
-output_dir <- file.path(project_root, "results", "03_variant_calling", "alt", "figures")
-dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-
+output_dir <- file.path(project_root, "results", "figures")
+mod_fig_dir <- file.path(project_root, "results", "03_variant_calling", "figures")
 utils_fig_dir <- file.path(project_root, "results", "utils", "figures")
+
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(mod_fig_dir, showWarnings = FALSE, recursive = TRUE)
 dir.create(utils_fig_dir, showWarnings = FALSE, recursive = TRUE)
 
-out_png <- file.path(output_dir, "02_gtex_brain_eqtl_summary.png")
-out_pdf <- file.path(output_dir, "02_gtex_brain_eqtl_summary.pdf")
+out_png <- file.path(output_dir, "07_gtex_brain_eqtl_summary.png")
+out_pdf <- file.path(output_dir, "07_gtex_brain_eqtl_summary.pdf")
+out_png_mod <- file.path(mod_fig_dir, "07_gtex_brain_eqtl_summary.png")
 out_png_utils <- file.path(utils_fig_dir, "gtex_brain_eqtl_summary.png")
 
 # --- 2. Load and Prepare GTEx Match Data ---
-csv_path <- file.path(project_root, "results", "03_variant_calling", "alt", "tables", "02_gtex_brain_eqtl_matches.csv")
-if (!file.exists(csv_path)) {
-  stop(paste("ERROR: Input table not found at", csv_path))
+candidates <- c(
+  file.path(project_root, "results", "tables", "07_gtex_brain_eqtl_matches.csv"),
+  file.path(project_root, "results", "03_variant_calling", "tables", "07_gtex_brain_eqtl_matches.csv")
+)
+csv_path <- candidates[file.exists(candidates)][1]
+if (is.na(csv_path)) {
+  stop("ERROR: Input GTEx table not found in production results.")
 }
 
 df <- read.csv(csv_path, stringsAsFactors = FALSE)
@@ -118,6 +125,7 @@ p_volcano <- ggplot(eqtls, aes(x = ba9_nes, y = neg_log10p)) +
 # --- 4. Export Single-Panel Plot ---
 ggsave(out_png, plot = p_volcano, width = 9.2, height = 6.4, dpi = 300, bg = "white")
 ggsave(out_pdf, plot = p_volcano, width = 9.2, height = 6.4, dpi = 300, bg = "white")
+ggsave(out_png_mod, plot = p_volcano, width = 9.2, height = 6.4, dpi = 300, bg = "white")
 ggsave(out_png_utils, plot = p_volcano, width = 9.2, height = 6.4, dpi = 300, bg = "white")
 
 message("[SUCCESS] GTEx volcano plot generated with dynamic sig counts in legend:")

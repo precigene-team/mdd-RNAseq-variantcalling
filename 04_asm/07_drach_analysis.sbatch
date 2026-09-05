@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[03_variant_calling/08_09_drach_analysis.sbatch]]
+# [[04_asm/07_drach_analysis.sbatch]]
 # Goal: Run DRACH motif discovery in consensus peaks and intersect with per-sample filtered SNPs.
 
 #SBATCH --job-name=drach_analysis
@@ -23,10 +23,10 @@ micromamba activate mdd 2>/dev/null || mamba activate mdd 2>/dev/null || conda a
 
 mkdir -p "$PROJECT_ROOT/_data/logs/drach"
 
-echo ">>> Step 08: Finding DRACH motif sites in consensus peaks..."
-python3 "$PROJECT_ROOT/03_variant_calling/08_find_drach_sites.py"
+echo ">>> Step 04: Finding DRACH motif sites in consensus peaks..."
+python3 "$PROJECT_ROOT/04_asm/04_find_drach_sites.py"
 
-echo ">>> Step 09: Intersecting filtered SNPs with DRACH sites and annotating disruption..."
-bash "$PROJECT_ROOT/03_variant_calling/09_intersect_drach_snps.sh"
+echo ">>> Step 06: Intersecting filtered SNPs with DRACH sites and annotating disruption..."
+bash "$PROJECT_ROOT/04_asm/06_intersect_drach_snps.sh"
 
 echo ">>> DRACH motif analysis complete!"

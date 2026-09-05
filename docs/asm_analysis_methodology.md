@@ -4,7 +4,7 @@
 
 ## 1. Question
 
-`03_variant_calling/07_m6allele_asm.sh` ran M6Allele `AsmPeakDetection` on the cohort-wide TRESS **consensus_peaks.bed** (`_data/peaks/consensus_peaks.bed`), producing per-subject, per-peak ASM calls in `_data/asm/${SUBJECT}_asmPeak.txt` for **39 subjects**. Each row is an m6A peak with a combined p/q-value, the number of heterozygous SNPs it contains, the allelic IP read counts, and a `majorAlleleFrequency`. The output boundaries vary per subject because they reflect each subject's heterozygous-SNP span within the shared consensus peak.
+`04_asm/03_m6allele_asm.sh` (formerly `03_variant_calling/07_m6allele_asm.sh`) ran M6Allele `AsmPeakDetection` on the cohort-wide TRESS **consensus_peaks.bed** (`_data/peaks/consensus_peaks.bed`), producing per-subject, per-peak ASM calls in `_data/asm/${SUBJECT}_asmPeak.txt` for **39 subjects**. Each row is an m6A peak with a combined p/q-value, the number of heterozygous SNPs it contains, the allelic IP read counts, and a `majorAlleleFrequency`. The output boundaries vary per subject because they reflect each subject's heterozygous-SNP span within the shared consensus peak.
 
 Open design questions:
 
@@ -84,7 +84,11 @@ Use each (peak × subject) row as the unit. Do **not** collapse to a per-subject
 
 ### 4.2 Signal → **continuous MAF skew**, thresholded
 
-Use `|MAF − 0.5|` (invariant to allele orientation, §2.2). **Filter: `qValue < 0.05` AND `|MAF − 0.5| ≥ 0.2`.** The `0.2` value aligns with 2025 effect-size practice (EMBO J. §2.5 ≈ |skew| ≥ 0.6 on log2 scale; Park & Cenik ≥ 0.1; ASE field commonly ~0.2 = 60:40 split) and retains ~46% of significant peaks. **Sensitivity runs at 0.1 and 0.3.** Report both effect size and FDR; never FDR alone.
+Use `|MAF − 0.5|` (invariant to allele orientation, §2.2). **Filter: `qValue < 0.05` AND `|MAF − 0.5| ≥ 0.2`.** The `0.2` threshold represents a 70:30 allelic imbalance ratio, grounded in standard allele-specific analysis:
+- **Castel et al. (2015, 2020)** (*Genome Biology* 16:195; *Nat Commun* 11:1955): Recommended minimum effect-size thresholds ($|aFC| > 0.5$, corresponding to $|AF - 0.5| \ge 0.15 - 0.20$) to filter out technical mapping skew and sequencing noise.
+- **EMBO J. (2025)** (§2.5): Applied $|\log_2(cpFC)| > 0.6$ (equivalent to allelic ratio $\ge 1.52$, or $|AF - 0.5| \approx 0.20$) for ASm6A identification.
+- **Park & Cenik (2025)** (§2.6): Demonstrated that minimum effect-size thresholds ($T \ge 0.10 - 0.20$) prevent inflated false positives in RNA-level allelic calls.
+- **Sensitivity sweeps:** Evaluated at 0.1 and 0.3 (§8.4) to confirm candidate stability. Report both effect size and FDR; never FDR alone.
 
 ### 4.3 Model → **per-peak beta-binomial (quasi-binomial) GLM, subject-aware**
 
@@ -117,9 +121,9 @@ Cohort: male_mdd=10, male_ctrl=10, female_mdd=10, female_ctrl=9. The **primary `
 
 ## 6. Implementation plan
 
-1. **HPC:** `03_variant_calling/10_input_ase_readcounter.sbatch` — GATK ASEReadCounter on **Input BAMs** at each subject's heterozygous SNP positions (reusing `_data/ase/${SUBJECT}_het_snps.vcf.gz`) → `${SUBJECT}_input_ase_counts.csv`.
-2. **Local (data prep):** `03_variant_calling/11_asm_build_matrix.py` — pure data munging. Uses GATK ASEReadCounter counts for **both** fractions (IP + Input, identical counting pipeline; allele A = REF allele) and M6Allele `_asmPeak.txt` for peak→gene mapping, per-subject q, and SNP positions. Clusters peaks into consensus loci (or uses `_data/peaks/consensus_peaks.bed` when synced). Writes `_data/RData/03_variant_calling/asm_matrix.tsv`.
-3. **Stats (R, established packages):** `03_variant_calling/12_asm_compare.R` — per-locus **beta-binomial** regression (`glmmTMB::glmmTMB` betabinomial; fallback `lme4::glmer`, `stats::glm` quasibinomial) of `IP allele counts ~ condition + sex` with `logit(Input AF)` offset (0.5-null if Input absent); within-sex and interaction contrasts (exploratory); BH-FDR. Cross-check: per-subject `fisher.test` (IP vs Input) log-OR → `wilcox.test` across groups. Sensitivity sweeps (skew 0.1/0.3, min-subjects 6/12).
+1. **HPC:** `04_asm/02_input_ase_readcounter.sbatch` (formerly `03_variant_calling/10`) — GATK ASEReadCounter on **Input BAMs** at each subject's heterozygous SNP positions (reusing `_data/ase/${SUBJECT}_het_snps.vcf.gz`) → `${SUBJECT}_input_ase_counts.csv`.
+2. **Local (data prep):** `04_asm/08_asm_build_matrix.py` (formerly `03_variant_calling/11`) — pure data munging. Uses GATK ASEReadCounter counts for **both** fractions (IP + Input, identical counting pipeline; allele A = REF allele) and M6Allele `_asmPeak.txt` for peak→gene mapping, per-subject q, and SNP positions. Clusters peaks into consensus loci (or uses `_data/peaks/consensus_peaks.bed` when synced). Writes `_data/RData/03_variant_calling/asm_matrix.tsv`.
+3. **Stats (R, established packages):** `04_asm/09_asm_compare.R` (formerly `03_variant_calling/12`) — per-locus **beta-binomial** regression (`glmmTMB::glmmTMB` betabinomial; fallback `lme4::glmer`, `stats::glm` quasibinomial) of `IP allele counts ~ condition + sex` with `logit(Input AF)` offset (0.5-null if Input absent); within-sex and interaction contrasts (exploratory); BH-FDR. Cross-check: per-subject `fisher.test` (IP vs Input) log-OR → `wilcox.test` across groups. Sensitivity sweeps (skew 0.1/0.3, min-subjects 6/12).
 4. **Outputs** → `results/03_variant_calling/` (tables + base-R PDF figures) + `_data/RData/03_variant_calling/asm_results.rds`.
 
 ## 8. Results (sex-adjusted run, 2026-08-03)

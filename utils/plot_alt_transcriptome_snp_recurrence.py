@@ -18,17 +18,22 @@ def get_project_root():
     return curr
 
 project_root = get_project_root()
-output_dir = os.path.join(project_root, "results", "03_variant_calling", "alt", "figures")
-os.makedirs(output_dir, exist_ok=True)
+output_dir = os.path.join(project_root, "results", "figures")
+mod_fig_dir = os.path.join(project_root, "results", "03_variant_calling", "figures")
 utils_fig_dir = os.path.join(project_root, "results", "utils", "figures")
-os.makedirs(utils_fig_dir, exist_ok=True)
 
-out_png = os.path.join(output_dir, "01_transcriptome_snp_recurrence.png")
-out_pdf = os.path.join(output_dir, "01_transcriptome_snp_recurrence.pdf")
-out_png_utils = os.path.join(utils_fig_dir, "01_transcriptome_snp_recurrence.png")
+for d in [output_dir, mod_fig_dir, utils_fig_dir]:
+    os.makedirs(d, exist_ok=True)
+
+out_png = os.path.join(output_dir, "06_transcriptome_snp_recurrence.png")
+out_pdf = os.path.join(output_dir, "06_transcriptome_snp_recurrence.pdf")
+out_png_mod = os.path.join(mod_fig_dir, "06_transcriptome_snp_recurrence.png")
+out_png_utils = os.path.join(utils_fig_dir, "transcriptome_snp_recurrence.png")
 
 # --- 2. Load Summary Data ---
-summary_csv = os.path.join(project_root, "results", "03_variant_calling", "alt", "tables", "01_transcriptome_snp_summary.csv")
+summary_csv = os.path.join(project_root, "results", "tables", "06_transcriptome_snp_summary.csv")
+if not os.path.exists(summary_csv):
+    summary_csv = os.path.join(project_root, "results", "03_variant_calling", "tables", "06_transcriptome_snp_summary.csv")
 
 metrics = {
     "total_subjects": 39,
@@ -160,6 +165,7 @@ for idx, stg in enumerate(funnel_stages):
 # Save PNG and PDF
 plt.savefig(out_png, dpi=300, bbox_inches='tight')
 plt.savefig(out_pdf, bbox_inches='tight')
+plt.savefig(out_png_mod, dpi=300, bbox_inches='tight')
 plt.savefig(out_png_utils, dpi=300, bbox_inches='tight')
 plt.close()
 

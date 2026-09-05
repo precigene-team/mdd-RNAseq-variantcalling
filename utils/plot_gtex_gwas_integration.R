@@ -3,7 +3,7 @@
 # Goal: 2-Facet Psychiatric GWAS Trait Matrix distinguishing Direct SNP hits (Red) from Gene-level eQTL hits (Navy) without No Match in legend.
 
 # Steps:
-#   1. Load prioritized candidates from results/03_variant_calling/alt/tables/04_prioritized_mdd_snps_summary.csv
+#   1. Load prioritized candidates from results/tables/09_prioritized_mdd_snps_summary.csv
 #   2. Filter valid protein-coding gene symbols (excluding non-coding antisense transcripts and MESDC2)
 #   3. Dynamically extract Top 5 GTEx Brain eQTL leads & Top 5 GWAS psychiatric/suicidality leads
 #   4. Differentiate Direct SNP GWAS hits (marked in Red) from Gene-level eQTL hits (Navy)
@@ -26,23 +26,29 @@ get_project_root <- function() {
 }
 
 project_root <- Sys.getenv("PROJECT_ROOT", unset = get_project_root())
-output_dir <- file.path(project_root, "results", "03_variant_calling", "alt", "figures")
-dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-
+output_dir <- file.path(project_root, "results", "figures")
+mod_fig_dir <- file.path(project_root, "results", "03_variant_calling", "figures")
 utils_fig_dir <- file.path(project_root, "results", "utils", "figures")
+
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+dir.create(mod_fig_dir, showWarnings = FALSE, recursive = TRUE)
 dir.create(utils_fig_dir, showWarnings = FALSE, recursive = TRUE)
 
-out_png <- file.path(output_dir, "04_gtex_gwas_multomic_integration.png")
-out_pdf <- file.path(output_dir, "04_gtex_gwas_multomic_integration.pdf")
+out_png <- file.path(output_dir, "09_gtex_gwas_multomic_integration.png")
+out_pdf <- file.path(output_dir, "09_gtex_gwas_multomic_integration.pdf")
+out_png_mod <- file.path(mod_fig_dir, "09_gtex_gwas_multomic_integration.png")
 out_png_utils <- file.path(utils_fig_dir, "gtex_gwas_multomic_integration.png")
 
 # --- 2. Load Data ---
-csv_path <- file.path(project_root, "results", "03_variant_calling", "alt", "tables", "04_prioritized_mdd_snps_summary.csv")
-if (!file.exists(csv_path)) {
-  csv_path <- file.path(project_root, "results", "03_variant_calling", "alt", "tables", "03_gwas_catalog_neuro_matches.csv")
-}
-if (!file.exists(csv_path)) {
-  stop(paste("ERROR: Input table not found at", csv_path))
+candidates <- c(
+  file.path(project_root, "results", "tables", "09_prioritized_mdd_snps_summary.csv"),
+  file.path(project_root, "results", "03_variant_calling", "tables", "09_prioritized_mdd_snps_summary.csv"),
+  file.path(project_root, "results", "tables", "08_gwas_catalog_neuro_matches.csv"),
+  file.path(project_root, "results", "03_variant_calling", "tables", "08_gwas_catalog_neuro_matches.csv")
+)
+csv_path <- candidates[file.exists(candidates)][1]
+if (is.na(csv_path)) {
+  stop("ERROR: Input candidate table not found in production results.")
 }
 
 df <- read.csv(csv_path, stringsAsFactors = FALSE)
@@ -207,6 +213,7 @@ p_faceted <- ggplot(mat_df, aes(x = gene, y = domain)) +
 # --- 5. Export 2-Facet Single Plot ---
 ggsave(out_png, plot = p_faceted, width = 14.0, height = 6.2, dpi = 300, bg = "white")
 ggsave(out_pdf, plot = p_faceted, width = 14.0, height = 6.2, dpi = 300, bg = "white")
+ggsave(out_png_mod, plot = p_faceted, width = 14.0, height = 6.2, dpi = 300, bg = "white")
 ggsave(out_png_utils, plot = p_faceted, width = 14.0, height = 6.2, dpi = 300, bg = "white")
 
 message("[SUCCESS] 2-Facet GWAS matrix generated (No Match excluded from legend):")

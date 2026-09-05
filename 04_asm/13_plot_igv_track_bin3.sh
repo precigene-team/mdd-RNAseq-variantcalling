@@ -1,6 +1,6 @@
 #!/bin/bash
-# [[03_variant_calling/16_plot_igv_track_bin3.sh]]
-# Goal: Render pyGenomeTracks figures and IGV HTML report for BIN3 locus (A>G SNP).
+# [[04_asm/13_plot_igv_track_bin3.sh]]
+# Goal: Render pyGenomeTracks and IGV visual proof of BIN3 m6A-associated SNP locus.
 
 #SBATCH --job-name=igv_track_bin3
 #SBATCH --output=_data/logs/igv_track_bin3/%x_%j.log
@@ -54,7 +54,7 @@ extract_bg "$INPUT_BAM" "$INPUT_BG"
 
 # --- Step 2: pyGenomeTracks Rendering ---
 echo ">>> Rendering pyGenomeTracks figure for BIN3 ($REGION)..."
-INI="03_variant_calling/16_bin3_tracks.ini"
+INI="04_asm/13_bin3_tracks.ini"
 
 pyGenomeTracks --tracks "$INI" --region "$REGION" --outFileName "$OUT_DIR/16_igv_track_bin3.png" --dpi 300
 pyGenomeTracks --tracks "$INI" --region "$REGION" --outFileName "$OUT_DIR/16_igv_track_bin3.pdf"

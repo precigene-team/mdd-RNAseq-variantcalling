@@ -81,8 +81,8 @@ while IFS= read -r sample; do
         echo "  [SKIP] $sample already extracted"
         continue
     fi
-    echo "  Extracting $sample (PASS, het, DP>=10, GQ>=20)..."
-    bcftools view -s "$sample" -f PASS -g het -i 'FMT/DP >= 10 && FMT/GQ >= 20' -O z -o "$out_vcf" "$COHORT_FILTERED"
+    echo "  Extracting $sample (PASS, non-ref [het+hom], DP>=10, GQ>=20)..."
+    bcftools view -s "$sample" -f PASS -e 'GT="ref" || GT="mis"' -i 'FMT/DP >= 10 && FMT/GQ >= 20' -O z -o "$out_vcf" "$COHORT_FILTERED"
     bcftools index -t "$out_vcf"
 done < "$LOG_DIR/sample_list.txt"
 

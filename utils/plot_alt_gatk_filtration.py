@@ -18,11 +18,17 @@ def get_project_root():
     return curr
 
 project_root = get_project_root()
-output_dir = os.path.join(project_root, "results", "utils", "figures")
-os.makedirs(output_dir, exist_ok=True)
+output_dir = os.path.join(project_root, "results", "figures")
+mod_fig_dir = os.path.join(project_root, "results", "03_variant_calling", "figures")
+utils_fig_dir = os.path.join(project_root, "results", "utils", "figures")
 
-out_png = os.path.join(output_dir, "alt_gatk_filtration.png")
-out_pdf = os.path.join(output_dir, "alt_gatk_filtration.pdf")
+for d in [output_dir, mod_fig_dir, utils_fig_dir]:
+    os.makedirs(d, exist_ok=True)
+
+out_png = os.path.join(output_dir, "06_transcriptome_gatk_filtration.png")
+out_pdf = os.path.join(output_dir, "06_transcriptome_gatk_filtration.pdf")
+out_png_mod = os.path.join(mod_fig_dir, "06_transcriptome_gatk_filtration.png")
+out_png_utils = os.path.join(utils_fig_dir, "transcriptome_gatk_filtration.png")
 
 # --- 2. Dynamic Real Data Loader ---
 def load_real_cohort_metrics(root_dir):
@@ -34,7 +40,9 @@ def load_real_cohort_metrics(root_dir):
         "transcriptome_loci": 813969
     }
     
-    summary_csv = os.path.join(root_dir, "results", "03_variant_calling", "alt", "tables", "01_transcriptome_snp_summary.csv")
+    summary_csv = os.path.join(root_dir, "results", "tables", "06_transcriptome_snp_summary.csv")
+    if not os.path.exists(summary_csv):
+        summary_csv = os.path.join(root_dir, "results", "03_variant_calling", "tables", "06_transcriptome_snp_summary.csv")
     if os.path.exists(summary_csv):
         try:
             with open(summary_csv, "r") as f:
@@ -162,6 +170,8 @@ for idx, stg in enumerate(stages):
 # Save PNG and PDF
 plt.savefig(out_png, dpi=300, bbox_inches='tight')
 plt.savefig(out_pdf, bbox_inches='tight')
+plt.savefig(out_png_mod, dpi=300, bbox_inches='tight')
+plt.savefig(out_png_utils, dpi=300, bbox_inches='tight')
 plt.close()
 
 print(f"[SUCCESS] 3-stage filtration figure saved to:\n  PNG: {out_png}\n  PDF: {out_pdf}")

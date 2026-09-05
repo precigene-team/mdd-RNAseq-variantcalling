@@ -28,10 +28,10 @@ The study is conducted on a cohort of **39 human postmortem brain subjects** (PF
 ### Subject Stratification Table
 | Cohort Group | Number of Subjects | Total Libraries (Input + IP) | Accession Range |
 |---|---|---|---|
-| **Male MDD** | 10 | 20 | [`SRR30401480`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) - [`SRR30401481`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) & [`SRR30401472`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) - [`SRR30401480`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) |
-| **Male Control** | 10 | 20 | [`SRR30401482`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) - [`SRR30401491`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) |
-| **Female MDD** | 10 | 20 | [`SRR30401505`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) - [`SRR30401513`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) & [`SRR30401492`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) |
-| **Female Control** | 9 | 18 | [`SRR30401514`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) - [`SRR30401522`](file:///mnt/22T/phongdinh/RNAseq_pipeline_depression/_data/_metadata/sample_sheet.csv) |
+| **Male MDD** | 10 | 20 | [`SRR30401480`](_data/_metadata/sample_sheet.csv) - [`SRR30401481`](_data/_metadata/sample_sheet.csv) & [`SRR30401472`](_data/_metadata/sample_sheet.csv) - [`SRR30401480`](_data/_metadata/sample_sheet.csv) |
+| **Male Control** | 10 | 20 | [`SRR30401482`](_data/_metadata/sample_sheet.csv) - [`SRR30401491`](_data/_metadata/sample_sheet.csv) |
+| **Female MDD** | 10 | 20 | [`SRR30401505`](_data/_metadata/sample_sheet.csv) - [`SRR30401513`](_data/_metadata/sample_sheet.csv) & [`SRR30401492`](_data/_metadata/sample_sheet.csv) |
+| **Female Control** | 9 | 18 | [`SRR30401514`](_data/_metadata/sample_sheet.csv) - [`SRR30401522`](_data/_metadata/sample_sheet.csv) |
 
 ---
 
@@ -63,8 +63,13 @@ This isolates actual post-transcriptional $m^6A$ methylation differences.
 
 ---
 
-## 🧬 4. Variant Calling Goals
+## 🧬 4. Variant Calling & Epitranscriptomic Architecture
 
-By executing RNA-seq based variant calling (using GATK Best Practices) across both `RNA-seq` (Input) and `m6A` (IP) fractions, the project aims to identify:
-1. **m6A-SNPs (m6A-modifying variants)**: Genomic single nucleotide polymorphisms (SNPs) located within or near consensus $m^6A$ motifs (`DRACH`) that disrupt or create methylation sites.
-2. **Allele-Specific Methylation (ASM)**: Overlap of variants in MeRIP-seq IP fractions showing biased allele ratios compared to Input fractions, suggesting that one allele is preferentially methylated.
+The pipeline executes RNA-seq variant discovery and epitranscriptomic allele-level integration across two dedicated modules:
+1. **Variant Calling & Clinical Interpretation (`03_variant_calling/`)**: GATK joint calling on RNA-seq inputs followed by a 3-stage clinical translation pipeline:
+   - **Stage 1 (Functional)**: In silico deleteriousness (CADD, SpliceAI) and psychiatric brain domain localization (PsychENCODE, PGC MDD GWAS).
+   - **Stage 2 (Pathogenicity)**: ACMG/AMP 5-tier classification and ClinVar cross-referencing.
+   - **Stage 3 (Pharmacogenomics)**: CPIC clinical practice guidelines and ClinPGx antidepressant actionability (metabolism & target sensitivity).
+2. **Allele-Specific Methylation (ASM) & m6A-SNPs (`04_asm/`)**:
+   - **m6A-SNPs**: Genomic SNPs within or near consensus $m^6A$ motifs (`DRACH`) that disrupt or create methylation sites.
+   - **ASM Modeling**: Beta-binomial modeling of allelic read ratios between MeRIP-seq IP and Input fractions to detect locus-level allele-preferential methylation.
