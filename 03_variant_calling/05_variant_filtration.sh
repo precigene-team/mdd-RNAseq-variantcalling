@@ -51,25 +51,33 @@ if [ -f "$SENTINEL" ]; then
     exit 0
 fi
 
-echo ">>> Selecting SNPs from joint VCF..."
-gatk SelectVariants \
-    -R "$FASTA_FILE" \
-    -V "$JOINT_VCF" \
-    -select-type SNP \
-    --restrict-alleles-to BIALLELIC \
-    -O "$COHORT_SNPS" 2>&1 | tee "$LOG_DIR/select_snps.log"
+if [ -s "$COHORT_SNPS" ]; then
+    echo "[SKIP] Biallelic SNPs already extracted: $COHORT_SNPS"
+else
+    echo ">>> Selecting SNPs from joint VCF..."
+    gatk SelectVariants \
+        -R "$FASTA_FILE" \
+        -V "$JOINT_VCF" \
+        -select-type SNP \
+        --restrict-alleles-to BIALLELIC \
+        -O "$COHORT_SNPS" 2>&1 | tee "$LOG_DIR/select_snps.log"
+fi
 
-echo ">>> Hard-filtering SNPs..."
-gatk VariantFiltration \
-    -R "$FASTA_FILE" \
-    -V "$COHORT_SNPS" \
-    -O "$COHORT_FILTERED" \
-    --window 35 \
-    --cluster 3 \
-    --filter-name "FS" \
-    --filter-expression "FS > 30.0" \
-    --filter-name "QD" \
-    --filter-expression "QD < 2.0" 2>&1 | tee "$LOG_DIR/filter.log"
+if [ -s "$COHORT_FILTERED" ]; then
+    echo "[SKIP] Filtered SNPs already exist: $COHORT_FILTERED"
+else
+    echo ">>> Hard-filtering SNPs..."
+    gatk VariantFiltration \
+        -R "$FASTA_FILE" \
+        -V "$COHORT_SNPS" \
+        -O "$COHORT_FILTERED" \
+        --window 35 \
+        --cluster 3 \
+        --filter-name "FS" \
+        --filter-expression "FS > 30.0" \
+        --filter-name "QD" \
+        --filter-expression "QD < 2.0" 2>&1 | tee "$LOG_DIR/filter.log"
+fi
 
 echo ">>> Splitting into per-sample VCFs..."
 # Get list of samples in the joint VCF
@@ -77,12 +85,13 @@ bcftools query -l "$COHORT_FILTERED" > "$LOG_DIR/sample_list.txt"
 
 while IFS= read -r sample; do
     out_vcf="$OUTPUT_DIR/${sample}.filtered.vcf.gz"
-    if [ -f "$out_vcf" ]; then
+    if [ -s "$out_vcf" ]; then
         echo "  [SKIP] $sample already extracted"
         continue
     fi
     echo "  Extracting $sample (PASS, non-ref [het+hom], DP>=10, GQ>=20)..."
-    bcftools view -s "$sample" -f PASS -e 'GT="ref" || GT="mis"' -i 'FMT/DP >= 10 && FMT/GQ >= 20' -O z -o "$out_vcf" "$COHORT_FILTERED"
+    bcftools view -s "$sample" "$COHORT_FILTERED" -Ou | \
+        bcftools view -f PASS -i 'GT!="ref" && GT!="mis" && FMT/DP >= 10 && FMT/GQ >= 20' -O z -o "$out_vcf"
     bcftools index -t "$out_vcf"
 done < "$LOG_DIR/sample_list.txt"
 
