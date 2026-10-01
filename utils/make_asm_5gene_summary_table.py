@@ -18,7 +18,7 @@ project_root = get_project_root()
 matrix_file = os.path.join(project_root, "_data", "RData", "03_variant_calling", "asm_matrix.tsv")
 sig_file = os.path.join(project_root, "results", "03_variant_calling", "tables", "12_asm_primary_significant.csv")
 
-output_table_dir = os.path.join(project_root, "results", "tables")
+output_table_dir = os.path.join(project_root, "results", "utils", "tables")
 os.makedirs(output_table_dir, exist_ok=True)
 
 out_csv = os.path.join(output_table_dir, "03_asm_5gene_summary_table.csv")

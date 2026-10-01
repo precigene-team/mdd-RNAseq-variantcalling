@@ -18,43 +18,39 @@ def get_project_root():
     return curr
 
 project_root = get_project_root()
-output_dir = os.path.join(project_root, "results", "figures")
-mod_fig_dir = os.path.join(project_root, "results", "03_variant_calling", "figures")
-utils_fig_dir = os.path.join(project_root, "results", "utils", "figures")
+output_dir = os.path.join(project_root, "results", "utils", "figures")
+os.makedirs(output_dir, exist_ok=True)
 
-for d in [output_dir, mod_fig_dir, utils_fig_dir]:
-    os.makedirs(d, exist_ok=True)
-
-out_png = os.path.join(output_dir, "06_transcriptome_gatk_filtration.png")
-out_pdf = os.path.join(output_dir, "06_transcriptome_gatk_filtration.pdf")
-out_png_mod = os.path.join(mod_fig_dir, "06_transcriptome_gatk_filtration.png")
-out_png_utils = os.path.join(utils_fig_dir, "transcriptome_gatk_filtration.png")
+out_png = os.path.join(output_dir, "alt_gatk_filtration.png")
+out_pdf = os.path.join(output_dir, "alt_gatk_filtration.pdf")
 
 # --- 2. Dynamic Real Data Loader ---
 def load_real_cohort_metrics(root_dir):
     metrics = {
-        "raw_vcf": 1482910,
-        "pass_hard": 614830,
-        "artifacts_removed": 868080,
-        "transcriptome_obs": 1601183,
-        "transcriptome_loci": 813969
+        "raw_vcf": 24571403,
+        "pass_hard": 11779936,
+        "artifacts_removed": 12791467,
     }
     
-    summary_csv = os.path.join(root_dir, "results", "tables", "06_transcriptome_snp_summary.csv")
-    if not os.path.exists(summary_csv):
-        summary_csv = os.path.join(root_dir, "results", "03_variant_calling", "tables", "06_transcriptome_snp_summary.csv")
+    summary_csv = os.path.join(root_dir, "results", "03_variant_calling", "tables", "06_transcriptome_snp_summary.csv")
     if os.path.exists(summary_csv):
         try:
             with open(summary_csv, "r") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    if row["metric"] == "total_het_snp_observations":
-                        metrics["transcriptome_obs"] = int(row["value"])
-                    elif row["metric"] == "unique_snp_loci":
-                        metrics["transcriptome_loci"] = int(row["value"])
+                    m = row["metric"].strip()
+                    v = row["value"].strip()
+                    if m in ("total_variant_observations", "total_het_snp_observations"):
+                        metrics["transcriptome_obs"] = int(v)
+                    elif m == "total_het_observations":
+                        metrics["het_obs"] = int(v)
+                    elif m == "total_hom_alt_observations":
+                        metrics["hom_obs"] = int(v)
+                    elif m == "unique_snp_loci":
+                        metrics["transcriptome_loci"] = int(v)
             print(f"[INFO] Successfully piped live metrics from: {summary_csv}")
         except Exception as e:
-            print(f"[WARNING] Could not parse {summary_csv}: {e}. Falling back to audited metrics.")
+            print(f"[WARNING] Could not parse {summary_csv}: {e}.")
             
     return metrics
 
@@ -111,7 +107,7 @@ ax_b.set_title("B. Transcriptome-Wide Variant Filtering Cascade",
 # Formatted counts
 raw_vcf_count = f"{metrics['raw_vcf']:,} raw variant loci"
 pass_hard_count = f"{metrics['pass_hard']:,} pass variant loci"
-transcriptome_het_count = f"{metrics['transcriptome_obs']:,} Obs  |  {metrics['transcriptome_loci']:,} Unique Loci"
+transcriptome_count = f"{metrics['transcriptome_obs']:,} Obs  |  {metrics['transcriptome_loci']:,} Loci\n({metrics['het_obs']:,} Het : {metrics['hom_obs']:,} Hom-Alt)"
 
 # 3-Stage Cascade (Centered and Spaced)
 stages = [
@@ -126,13 +122,13 @@ stages = [
         "title": "2. Hard-Filtered Variants", 
         "count": pass_hard_count, 
         "w": 8.0, "y": 4.2, "h": 1.5, "fc": "#e8f8f5", "ec": "#17a589", "tc": "#117864",
-        "left_criterion": "Het Genotype: 0/1, DP >= 10, GQ >= 20",
-        "right_removed": "- Non-het / low-qual"
+        "left_criterion": "Non-Ref: het + hom-alt, DP >= 10, GQ >= 20",
+        "right_removed": "- Low-qual / non-variant"
     },
     {
-        "title": "3. Transcriptome Het SNPs", 
-        "count": transcriptome_het_count, 
-        "w": 6.8, "y": 1.1, "h": 1.5, "fc": "#fef9e7", "ec": "#f39c12", "tc": "#d35400",
+        "title": "3. Transcribed Non-Ref SNPs", 
+        "count": transcriptome_count, 
+        "w": 7.4, "y": 0.9, "h": 1.7, "fc": "#fef9e7", "ec": "#f39c12", "tc": "#d35400",
         "left_criterion": None,
         "right_removed": None
     }
@@ -170,8 +166,6 @@ for idx, stg in enumerate(stages):
 # Save PNG and PDF
 plt.savefig(out_png, dpi=300, bbox_inches='tight')
 plt.savefig(out_pdf, bbox_inches='tight')
-plt.savefig(out_png_mod, dpi=300, bbox_inches='tight')
-plt.savefig(out_png_utils, dpi=300, bbox_inches='tight')
 plt.close()
 
 print(f"[SUCCESS] 3-stage filtration figure saved to:\n  PNG: {out_png}\n  PDF: {out_pdf}")

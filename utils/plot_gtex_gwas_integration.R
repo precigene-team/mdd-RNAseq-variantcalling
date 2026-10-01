@@ -26,28 +26,21 @@ get_project_root <- function() {
 }
 
 project_root <- Sys.getenv("PROJECT_ROOT", unset = get_project_root())
-output_dir <- file.path(project_root, "results", "figures")
-mod_fig_dir <- file.path(project_root, "results", "03_variant_calling", "figures")
 utils_fig_dir <- file.path(project_root, "results", "utils", "figures")
-
-dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-dir.create(mod_fig_dir, showWarnings = FALSE, recursive = TRUE)
 dir.create(utils_fig_dir, showWarnings = FALSE, recursive = TRUE)
 
-out_png <- file.path(output_dir, "09_gtex_gwas_multomic_integration.png")
-out_pdf <- file.path(output_dir, "09_gtex_gwas_multomic_integration.pdf")
-out_png_mod <- file.path(mod_fig_dir, "09_gtex_gwas_multomic_integration.png")
 out_png_utils <- file.path(utils_fig_dir, "gtex_gwas_multomic_integration.png")
+out_pdf_utils <- file.path(utils_fig_dir, "gtex_gwas_multomic_integration.pdf")
 
 # --- 2. Load Data ---
 candidates <- c(
-  file.path(project_root, "results", "tables", "09_prioritized_mdd_snps_summary.csv"),
   file.path(project_root, "results", "03_variant_calling", "tables", "09_prioritized_mdd_snps_summary.csv"),
-  file.path(project_root, "results", "tables", "08_gwas_catalog_neuro_matches.csv"),
   file.path(project_root, "results", "03_variant_calling", "tables", "08_gwas_catalog_neuro_matches.csv")
 )
 csv_path <- candidates[file.exists(candidates)][1]
 if (is.na(csv_path)) {
+  stop("ERROR: Input table not found in results/03_variant_calling/tables.")
+}
   stop("ERROR: Input candidate table not found in production results.")
 }
 
@@ -211,11 +204,9 @@ p_faceted <- ggplot(mat_df, aes(x = gene, y = domain)) +
   )
 
 # --- 5. Export 2-Facet Single Plot ---
-ggsave(out_png, plot = p_faceted, width = 14.0, height = 6.2, dpi = 300, bg = "white")
-ggsave(out_pdf, plot = p_faceted, width = 14.0, height = 6.2, dpi = 300, bg = "white")
-ggsave(out_png_mod, plot = p_faceted, width = 14.0, height = 6.2, dpi = 300, bg = "white")
 ggsave(out_png_utils, plot = p_faceted, width = 14.0, height = 6.2, dpi = 300, bg = "white")
+ggsave(out_pdf_utils, plot = p_faceted, width = 14.0, height = 6.2, dpi = 300, bg = "white")
 
 message("[SUCCESS] 2-Facet GWAS matrix generated (No Match excluded from legend):")
-message("  PNG: ", out_png)
-message("  PDF: ", out_pdf)
+message("  PNG: ", out_png_utils)
+message("  PDF: ", out_pdf_utils)

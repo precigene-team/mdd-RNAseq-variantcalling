@@ -22,11 +22,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT") or os.path.normpath(os.path.join(SCRIPT_DIR, ".."))
 
 ASE_DIR = os.path.join(PROJECT_ROOT, "_data", "ase")
-TABLES_DIR = os.path.join(PROJECT_ROOT, "results", "tables")
-MOD_TABLES_DIR = os.path.join(PROJECT_ROOT, "results", "03_variant_calling", "tables")
-
-for d in [TABLES_DIR, MOD_TABLES_DIR]:
-    os.makedirs(d, exist_ok=True)
+TABLES_DIR = os.path.join(PROJECT_ROOT, "results", "03_variant_calling", "tables")
+os.makedirs(TABLES_DIR, exist_ok=True)
 
 OUT_MASTER_TSV = os.path.join(TABLES_DIR, "06_transcriptome_snp_master.tsv.gz")
 OUT_SUMMARY_CSV = os.path.join(TABLES_DIR, "06_transcriptome_snp_summary.csv")
@@ -45,15 +42,21 @@ if len(vcf_files) != 39:
 print(f"[INFO] Discovered {len(vcf_files)} per-sample VCF files ({source_label}).")
 
 # --- Step 3: Parse and Aggregate SNPs ---
-print("[INFO] Parsing and aggregating transcriptome-wide heterozygous SNPs...")
+print("[INFO] Parsing and aggregating transcriptome-wide non-reference SNPs (het + hom-alt)...")
 
 locus_data = defaultdict(lambda: {
     'male_mdd': 0, 'male_ctrl': 0,
     'female_mdd': 0, 'female_ctrl': 0,
+    'male_mdd_het': 0, 'male_mdd_hom': 0,
+    'male_ctrl_het': 0, 'male_ctrl_hom': 0,
+    'female_mdd_het': 0, 'female_mdd_hom': 0,
+    'female_ctrl_het': 0, 'female_ctrl_hom': 0,
     'subjects': []
 })
 
 total_observations = 0
+total_het_observations = 0
+total_hom_alt_observations = 0
 
 for idx, vcf_path in enumerate(vcf_files, 1):
     fname = os.path.basename(vcf_path)
@@ -105,6 +108,14 @@ for idx, vcf_path in enumerate(vcf_files, 1):
             pos = int(pos_str)
             key = (clean_chr, pos, ref, alt)
             
+            is_hom = gt in ("1/1", "1|1")
+            if is_hom:
+                total_hom_alt_observations += 1
+                locus_data[key][f"{sex}_{condition}_hom"] += 1
+            else:
+                total_het_observations += 1
+                locus_data[key][f"{sex}_{condition}_het"] += 1
+            
             group_key = f"{sex}_{condition}"
             locus_data[key][group_key] += 1
             locus_data[key]['subjects'].append(subject)
@@ -112,10 +123,10 @@ for idx, vcf_path in enumerate(vcf_files, 1):
             total_observations += 1
 
     if idx % 10 == 0 or idx == len(vcf_files):
-        print(f"  [PROCESSED] {idx}/{len(vcf_files)} subjects parsed. (Latest: {subject}, {sample_calls:,} het-SNPs)")
+        print(f"  [PROCESSED] {idx}/{len(vcf_files)} subjects parsed. (Latest: {subject}, {sample_calls:,} variants)")
 
 n_unique_loci = len(locus_data)
-print(f"[INFO] Parsed {total_observations:,} total het-observations collapsed into {n_unique_loci:,} distinct loci.")
+print(f"[INFO] Parsed {total_observations:,} total non-reference observations ({total_het_observations:,} het, {total_hom_alt_observations:,} hom-alt) collapsed into {n_unique_loci:,} distinct loci.")
 
 # --- Step 4: Strict Data Assertions ---
 assert total_observations > 1_000_000, f"Assertion Failed: Total variant count {total_observations} unexpectedly low (<1M)."
@@ -139,7 +150,8 @@ sorted_keys = sorted(locus_data.keys(), key=lambda k: (sort_chrom(k[0]), k[1]))
 
 header = [
     "chr", "pos", "ref", "alt",
-    "n_subjects", "n_mdd", "n_ctrl",
+    "n_subjects", "n_het", "n_hom_alt",
+    "n_mdd", "n_ctrl",
     "n_male", "n_female",
     "n_male_mdd", "n_male_ctrl",
     "n_female_mdd", "n_female_ctrl",
@@ -153,6 +165,10 @@ def write_tsv(target_path):
         writer.writerow(header)
         for k in sorted_keys:
             d = locus_data[k]
+            n_het = (d['male_mdd_het'] + d['male_ctrl_het'] + 
+                     d['female_mdd_het'] + d['female_ctrl_het'])
+            n_hom_alt = (d['male_mdd_hom'] + d['male_ctrl_hom'] + 
+                         d['female_mdd_hom'] + d['female_ctrl_hom'])
             n_mdd = d['male_mdd'] + d['female_mdd']
             n_ctrl = d['male_ctrl'] + d['female_ctrl']
             n_male = d['male_mdd'] + d['male_ctrl']
@@ -172,7 +188,8 @@ def write_tsv(target_path):
             
             writer.writerow([
                 k[0], k[1], k[2], k[3],
-                n_subj, n_mdd, n_ctrl,
+                n_subj, n_het, n_hom_alt,
+                n_mdd, n_ctrl,
                 n_male, n_female,
                 d['male_mdd'], d['male_ctrl'],
                 d['female_mdd'], d['female_ctrl'],
@@ -181,7 +198,6 @@ def write_tsv(target_path):
             ])
 
 write_tsv(OUT_MASTER_TSV)
-write_tsv(os.path.join(MOD_TABLES_DIR, "06_transcriptome_snp_master.tsv.gz"))
 
 # --- Step 6: Export Cohort Summary Metrics ---
 recurrence_bins = defaultdict(int)
@@ -198,9 +214,11 @@ for k, d in locus_data.items():
 
 summary_rows = [
     {"metric": "total_subjects", "value": 39, "note": "20 MDD; 19 Control (20 Male; 19 Female)"},
-    {"metric": "total_het_observations", "value": total_observations, "note": "Sum of per-subject pass het-SNPs"},
+    {"metric": "total_variant_observations", "value": total_observations, "note": "Sum of per-subject pass non-reference SNPs (het + hom-alt)"},
+    {"metric": "total_het_observations", "value": total_het_observations, "note": f"{total_het_observations/total_observations*100:.2f}% of all variant calls"},
+    {"metric": "total_hom_alt_observations", "value": total_hom_alt_observations, "note": f"{total_hom_alt_observations/total_observations*100:.2f}% of all variant calls"},
     {"metric": "unique_snp_loci", "value": n_unique_loci, "note": "Distinct (chr; pos; ref; alt) loci"},
-    {"metric": "mean_het_snps_per_subject", "value": round(total_observations / 39, 1), "note": "Average het calls per individual"},
+    {"metric": "mean_variants_per_subject", "value": round(total_observations / 39, 1), "note": "Average non-ref calls per individual"},
     {"metric": "loci_private_1_subject", "value": recurrence_bins["Private (1 Subject)"], "note": f"{recurrence_bins['Private (1 Subject)']/n_unique_loci*100:.2f}% of all loci"},
     {"metric": "loci_low_recurrence_2_4", "value": recurrence_bins["Low Recurrence (2-4 Subjects)"], "note": f"{recurrence_bins['Low Recurrence (2-4 Subjects)']/n_unique_loci*100:.2f}% of all loci"},
     {"metric": "loci_moderate_recurrence_5_7", "value": recurrence_bins["Moderate Recurrence (5-7 Subjects)"], "note": f"{recurrence_bins['Moderate Recurrence (5-7 Subjects)']/n_unique_loci*100:.2f}% of all loci"},
@@ -214,7 +232,6 @@ def write_summary(target_path):
         writer.writerows(summary_rows)
 
 write_summary(OUT_SUMMARY_CSV)
-write_summary(os.path.join(MOD_TABLES_DIR, "06_transcriptome_snp_summary.csv"))
 
 print(f"[SUCCESS] Exported summary statistics to: {OUT_SUMMARY_CSV}")
 print("[DONE] 06_build_transcriptome_snp_table.py executed successfully.")

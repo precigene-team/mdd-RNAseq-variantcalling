@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # [[utils/plot_alt_transcriptome_snp_recurrence.py]]
-# Goal: Minimalist, cohesive visualization of SNP recurrence breakdown and 40,073 high-recurrence loci.
+# Goal: Minimalist, cohesive visualization of transcriptome SNP recurrence breakdown from dynamic summary data.
 
 import os
 import csv
+import sys
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -18,49 +19,59 @@ def get_project_root():
     return curr
 
 project_root = get_project_root()
-output_dir = os.path.join(project_root, "results", "figures")
-mod_fig_dir = os.path.join(project_root, "results", "03_variant_calling", "figures")
 utils_fig_dir = os.path.join(project_root, "results", "utils", "figures")
+os.makedirs(utils_fig_dir, exist_ok=True)
 
-for d in [output_dir, mod_fig_dir, utils_fig_dir]:
-    os.makedirs(d, exist_ok=True)
-
-out_png = os.path.join(output_dir, "06_transcriptome_snp_recurrence.png")
-out_pdf = os.path.join(output_dir, "06_transcriptome_snp_recurrence.pdf")
-out_png_mod = os.path.join(mod_fig_dir, "06_transcriptome_snp_recurrence.png")
 out_png_utils = os.path.join(utils_fig_dir, "transcriptome_snp_recurrence.png")
+out_pdf_utils = os.path.join(utils_fig_dir, "transcriptome_snp_recurrence.pdf")
 
-# --- 2. Load Summary Data ---
-summary_csv = os.path.join(project_root, "results", "tables", "06_transcriptome_snp_summary.csv")
+# --- 2. Load Summary Data Dynamically ---
+summary_csv = os.path.join(project_root, "results", "03_variant_calling", "tables", "06_transcriptome_snp_summary.csv")
+
 if not os.path.exists(summary_csv):
-    summary_csv = os.path.join(project_root, "results", "03_variant_calling", "tables", "06_transcriptome_snp_summary.csv")
+    raise FileNotFoundError(
+        f"[ERROR] Required summary table not found: {summary_csv}\n"
+        f"Please run 03_variant_calling/06_build_transcriptome_snp_table.py first."
+    )
 
-metrics = {
-    "total_subjects": 39,
-    "total_het_observations": 1601183,
-    "unique_snp_loci": 813969,
-    "loci_private_1_subject": 633892,
-    "loci_low_recurrence_2_4": 111206,
-    "loci_moderate_recurrence_5_7": 28798,
-    "loci_high_recurrence_gte_8": 40073
-}
+metrics = {}
+with open(summary_csv, "r") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        k = row["metric"].strip()
+        v = row["value"].strip()
+        metrics[k] = float(v) if "." in v else int(v)
 
-if os.path.exists(summary_csv):
-    try:
-        with open(summary_csv, "r") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                k = row["metric"]
-                if k in metrics:
-                    metrics[k] = float(row["value"]) if "." in row["value"] else int(row["value"])
-    except Exception as e:
-        print(f"[WARNING] Could not parse {summary_csv}: {e}")
+required_keys = [
+    "unique_snp_loci",
+    "loci_private_1_subject",
+    "loci_low_recurrence_2_4",
+    "loci_moderate_recurrence_5_7",
+    "loci_high_recurrence_gte_8"
+]
+for rk in required_keys:
+    if rk not in metrics:
+        raise KeyError(f"[ERROR] Missing required metric '{rk}' in {summary_csv}")
 
 total_loci = int(metrics["unique_snp_loci"])
 priv = int(metrics["loci_private_1_subject"])
 low = int(metrics["loci_low_recurrence_2_4"])
 mod = int(metrics["loci_moderate_recurrence_5_7"])
 high = int(metrics["loci_high_recurrence_gte_8"])
+
+# Determine observations metric and label dynamically
+if "total_variant_observations" in metrics:
+    obs_title = "Total Variant Observations"
+    tot_obs = int(metrics["total_variant_observations"])
+elif "total_het_observations" in metrics:
+    obs_title = "Total Het Observations"
+    tot_obs = int(metrics["total_het_observations"])
+else:
+    obs_title = "Total Observations"
+    tot_obs = priv + low + mod + high
+
+pct_high = (high / total_loci * 100.0) if total_loci > 0 else 0.0
+pct_high_str = f"({pct_high:.2f}%)" if pct_high < 10 else f"({pct_high:.1f}%)"
 
 # --- 3. Figure Setup ---
 fig, (ax_a, ax_b) = plt.subplots(1, 2, figsize=(14.0, 5.8), dpi=300, facecolor="#ffffff")
@@ -129,8 +140,8 @@ ax_b.axis('off')
 
 funnel_stages = [
     {
-        "title": "Total Het Observations",
-        "count": f"{int(metrics['total_het_observations']):,}",
+        "title": obs_title,
+        "count": f"{tot_obs:,}",
         "w": 8.8, "y": 7.1, "h": 1.6, "fc": "#f8fafc", "ec": "#cbd5e1", "tc": "#475569"
     },
     {
@@ -140,7 +151,7 @@ funnel_stages = [
     },
     {
         "title": "High-Recurrence Loci (≥ 8 Subjects)",
-        "count": f"{high:,}  (4.92%)",
+        "count": f"{high:,}  {pct_high_str}",
         "w": 6.0, "y": 1.1, "h": 1.6, "fc": "#eff6ff", "ec": "#1e3a8a", "tc": "#1e3a8a"
     }
 ]
@@ -163,10 +174,8 @@ for idx, stg in enumerate(funnel_stages):
                       arrowprops=dict(arrowstyle="->", color="#94a3b8", lw=1.8))
 
 # Save PNG and PDF
-plt.savefig(out_png, dpi=300, bbox_inches='tight')
-plt.savefig(out_pdf, bbox_inches='tight')
-plt.savefig(out_png_mod, dpi=300, bbox_inches='tight')
 plt.savefig(out_png_utils, dpi=300, bbox_inches='tight')
+plt.savefig(out_pdf_utils, bbox_inches='tight')
 plt.close()
 
-print(f"[SUCCESS] Donut updated to start at 90° clockwise order (1 -> 2-4 -> 5-7 -> >=8):\n  PNG: {out_png}")
+print(f"[SUCCESS] Recurrence figure exported to:\n  PNG: {out_png_utils}\n  PDF: {out_pdf_utils}")

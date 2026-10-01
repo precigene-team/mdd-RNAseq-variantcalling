@@ -27,27 +27,16 @@ get_project_root <- function() {
 }
 
 project_root <- Sys.getenv("PROJECT_ROOT", unset = get_project_root())
-output_dir <- file.path(project_root, "results", "figures")
-mod_fig_dir <- file.path(project_root, "results", "03_variant_calling", "figures")
 utils_fig_dir <- file.path(project_root, "results", "utils", "figures")
-
-dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
-dir.create(mod_fig_dir, showWarnings = FALSE, recursive = TRUE)
 dir.create(utils_fig_dir, showWarnings = FALSE, recursive = TRUE)
 
-out_png <- file.path(output_dir, "10_functional_annotations.png")
-out_pdf <- file.path(output_dir, "10_functional_annotations.pdf")
-out_png_mod <- file.path(mod_fig_dir, "10_functional_annotations.png")
 out_png_utils <- file.path(utils_fig_dir, "functional_annotations.png")
+out_pdf_utils <- file.path(utils_fig_dir, "functional_annotations.pdf")
 
 # --- 2. Load Data ---
-candidates <- c(
-  file.path(project_root, "results", "tables", "10_functional_annotation.csv"),
-  file.path(project_root, "results", "03_variant_calling", "tables", "10_functional_annotation.csv")
-)
-csv_path <- candidates[file.exists(candidates)][1]
-if (is.na(csv_path)) {
-  stop("ERROR: Input table not found in production results. Run 10_functional_annotation.py first.")
+csv_path <- file.path(project_root, "results", "03_variant_calling", "tables", "10_functional_annotation.csv")
+if (!file.exists(csv_path)) {
+  stop("ERROR: Input table not found: ", csv_path, ". Run 10_functional_annotation.py first.")
 }
 
 df <- read.csv(csv_path, stringsAsFactors = FALSE)
@@ -137,11 +126,9 @@ p_vep <- ggplot(hits, aes(x = n_mdd, y = gene_label, fill = clean_cons)) +
   )
 
 # --- 4. Export 2-Facet Single Plot ---
-ggsave(out_png, plot = p_vep, width = 14.0, height = 7.0, dpi = 300, bg = "white")
-ggsave(out_pdf, plot = p_vep, width = 14.0, height = 7.0, dpi = 300, bg = "white")
-ggsave(out_png_mod, plot = p_vep, width = 14.0, height = 7.0, dpi = 300, bg = "white")
 ggsave(out_png_utils, plot = p_vep, width = 14.0, height = 7.0, dpi = 300, bg = "white")
+ggsave(out_pdf_utils, plot = p_vep, width = 14.0, height = 7.0, dpi = 300, bg = "white")
 
-message("[SUCCESS] 2-Facet functional annotation figure for the 10 loci generated successfully:")
-message("  PNG: ", out_png)
-message("  PDF: ", out_pdf)
+message("[SUCCESS] 2-Facet functional annotation figure generated successfully:")
+message("  PNG: ", out_png_utils)
+message("  PDF: ", out_pdf_utils)
