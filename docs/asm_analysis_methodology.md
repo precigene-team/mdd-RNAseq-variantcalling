@@ -1,5 +1,22 @@
 # ASM Group-Comparison Methodology — Research Basis & Verdict
 
+> **SUPERSEDED — read-ratio ASM, retained as historical record.**
+> This document analyses the retired window-level pipeline (M6Allele +
+> ASEReadCounter + glmmTMB). Its verdict — that group comparison needs a
+> defensible unit of analysis and effect-size threshold — still stands, and the
+> audit it records is the reason for the pivot. But the pipeline it describes was
+> abandoned: window-level pooling aggregates unrelated private variants across
+> donors in an outbred cohort, and the signal failed non-parametric replication
+> (MWU FDR = 1.00).
+>
+> **Current module:** `04_asm/` (`01`–`07`), sequence-level DRACH disruption plus
+> per-donor allele-specific m6A.
+> See `docs/04_asm_methods.md`, `docs/04_asm_postmortem.md`.
+> Retired scripts: `_legacy/04_asm/scripts/`.
+>
+> Script paths below (`04_asm/03_m6allele_asm.sh`, `04_asm/08_asm_build_matrix.py`,
+> `04_asm/09_asm_compare.R`) no longer exist at those locations.
+
 *Companion to `docs/pipeline_problem_list.md` (Item 7, Allele-Specific Methylation). Question: for the MDD-vs-Ctrl comparison of allele-specific m6A (ASM), what is the correct unit of analysis, signal/effect-size threshold, and statistical model?*
 
 ## 1. Question

@@ -1,5 +1,12 @@
 # Allele Skew and Condition Shift Calculation in ASm6A Analysis
 
+> **SUPERSEDED — read-ratio ASM, retained as historical record.**
+> The allele-skew and condition-shift definitions below belong to the retired
+> window-level pipeline. The current module (`04_asm/01`–`07`) uses a per-donor
+> IP-vs-Input design in which each donor is self-normalising, so the cross-group
+> condition-shift contrast is no longer the primary statistic. See
+> `docs/04_asm_methods.md` and `docs/04_asm_postmortem.md`.
+
 This document outlines the mathematical definitions, biological significance, and step-by-step calculations for **Allele Skew** and **Condition Shift** in the Allele-Specific m6A Methylation (ASm6A) pipeline.
 
 ---

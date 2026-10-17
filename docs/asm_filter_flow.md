@@ -1,5 +1,11 @@
 # ASM Group-Comparison Filtering Flow
 
+> **SUPERSEDED — read-ratio ASM, retained as historical record.**
+> Describes the retired window-level pipeline. Scripts no longer exist at these
+> paths: `_legacy/04_asm/scripts/08_asm_build_matrix.py`,
+> `_legacy/04_asm/scripts/09_asm_compare.R`. Current module: `04_asm/` (`01`–`07`)
+> — see `docs/04_asm_methods.md` and `docs/04_asm_postmortem.md`.
+
 *Source: `11_asm_build_matrix.py` log (2026-08-03 10:26) for the upstream build; `12_asm_compare.R` (`include_obs`, `analyze`) for the filters applied to `_data/RData/03_variant_calling/asm_matrix.tsv`. Counts from the sex-adjusted run of 2026-08-03.*
 
 ```mermaid
