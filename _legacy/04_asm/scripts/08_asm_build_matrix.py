@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# [[03_variant_calling/11_asm_build_matrix.py]]
+# [[04_asm/08_asm_build_matrix.py]]
 # Goal: Build the tidy per-(locus, subject) allele-count matrix for the ASM group-comparison.
 #       DATA MUNGING ONLY (no statistics) — all hypothesis testing happens in
-#       03_variant_calling/12_asm_compare.R using established R packages.
+#       04_asm/09_asm_compare.R using established R packages.
 #
 # Counts come from GATK ASEReadCounter (identical pipeline for IP and Input fractions),
 #   *_ip_ase_counts.csv / *_input_ase_counts.csv -> (subject, chr, pos) ref/alt counts.
@@ -18,7 +18,7 @@
 #   4. Load IP (and, if present, Input) ASEReadCounter counts.
 #   5. Aggregate per (locus, subject): ip_ref/ip_total, in_ref/in_total (Input NA if absent),
 #      min_q, n_snps, gene. Allele A = REF allele (fixed genome base, consistent across subjects).
-#   6. Write tidy TSV to _data/RData/03_variant_calling/asm_matrix.tsv for the R analysis.
+#   6. Write tidy TSV to _data/RData/04_asm/asm_matrix.tsv for the R analysis.
 
 import csv
 import os
@@ -33,13 +33,13 @@ ASM_DIR    = os.path.join(PROJECT_ROOT, "_data", "asm")
 ASE_DIR    = os.path.join(PROJECT_ROOT, "_data", "ase")
 PEAKS_BED  = os.path.join(PROJECT_ROOT, "_data", "peaks", "consensus_peaks.bed")
 META_FILE  = os.path.join(PROJECT_ROOT, "_data", "_metadata", "sample_sheet.csv")
-OUT_DIR    = os.path.join(PROJECT_ROOT, "_data", "RData", "03_variant_calling")
+OUT_DIR    = os.path.join(PROJECT_ROOT, "_data", "RData", "04_asm")
 LOG_DIR    = os.path.join(PROJECT_ROOT, "_data", "logs", "asm")
 for d in (OUT_DIR, LOG_DIR):
     os.makedirs(d, exist_ok=True)
 OUT_TSV = os.path.join(OUT_DIR, "asm_matrix.tsv")
 PICKLE  = os.path.join(OUT_DIR, "asm_matrix.pkl")
-LOG_FILE = os.path.join(LOG_DIR, "11_asm_build_matrix.log")
+LOG_FILE = os.path.join(LOG_DIR, "08_asm_build_matrix.log")
 
 CHR_ORDER = {str(i): i for i in range(1, 23)} | {"X": 23, "Y": 24, "MT": 25}
 

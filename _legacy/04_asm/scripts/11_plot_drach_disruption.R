@@ -1,14 +1,14 @@
 #!/usr/bin/env Rscript
-# [[03_variant_calling/14_plot_drach_disruption.R]]
+# [[04_asm/11_plot_drach_disruption.R]]
 # Goal: Visualize DRACH motif disruption patterns using 100% stacked bar plots with clean D-R-A-C-H X-axis labels.
 
 # Steps:
 #   1. Resolve dynamic project root path.
-#   2. Load annotated DRACH disruption table (09_drach_disrupting_snps.csv).
+#   2. Load annotated DRACH disruption table (05_drach_disrupting_snps.csv or legacy 09_drach_disrupting_snps.csv).
 #   3. Deduplicate overlapping variants per (chr, pos, ref, alt, drach_name).
 #   4. Compute position-wise disruption proportions across 5-mer motif positions (D-R-A-C-H).
 #   5. Render publication-ready 100% stacked bar charts (Offset breakdown & Overall proportions).
-#   6. Save figures as PDF and high-resolution PNG to results/03_variant_calling/figures/.
+#   6. Save figures as PDF and high-resolution PNG to results/04_asm/figures/.
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -27,22 +27,16 @@ get_project_root <- function() {
 project_root <- get_project_root()
 
 # Input & Output Paths
-input_csv_primary  <- file.path(project_root, "results/03_variant_calling/tables/09_drach_disrupting_snps.csv")
-input_csv_fallback <- file.path(project_root, "results/tables/09_drach_disrupting_snps.csv")
-
-if (file.exists(input_csv_primary)) {
-  input_csv <- input_csv_primary
-} else if (file.exists(input_csv_fallback)) {
-  input_csv <- input_csv_fallback
-} else {
-  stop("Assertion Error: Input CSV not found at ", input_csv_primary, " or ", input_csv_fallback)
+input_csv <- file.path(project_root, "results/04_asm/tables/05_drach_disrupting_snps.csv")
+if (!file.exists(input_csv)) {
+  stop("Assertion Error: Input CSV not found at ", input_csv)
 }
 
-figures_dir <- file.path(project_root, "results/03_variant_calling/figures")
+figures_dir <- file.path(project_root, "results/04_asm/figures")
 dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
-out_pdf <- file.path(figures_dir, "14_drach_disruption.pdf")
-out_png <- file.path(figures_dir, "14_drach_disruption.png")
+out_pdf <- file.path(figures_dir, "11_drach_disruption.pdf")
+out_png <- file.path(figures_dir, "11_drach_disruption.png")
 
 # --- 2. Load & Deduplicate Data ---
 message("[INFO] Loading DRACH disruption table: ", input_csv)

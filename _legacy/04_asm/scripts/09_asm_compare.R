@@ -1,8 +1,8 @@
-# [[03_variant_calling/12_asm_compare.R]]
+# [[04_asm/09_asm_compare.R]]
 # Goal: Group-level comparison of allele-specific m6A (ASM) between MDD and Control.
 #       STATISTICAL COMPUTE ONLY. Long-running. Results are saved to asm_results.rds;
-#       visualisation is deferred to 13_asm_compare_viz.R (reads the RDS, no recompute).
-#       Per-(locus,subject) allele-count matrix is built by 11_asm_build_matrix.py.
+#       visualisation is deferred to 10_asm_compare_viz.R (reads the RDS, no recompute).
+#       Per-(locus,subject) allele-count matrix is built by 08_asm_build_matrix.py.
 #
 # Model (established machinery, per docs/asm_analysis_methodology.md §4):
 #   Per locus: beta-binomial regression of IP allele counts on condition + sex, with
@@ -26,10 +26,11 @@ get_project_root <- function() {
 }
 project_root <- get_project_root()
 
-mat_file    <- file.path(project_root, "_data/RData/03_variant_calling/asm_matrix.tsv")
-tables_dir  <- file.path(project_root, "results/03_variant_calling/tables")
-out_rds     <- file.path(project_root, "_data/RData/03_variant_calling/asm_results.rds")
+mat_file    <- file.path(project_root, "_data/RData/04_asm/asm_matrix.tsv")
+tables_dir  <- file.path(project_root, "results/04_asm/tables")
+out_rds     <- file.path(project_root, "_data/RData/04_asm/asm_results.rds")
 dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
+dir.create(dirname(out_rds), recursive = TRUE, showWarnings = FALSE)
 
 # --- Parameters ---
 Q_CUT           <- 0.05
@@ -192,8 +193,8 @@ res <- analyze(SKEW_CUT, MIN_SUBJECTS)
 if (is.null(res)) stop("No loci passed filters at the default thresholds.")
 message("[INFO] loci tested: ", nrow(res), "; FDR<", FDR_CUT, ": ", sum(res$fdr < FDR_CUT))
 
-locus_table <- file.path(tables_dir, "12_asm_locus_table.csv")
-sig_table   <- file.path(tables_dir, "12_asm_primary_significant.csv")
+locus_table <- file.path(tables_dir, "09_asm_locus_table.csv")
+sig_table   <- file.path(tables_dir, "09_asm_primary_significant.csv")
 write.csv(res, locus_table, row.names = FALSE)
 write.csv(res[res$fdr < FDR_CUT & !is.na(res$fdr), , drop = FALSE], sig_table, row.names = FALSE)
 message("[INFO] wrote: ", locus_table, " / ", sig_table)
@@ -201,7 +202,7 @@ message("[INFO] wrote: ", locus_table, " / ", sig_table)
 if (input_available) {
   cross <- res[!is.na(res$mwu_p), c("locus_id", "gene", "coef", "p", "fdr", "mwu_p", "mwu_fdr", "fisher_n_sig")]
   cross$rank_agree <- cor(res$p, res$mwu_p, method = "spearman", use = "complete.obs")
-  write.csv(cross, file.path(tables_dir, "12_asm_crosscheck.csv"), row.names = FALSE)
+  write.csv(cross, file.path(tables_dir, "09_asm_crosscheck.csv"), row.names = FALSE)
   message("[INFO] Spearman rank corr (GLM p vs MWU p): ", round(cross$rank_agree[1], 3))
 }
 
@@ -217,12 +218,12 @@ for (i in seq_len(nrow(sweep))) {
     sweep$n_female_sig[i]   <- sum(r$female_fdr < FDR_CUT, na.rm = TRUE)
   }
 }
-write.csv(sweep, file.path(tables_dir, "12_asm_sensitivity.csv"), row.names = FALSE)
-message("[INFO] wrote sensitivity: ", file.path(tables_dir, "12_asm_sensitivity.csv"))
+write.csv(sweep, file.path(tables_dir, "09_asm_sensitivity.csv"), row.names = FALSE)
+message("[INFO] wrote sensitivity: ", file.path(tables_dir, "09_asm_sensitivity.csv"))
 
 saveRDS(list(results = res, sensitivity = sweep, params = list(
   q_cut = Q_CUT, skew_cut = SKEW_CUT, min_subjects = MIN_SUBJECTS, min_ip_reads = MIN_IP_READS,
   min_allele = MIN_ALLELE, min_input_reads = MIN_INPUT_READS, fdr_cut = FDR_CUT,
   input_available = input_available)), out_rds)
 message("[INFO] wrote RDS: ", out_rds)
-message("[INFO] done. Run 13_asm_compare_viz.R to generate figures from ", out_rds, ".")
+message("[INFO] done. Run 10_asm_compare_viz.R to generate figures from ", out_rds, ".")

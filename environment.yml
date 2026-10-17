@@ -43,6 +43,19 @@ dependencies:
   - r-ashr
   - r-glmmtmb
   - r-lme4
+  # --- m6A-SNP pivot (04_asm/01, 04_asm/04) ---
+  # Biostrings: DRACH motif matching (vmatchPattern) + strand conversion
+  #             (reverseComplement/complement) in 01_find_drach_sites.R and
+  #             04_annotate_strand_aware_disruption.R
+  - bioconductor-biostrings
+  # data.table: fread + summary tables in 04_annotate_strand_aware_disruption.R
+  - r-data.table
+  # R.utils: NOT used by the current 04_asm pipeline. It was required by the
+  #         retired 09_plot_m6asnp_funnel.R to read the 855k-row gzipped
+  #         06_transcriptome_snp_master.tsv.gz without shelling out to zcat;
+  #         that step is now 05_plot_m6asnp_funnel.py (Python). Retained
+  #         pending a dependency audit -- safe to drop.
+  - r-r.utils
   - bioconductor-deseq2
   - bioconductor-biomart
   - bioconductor-apeglm
@@ -52,3 +65,18 @@ dependencies:
   - bioconductor-tress
   - bioconductor-rrho
   - bioconductor-complexheatmap
+
+# NOTE on m6A-SNP cross-validation resources
+#   m6AVar   (Zhang et al., Database 2019)  -- web database, no package
+#   RMVar    (Liu et al., Nat Commun 2020)    -- published pipeline, web tool only
+#   m6A-TSHub (2023)                          -- web database, no package
+# None of these are distributed via conda/bioconda/CRAN/Bioconductor, so nothing
+# can be added here. They are unreachable from this host (m6avar.bioannotation.cn
+# and bioannotation.cn both refused connection). Cross-validation is therefore
+# performed against the GWAS Catalog and Ensembl REST instead -- see the retired
+# _legacy/04_asm/scripts/07_validate_external.R.
+#
+# Rebuild this environment with:
+#   micromamba env create -f environment.yml
+# or add the new packages to an existing environment with:
+#   micromamba install -n mdd -c conda-forge bioconductor-biostrings r-data.table

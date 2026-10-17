@@ -30,8 +30,8 @@ eval "$(micromamba shell hook --shell bash 2>/dev/null || mamba shell hook --she
 micromamba activate mdd 2>/dev/null || mamba activate mdd 2>/dev/null || conda activate mdd 2>/dev/null
 
 LOG_DIR="$PROJECT_ROOT/_data/logs/igv_track_bin3"
-OUT_DIR="results/03_variant_calling/figures"
-TRACK_DIR="results/03_variant_calling/tracks"
+OUT_DIR="results/04_asm/figures"
+TRACK_DIR="results/04_asm/tracks"
 mkdir -p "$LOG_DIR" "$OUT_DIR" "$TRACK_DIR"
 
 REGION="8:22619800-22621500"
@@ -56,8 +56,8 @@ extract_bg "$INPUT_BAM" "$INPUT_BG"
 echo ">>> Rendering pyGenomeTracks figure for BIN3 ($REGION)..."
 INI="04_asm/13_bin3_tracks.ini"
 
-pyGenomeTracks --tracks "$INI" --region "$REGION" --outFileName "$OUT_DIR/16_igv_track_bin3.png" --dpi 300
-pyGenomeTracks --tracks "$INI" --region "$REGION" --outFileName "$OUT_DIR/16_igv_track_bin3.pdf"
+pyGenomeTracks --tracks "$INI" --region "$REGION" --outFileName "$OUT_DIR/13_igv_track_bin3.png" --dpi 300
+pyGenomeTracks --tracks "$INI" --region "$REGION" --outFileName "$OUT_DIR/13_igv_track_bin3.pdf"
 
 # --- Step 3: Interactive IGV Read-Level HTML Report ---
 SNP_BED="$TRACK_DIR/bin3_snp.bed"
@@ -69,7 +69,7 @@ if command -v create_report &>/dev/null; then
     --fasta "$FASTA" \
     --tracks "$IP_BAM" "$INPUT_BAM" "$GTF" \
     --flanking 200 \
-    --output "$OUT_DIR/16_igv_report_bin3.html"
+    --output "$OUT_DIR/13_igv_report_bin3.html"
 else
   echo ">>> Note: 'igv-reports' (create_report) not found in PATH yet."
 fi

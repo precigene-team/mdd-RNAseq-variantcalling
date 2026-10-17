@@ -1,5 +1,5 @@
-# [[03_variant_calling/13_asm_compare_viz.R]]
-# Goal: Produce ASM visualisation figures from the compute artifact written by 12_asm_compare.R (asm_results.rds).
+# [[04_asm/10_asm_compare_viz.R]]
+# Goal: Produce ASM visualisation figures from the compute artifact written by 09_asm_compare.R (asm_results.rds).
 
 suppressPackageStartupMessages({
   suppressMessages({
@@ -17,9 +17,9 @@ get_project_root <- function() {
 }
 project_root <- get_project_root()
 
-rds_path <- file.path(project_root, "_data/RData/03_variant_calling/asm_results.rds")
+rds_path <- file.path(project_root, "_data/RData/04_asm/asm_results.rds")
 if (!file.exists(rds_path)) {
-  stop(paste0("Artifact not found: ", rds_path, ". Run 12_asm_compare.R first."))
+  stop(paste0("Artifact not found: ", rds_path, ". Run 09_asm_compare.R first."))
 }
 
 cfg <- readRDS(rds_path)
@@ -27,7 +27,7 @@ res <- cfg$results
 sweep <- cfg$sensitivity
 P <- cfg$params
 
-fig_dir <- file.path(project_root, "results/03_variant_calling/figures")
+fig_dir <- file.path(project_root, "results/04_asm/figures")
 dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
 
 tag       <- ifelse(isTRUE(P$input_available), "Input-null offset", "0.5-null offset")
@@ -90,10 +90,12 @@ vol <- vol + ggplot2::labs(
   caption = sprintf("BH-FDR cutoff = %.2f, SKEW_CUT = %.1f, min subjects = %d",
                     P$fdr_cut, P$skew_cut, P$min_subjects))
 
-out_pdf <- file.path(fig_dir, "13_asm_volcano.pdf")
-out_png <- file.path(fig_dir, "13_asm_volcano.png")
+out_pdf <- file.path(fig_dir, "10_asm_volcano.pdf")
+out_png <- file.path(fig_dir, "10_asm_volcano.png")
 ggplot2::ggsave(out_pdf, vol, width = 180, height = 140, units = "mm", dpi = 300)
 ggplot2::ggsave(out_png, vol, width = 180, height = 140, units = "mm", dpi = 300)
+file.copy(out_pdf, file.path(fig_dir, "13_asm_volcano.pdf"), overwrite = TRUE)
+file.copy(out_png, file.path(fig_dir, "13_asm_volcano.png"), overwrite = TRUE)
 message("[INFO] Wrote volcano plot to: ", out_pdf, " and ", out_png)
 
 # --- 2. Sensitivity Sweep Plot (Barplot) ---
@@ -114,10 +116,12 @@ if (nrow(sweep) > 0) {
   sp <- sp + ggplot2::labs(x = "min subjects", y = "tested loci", fill = NULL,
                            title = "ASM Sensitivity to Filtering Parameters")
   
-  out_sp_pdf <- file.path(fig_dir, "13_asm_sensitivity.pdf")
-  out_sp_png <- file.path(fig_dir, "13_asm_sensitivity.png")
+  out_sp_pdf <- file.path(fig_dir, "10_asm_sensitivity.pdf")
+  out_sp_png <- file.path(fig_dir, "10_asm_sensitivity.png")
   ggplot2::ggsave(out_sp_pdf, sp, width = 180, height = 140, units = "mm", dpi = 300)
   ggplot2::ggsave(out_sp_png, sp, width = 180, height = 140, units = "mm", dpi = 300)
+  file.copy(out_sp_pdf, file.path(fig_dir, "13_asm_sensitivity.pdf"), overwrite = TRUE)
+  file.copy(out_sp_png, file.path(fig_dir, "13_asm_sensitivity.png"), overwrite = TRUE)
   message("[INFO] Wrote sensitivity plot to: ", out_sp_pdf, " and ", out_sp_png)
 } else {
   message("[WARN] sensitivity table empty; skipping sweep plot.")
