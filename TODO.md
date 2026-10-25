@@ -564,3 +564,115 @@ per-donor analysis that replaced it does not need a Java tool. See Phase 5.
   * [ ] **Layer 4 (GWAS Catalog)**: Cross-reference associations with MDD, psychiatric traits, and neurological phenotypes
   * [ ] **Layer 5 (Literature Curation)**: Query PubMed/Google Scholar (`[Gene] + MDD/depression/brain/stress/m6A`)
   * [ ] **Deliverable**: Compile summary table (`Gene | SNP/rsID | Variant Consequence | eQTL/sQTL | Brain/MDD Evidence | m6A Evidence | Reference`)
+
+---
+
+## 🧬 Polygenic Burden Analysis (Client Genetic-Risk Deliverable)
+
+**Status:** Pipeline COMPLETE. Result is **NULL** across all four arms.
+**Methodology (with verified DOIs):** [`docs/polygenic_burden_methodology.md`](docs/polygenic_burden_methodology.md)
+
+### Locked Decisions
+
+| Decision | Value |
+|---|---|
+| Analysis unit | Per-donor count of qualifying variants, collapsed per gene / gene set |
+| Variant set | SnpEff impact `HIGH`+`MODERATE`+`LOW` (11,486 after filters). `LOW`/synonymous retained — not inert, and the `HAX1` core-ablation locus is itself synonymous/LOW |
+| **Normalization** | Negative binomial with `offset = log(total_variants_d)`. Library-size principle, as edgeR/DESeq2 use for read counts |
+| Null calibration | Condition permuted **within sex**, preserving each donor's call count |
+| Primary gene panel | Open Targets `MONDO_0002009`, **`genetic_association` evidence only** (literature/clinical excluded to avoid circularity). Threshold ≥ 0.35 |
+| Pathways | msigdbr Hallmark / C2 / C5 — **exploratory only**, never load-bearing |
+| Excluded | 116 unplaced-contig rows only. No carrier-count filter — an earlier one was wrong (§4.1) |
+| PGS | **Not attempted** — GSE275676 contains no genome-wide genotypes, and N=39 is below the recommended 100 |
+
+### Pipeline
+
+| Step | Script | Role |
+|---|---|---|
+| 15 | `15_build_burden_matrix.py` | Donor × variant carrier matrix. Data munging only |
+| 16 | `16_fetch_opentargets_panel.py` | Open Targets fetch, cached with pinned date |
+| 16b | `16b_export_pathway_sets.R` | msigdbr export, collections kept separate (exploratory) |
+| 17 | `17_gene_burden_test.py` | Four arms + sensitivity |
+| 18 | `18_plot_burden_results.R` | Gene-level and panel figures |
+| 20 | `20_burden_control_vs_mdd_table.R` | Per-donor and per-set burden tables. Draws nothing |
+| 21 | `21_plot_burden_control_vs_mdd.R` | Shared plot helper, sourced by 22–26. Not run directly |
+| 22 | `22_plot_burden_reactome.R` | Reactome figure |
+| 23 | `23_plot_burden_kegg.R` | KEGG figure |
+| 24 | `24_plot_burden_go_bp.R` | GO:BP figure |
+| 25 | `25_plot_burden_go_cc.R` | GO:CC figure |
+| 26 | `26_plot_burden_go_mf.R` | GO:MF figure |
+| — | `utils/case_control_null.py` | Shared permutation + offset model, also used by `04_asm/06` |
+
+### Why a polygenic score is off the table
+
+GSE275676 is RNA-seq + MeRIP only — 78 libraries, no DNA, no genotyping array.
+Variants are RNA-seq calls: restricted to expressed sequence, hard-called, never
+imputed. A PGS needs genome-wide target genotypes plus an LD reference; neither
+exists here. **PGC MDD2025 summary statistics are free and CC BY 4.0**
+(`doi:10.6084/m9.figshare.27061255.v5`), so only tissue genotyping is missing.
+Real PGS becomes possible once postmortem DNA is genotyped.
+
+### Why rare-variant burden does not apply
+
+Measured cohort MAF spectrum — **zero variants below 1% MAF**:
+
+| MAF band | All variants | Coding (H/M/L) |
+|---|---|---|
+| < 1% | **0 (0.0%)** | **0 (0.0%)** |
+| 1–5% | 1,649 (2.7%) | 315 (2.7%) |
+| 5–20% | 9,309 (15.1%) | 1,431 (12.5%) |
+| > 20% | **46,049 (74.7%)** | **9,126 (79.4%)** |
+
+RNA-seq calling recovers only common, well-expressed variants (~40% of what DNA
+sequencing finds, >80% precision; `doi:10.1186/s12864-024-10645-z`). SKAT,
+SKAT-O, SAIGE-GENE(+), and STAAR are all gated at MAF ≤ 1% and would filter out
+the entire cohort. This is **common-variant load**, not rare-variant burden.
+
+### The coverage confound (root cause of earlier inconsistent results)
+
+| Group | Mean total variants/donor | Mean panel burden/donor |
+|---|---|---|
+| MDD (20) | 62,472 | 5,983 |
+| Ctrl (19) | 49,825 | 5,901 |
+| **Ratio** | **1.254** | 1.014 |
+
+Per-donor total spread is 7,611–131,865 (**17×**). Burden is a count, so
+unnormalized it reads sequencing depth before biology. Same 1.254× ratio
+independently measured in the `04_asm` case-control test — one confound, two modules.
+
+### Results — NULL
+
+| Analysis | Tests | Result |
+|---|---|---|
+| **1. Unbiased gene-level (primary)** | 5,918 genes | 50 nominal p<0.05 (0.9%); **0 at BH-FDR<0.05** |
+| **2. Open Targets panel** | 4 thresholds | offset RR 1.031–1.075, all p>0.69; permutation p 0.70–0.85 |
+| **3. Pathways (exploratory)** | 11,234 sets | **0 at FDR<0.05** in any of the 8 collections |
+| **4. Convergence** | — | 0 (gene-level burden produced no hits) |
+
+**No gene or gene set shows differential burden once detection depth is
+controlled.** No MDD enrichment claim is made.
+
+### Run commands
+
+```bash
+micromamba activate mdd
+python3 03_variant_calling/15_build_burden_matrix.py
+python3 03_variant_calling/16_fetch_opentargets_panel.py   # cached; FORCE=1 to refresh
+Rscript  03_variant_calling/16b_export_pathway_sets.R
+python3 03_variant_calling/17_gene_burden_test.py
+Rscript  03_variant_calling/18_plot_burden_results.R
+Rscript  03_variant_calling/20_burden_control_vs_mdd_table.R
+Rscript  03_variant_calling/22_plot_burden_reactome.R   # and 23 kegg, 24 go_bp, 25 go_cc, 26 go_mf
+
+N_PERM=100000 python3 03_variant_calling/17_gene_burden_test.py   # tighter null
+
+```
+
+### Known Limitations
+
+1. **Not a PGS** and not presented as one.
+2. **Not rare-variant burden** — zero variants below 1% MAF.
+3. **Expression confounding.** Burden reflects *detected* variation, which tracks expression, which differs by group. The offset corrects genome-wide depth, not gene-specific detection probability.
+4. **Power.** N=39; female-control stratum is n=9, so the within-sex permutation there rests on 10 vs 9.
+5. **Peak/variant ascertainment.** Variants come from RNA-seq, so only expressed, well-covered regions contribute.
+6. **Postmortem confounders unmodelled.** Sex is stratified; age, PMI, RIN not checked against the sample sheet.

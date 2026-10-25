@@ -60,6 +60,19 @@ Below is the layout of the analysis workspace:
   * [`07_clinical_pathogenicity.py`](03_variant_calling/07_clinical_pathogenicity.py): ClinVar cross-referencing and ACMG/AMP 5-tier classification.
   * [`08_pharmacogenomics_actionability.py`](03_variant_calling/08_pharmacogenomics_actionability.py): CPIC antidepressant guidelines and ClinPGx actionability.
   * [`09_plot_clinical_annotation_landscape.R`](03_variant_calling/09_plot_clinical_annotation_landscape.R): Multi-panel publication figure.
+  * [`15_build_burden_matrix.py`](03_variant_calling/15_build_burden_matrix.py): Build the donor × variant carrier matrix for burden analysis. Data munging only.
+  * [`16_fetch_opentargets_panel.py`](03_variant_calling/16_fetch_opentargets_panel.py): Fetch and cache the Open Targets MDD panel (genetic evidence only).
+  * [`16b_export_pathway_sets.R`](03_variant_calling/16b_export_pathway_sets.R): Export msigdbr gene sets, collections kept separate, for the exploratory pathway arm.
+  * [`17_gene_burden_test.py`](03_variant_calling/17_gene_burden_test.py): Four-arm burden test with detection-depth offset and within-sex permutation.
+  * [`18_plot_burden_results.R`](03_variant_calling/18_plot_burden_results.R): Raw-vs-offset figure, Arm 1 volcano, Arm 2 panel.
+  * [`20_burden_control_vs_mdd_table.R`](03_variant_calling/20_burden_control_vs_mdd_table.R): Per-donor and per-set burden tables. Draws nothing.
+  * [`21_plot_burden_control_vs_mdd.R`](03_variant_calling/21_plot_burden_control_vs_mdd.R): Shared plot helper for the per-collection figures below. Sourced, not run.
+  * [`22_plot_burden_reactome.R`](03_variant_calling/22_plot_burden_reactome.R): Control-vs-MDD burden, Reactome. Top-10 reference panel + Reactome synapse sets.
+  * [`23_plot_burden_kegg.R`](03_variant_calling/23_plot_burden_kegg.R): Same layout, KEGG.
+  * [`24_plot_burden_go_bp.R`](03_variant_calling/24_plot_burden_go_bp.R): Same layout, GO Biological Process.
+  * [`25_plot_burden_go_cc.R`](03_variant_calling/25_plot_burden_go_cc.R): Same layout, GO Cellular Component.
+  * [`26_plot_burden_go_mf.R`](03_variant_calling/26_plot_burden_go_mf.R): Same layout, GO Molecular Function.
+  * Methodology: [`docs/polygenic_burden_methodology.md`](docs/polygenic_burden_methodology.md).
 * **[`04_asm/`](04_asm)**: Sequence-level $m^6A$-SNP analysis — DRACH motif disruption in consensus m6A peaks, plus per-donor allele-specific m6A.
   * [`01_find_drach_sites.R`](04_asm/01_find_drach_sites.R): Scan consensus m6A peaks for the DRACH writer motif (Biostrings `vmatchPattern`, strand-aware).
   * [`02_verify_drach_reference.py`](04_asm/02_verify_drach_reference.py): Hard QC gate on the motif set; exits non-zero on corruption.

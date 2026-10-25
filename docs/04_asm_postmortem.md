@@ -221,6 +221,51 @@ Deliberately **not** fixed in this cleanup:
 
 ---
 
+## Appendix B. A retracted finding: the "degenerate rows"
+
+Worth recording because it is the same failure mode as §1.4, and because it briefly
+propagated into code and documentation.
+
+**The claim.** `07_functional_annotation.csv` was reported to contain 1,942 rows
+(3.1%) with byte-identical carrier counts (`n_subjects=8`, `n_mdd=4`, `n_ctrl=4`),
+described as placeholder padding written when per-gene listings were truncated.
+The rows concentrate in the largest brain-expressed genes, which is what made the
+fabrication story plausible. A filter was added to exclude them.
+
+**Why it was wrong.** The pattern was inferred from a partial view — the tail of
+the file, where low-carrier rows had clustered — without checking the
+distribution. Three checks refuted it:
+
+- `n_mdd + n_ctrl == n_subjects` in all 61,685 rows, so `n_subjects` is exactly
+  the carrier count.
+- `n_subjects` has min **8**, median 15, max 39. 8 is a floor, not a cap, and
+  55,224 rows exceed it.
+- Carrier counts decay smoothly (8:6,461 · 9:5,506 · 10:4,816 · 11:4,052) with no
+  spike at 8. Fabrication would produce a spike.
+- `(4,4)` is the modal group split, among near neighbours: `(5,3)` 1,804,
+  `(5,4)` 1,710, `(6,4)` 1,328.
+
+**Cost.** 254 of 11,493 coding variants (2.2%) and 8 of 433 panel variants were
+deleted. 87 genes dropped out of the analysis entirely, having been reduced to
+zero retained carriers. No conclusion changed — the burden results are null either
+way — but legitimate measurements were discarded on a premise that did not hold.
+Removed 18 October 2026.
+
+**The real constraint.** `06_build_transcriptome_snp_table.py` bins loci by
+recurrence, and this table contains only the `High Recurrence (>=8 Subjects)`
+tier. Private and low-recurrence variants are therefore absent **by construction**,
+which is a firmer explanation for the missing rare variants than RNA-seq depth
+alone.
+
+**The lesson, same as §1.4.** Both failures are the same shape: a pattern noticed
+in a slice of the data was generalised to the whole dataset without checking the
+marginal distribution. Row-count error (§1.4) and frequency-floor error (here) are
+both caught by looking at the distribution of a single column before acting on it.
+The difference from §1.4 is that one was a code bug and this one was an
+interpretation error wearing a code bug as a disguise.
+
+Full detail: `docs/polygenic_burden_methodology.md` §4.
+
 ## Reproducing
 
 ```bash
