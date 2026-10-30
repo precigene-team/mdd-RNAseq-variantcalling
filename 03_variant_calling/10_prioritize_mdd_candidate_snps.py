@@ -11,7 +11,6 @@
 #   4. Strict filter: restrict to n_ctrl <= 2 & n_mdd >= 8, sort MDD descending.
 #   5. Build the external resource URLs by string formatting (OMIM, DECIPHER, PubMed,
 #      gnomAD gene + variant, GENCC, GWAS Catalog gene). No network call is made.
-#      The two psych-trait columns are literal labels, not lookups.
 #   6. Apply strict data assertions.
 #   7. Save the candidate table to results/03_variant_calling/tables/10_mdd_candidate_snps_urls.csv.
 #
@@ -47,8 +46,6 @@ def attach_resource_urls(df):
     df['gnomad_variant_url'] = df['variant_id'].apply(lambda v: f"https://gnomad.broadinstitute.org/variant/{str(v).replace(':', '-')}?dataset=gnomad_r4")
     df['gencc_url'] = df['gene'].apply(lambda g: f"https://search.thegencc.org/genes/{g}")
     df['gwas_catalog_gene_url'] = df['gene'].apply(lambda g: f"https://www.ebi.ac.uk/gwas/genes/{g}")
-    df['direct_snp_gwas_psych_traits'] = "Linked via GWAS Catalog URL"
-    df['target_gene_gwas_psych_traits'] = "Linked via GWAS Catalog URL"
     return df
 
 # --- Step 2: Load Candidates ---
@@ -99,8 +96,7 @@ required_cols = [
     'consequence', 'impact', 'hgvs_c', 'hgvs_p',
     'n_subjects', 'n_mdd', 'n_ctrl', 'mdd_fraction',
     'omim_url', 'decipher_url', 'pubmed_url', 'gnomad_gene_url',
-    'gnomad_variant_url', 'gencc_url', 'gwas_catalog_gene_url',
-    'direct_snp_gwas_psych_traits', 'target_gene_gwas_psych_traits'
+    'gnomad_variant_url', 'gencc_url', 'gwas_catalog_gene_url'
 ]
 for col in required_cols:
     assert col in prioritized.columns, f"Assertion Failed: Column {col} missing in output."
