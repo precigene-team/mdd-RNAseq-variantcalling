@@ -29,4 +29,4 @@
 
 ### 2. Artificially Low Assignment Rates in Input Samples
 * **What went wrong**: Counts QC flagged a warning for all 39 input samples showing $<50\%$ assignment rates (typically 5–15%), while the IP (m6A) samples passed.
-* **How it was dealt with**: Identified that the QC script was counting raw multi-mapping alignments in its denominator (which were highly inflated due to some escaped rRNA mapping to repetitive rDNA units). Refactored [11_counts_qc.sh](../01_core_alignment/11_counts_qc.sh) to calculate assignment rates relative to uniquely mapped reads, raising the true rate to **50.5%**.
+* **How it was dealt with**: Identified that the QC script was counting raw multi-mapping alignments in its denominator (which were highly inflated due to some escaped rRNA mapping to repetitive rDNA units). Refactored [09_counts_qc.sh](../01_core_alignment/09_counts_qc.sh) to calculate assignment rates relative to uniquely mapped reads, raising the true rate to **50.5%**.

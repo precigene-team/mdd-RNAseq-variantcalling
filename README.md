@@ -1,16 +1,17 @@
-# MDD RNA-seq & MeRIP-seq Analysis Pipeline
+# MDD RNA-seq Analysis Pipeline
 
-This repository hosts a modular, high-throughput bioinformatics pipeline for processing and analyzing paired-end human RNA-seq and MeRIP-seq (m6A IP) datasets. The study evaluates transcriptomic and epitranscriptomic profiles of Major Depressive Disorder (MDD) vs. healthy controls (`ctrl`), stratified by sex (`male` and `female`).
+This repository hosts a modular, high-throughput bioinformatics pipeline for processing and analyzing paired-end human RNA-seq (Input) datasets. The study evaluates the transcriptome and germline variation of Major Depressive Disorder (MDD) vs. healthy controls (`ctrl`), stratified by sex (`male` and `female`). The analysis focuses on the 39 Input samples (20 MDD, 19 control; 20 male, 19 female) and stops at variant calling: `01_core_alignment` → `02_dge_analysis` → `03_variant_calling`. 
+
+MeRIP-seq (m6A IP) analysis is out of scope for this repository.
 
 ---
 
 ## 🎯 Objectives
 
-1. **Gene Expression & Methylation Alterations (MDD vs. Control)**
-   * **Baseline Expression (RNA-seq DEGs)**: Identify differentially expressed genes (upregulated/downregulated) from the standard RNA-seq (Input) data and annotate gene names.
-   * **Methylation Evaluation (RIP-seq vs. RNA-seq)**: Detect differential methylation by comparing RIP-seq DEGs normalized by RNA-seq DEGs ($[\text{DEGs RIP}] / [\text{DEGs RNA}]$) between MDD and Control groups to identify hypo/hyper-methylation.
+1. **Gene Expression Alterations (MDD vs. Control)**
+   * **Differential Expression (RNA-seq DEGs)**: Identify differentially expressed genes (upregulated/downregulated) from the RNA-seq (Input) data and annotate gene names.
 2. **Variant Identification (SNPs)**
-   * Identify SNPs primarily within the RIP-seq (m6A) fraction. Because RIP-seq library features may limit coverage, additional SNP variant calling will be performed on the RNA-seq (Input) dataset for validation and comparative screening.
+   * Call SNPs on the RNA-seq (Input) data via GATK joint calling across the cohort, then hard filtration, functional annotation, and clinical actionability assessment.
 
 ---
 
@@ -35,12 +36,11 @@ Below is the layout of the analysis workspace:
   * [`04_trimmed_fastqc.sh`](01_core_alignment/04_trimmed_fastqc.sh): Post-trimming quality control.
   * [`05_star_align.sh`](01_core_alignment/05_star_align.sh): Map trimmed reads to the human reference.
   * [`06_qualimap_bamqc.sh`](01_core_alignment/06_qualimap_bamqc.sh) & [`07_qualimap_rnaseq.sh`](01_core_alignment/07_qualimap_rnaseq.sh): QC assessment on BAM alignments.
-  * [`08_tress_peak_calling.R`](01_core_alignment/08_tress_peak_calling.R): Peak calling via TRESS in R.
-  * [`09_merge_tress_peaks.R`](01_core_alignment/09_merge_tress_peaks.R): Merge peaks into cohort consensus coordinates.
-  * [`10_quantification.sh`](01_core_alignment/10_quantification.sh): Peak-level read quantification via featureCounts.
-  * [`11_counts_qc.sh`](01_core_alignment/11_counts_qc.sh): QC assertions on counts matrix.
-  * [`12_multiqc.sh`](01_core_alignment/12_multiqc.sh): Centralized report aggregator.
-* **[`02_dge_analysis/`](02_dge_analysis)**: Expression & methylation statistical testing.
+  * [`08_quantification.sh`](01_core_alignment/08_quantification.sh): Gene-level read quantification via featureCounts against the Ensembl GTF.
+  * [`09_counts_qc.sh`](01_core_alignment/09_counts_qc.sh): QC assertions on counts matrix.
+  * [`10_multiqc.sh`](01_core_alignment/10_multiqc.sh): Centralized report aggregator.
+
+* **[`02_dge_analysis/`](02_dge_analysis)**: Expression statistical testing.
   * [`config.yaml`](02_dge_analysis/config.yaml): Parameter configurations.
   * [`01_gene_mapping.R`](02_dge_analysis/01_gene_mapping.R): Ensembl database mapping via BioMart.
   * [`02_rna_processing.R`](02_dge_analysis/02_rna_processing.R): Low-count filtering and normalization.
@@ -48,6 +48,7 @@ Below is the layout of the analysis workspace:
   * [`04_deg_analysis.R`](02_dge_analysis/04_deg_analysis.R): Differential expression testing.
   * [`05_dge_plotting.R`](02_dge_analysis/05_dge_plotting.R): Generate Volcano/MA plots.
   * [`06_annotate_results.R`](02_dge_analysis/06_annotate_results.R): Map genes to functional labels.
+
 * **[`03_variant_calling/`](03_variant_calling)**: GATK joint calling and clinical translation.
   * [`01_read_groups.sh`](03_variant_calling/01_read_groups.sh): Add read groups to aligned BAMs.
   * [`02_mark_duplicates.sh`](03_variant_calling/02_mark_duplicates.sh): Flag PCR duplicate alignments.
@@ -73,6 +74,7 @@ Below is the layout of the analysis workspace:
   * [`25_plot_burden_go_cc.R`](03_variant_calling/25_plot_burden_go_cc.R): Same layout, GO Cellular Component.
   * [`26_plot_burden_go_mf.R`](03_variant_calling/26_plot_burden_go_mf.R): Same layout, GO Molecular Function.
   * Methodology: [`docs/polygenic_burden_methodology.md`](docs/polygenic_burden_methodology.md).
+
 * **[`04_asm/`](04_asm)**: Sequence-level $m^6A$-SNP analysis — DRACH motif disruption in consensus m6A peaks, plus per-donor allele-specific m6A.
   * [`01_find_drach_sites.R`](04_asm/01_find_drach_sites.R): Scan consensus m6A peaks for the DRACH writer motif (Biostrings `vmatchPattern`, strand-aware).
   * [`02_verify_drach_reference.py`](04_asm/02_verify_drach_reference.py): Hard QC gate on the motif set; exits non-zero on corruption.
@@ -102,11 +104,9 @@ bash 01_core_alignment/04_trimmed_fastqc.sh
 bash 01_core_alignment/05_star_align.sh
 bash 01_core_alignment/06_qualimap_bamqc.sh
 bash 01_core_alignment/07_qualimap_rnaseq.sh
-Rscript 01_core_alignment/08_tress_peak_calling.R
-Rscript 01_core_alignment/09_merge_tress_peaks.R
-bash 01_core_alignment/10_quantification.sh
-bash 01_core_alignment/11_counts_qc.sh
-bash 01_core_alignment/12_multiqc.sh
+bash 01_core_alignment/08_quantification.sh
+bash 01_core_alignment/09_counts_qc.sh
+bash 01_core_alignment/10_multiqc.sh
 ```
 
 ### 2. Differential Expression (DGE) & Annotations

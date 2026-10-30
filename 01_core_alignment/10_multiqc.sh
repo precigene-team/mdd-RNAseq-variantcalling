@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[01_core_alignment/13_multiqc.sh]]
+# [[01_core_alignment/10_multiqc.sh]]
 # Goal: Run MultiQC to centrally aggregate all quality reports.
 
 # Steps:

@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[01_core_alignment/11_quantification.sh]]
+# [[01_core_alignment/08_quantification.sh]]
 # Goal: Run featureCounts on aligned BAM files.
 
 # Steps:
@@ -25,7 +25,7 @@ fi
 
 BAM_DIR="$PROJECT_ROOT/_data/bam"
 COUNT_DIR="$PROJECT_ROOT/_data/featurecounts"
-ANNOTATION_FILE="$PROJECT_ROOT/_data/peaks/consensus_peaks.saf"
+ANNOTATION_FILE="$PROJECT_ROOT/_data/genome/Homo_sapiens.GRCh38.115.gtf"
 LOG_DIR="$PROJECT_ROOT/_data/logs/quantification"
 
 mkdir -p "$COUNT_DIR"
@@ -89,7 +89,7 @@ for bam in $BAM_LIST; do
         -T "$CPUS_PER_JOB" \
         -p \
         -s 2 \
-        -F SAF \
+        -F GTF \
         -a "$ANNOTATION_FILE" \
         -o "$OUTPUT_FILE" \
         "$bam" > "$SAMPLE_LOG" 2>&1 &
