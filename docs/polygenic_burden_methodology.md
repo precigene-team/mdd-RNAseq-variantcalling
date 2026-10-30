@@ -1,7 +1,7 @@
 # Polygenic Burden Analysis — Methodology and Design Rationale
 
 **Date:** 17 October 2026
-**Module:** `03_variant_calling` (steps 11–15)
+**Module:** `03_variant_calling` (steps 11–22)
 **Status:** Methodology locked. Implementation pending.
 
 ---
@@ -221,7 +221,7 @@ Counting variants per donor directly from `_data/variant/filtered_vcf/`:
 
 Per-donor range across the cohort: **7,611 to 131,865 — a 17-fold spread.**
 
-Burden is a count. Unnormalized, MDD donors read as more burdened by 25% before any biology is involved. Normalize it, and the set of genes clearing any filter shifts, so the headline result changes with the normalization chosen. That is not noise; it is the predictable behaviour of an unnormalized count comparison. The identical 1.254× ratio was independently measured in the `04_asm` case-control test, so this is one confound presenting in two modules.
+Burden is a count. Unnormalized, MDD donors read as more burdened by 25% before any biology is involved. Normalize it, and the set of genes clearing any filter shifts, so the headline result changes with the normalization chosen. That is not noise; it is the predictable behaviour of an unnormalized count comparison. The identical 1.254× ratio was independently measured in the retired MeRIP case-control test (`docs/_archive/asm_methods.md:207,217`), so this is one confound presenting in two modules.
 
 ### 6.2 Layer 1 — count model with library-size offset (primary)
 
@@ -251,7 +251,7 @@ Required mitigations:
 
 ### 6.5 Outlier handling
 
-`male_ctrl_1` has 13,970 variants, near the bottom of the 17-fold range, and was already excluded at the RNA-seq analysis under QC-01. All primary tests are run with and without it, and both are reported.
+`male_ctrl_1` has 13,970 variants, near the bottom of the 17-fold range. It was dropped from the RNA-seq analysis by the retired 10 Million library-size gate, which ran on Input and IP pairs; the shipped gate is `MIN_LIBRARY_SIZE <- 2e6` on gene-mapped Input counts, evaluated at runtime at `02_dge_analysis/04_deg_analysis.R:95`, so the exclusion set is whatever that run prints, not a fixed list. All primary tests are run with and without `male_ctrl_1`, and both are reported.
 
 ---
 
@@ -343,7 +343,7 @@ Sensitivity, all null:
 
 ## 10. Implementation
 
-One responsibility per script, following the module convention that script number equals output number equals execution order. `16b` is R because msigdbr is an R package and `16` is Python; one language per script.
+One responsibility per script, following the module convention that script number equals output number equals execution order. `13` is R because msigdbr is an R package, and `11`, `12` and `14` are Python; one language per script.
 
 | Script | Sole responsibility | Output |
 |---|---|---|

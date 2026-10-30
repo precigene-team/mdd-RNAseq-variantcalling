@@ -39,8 +39,6 @@ $$\text{Contrast}_{\text{Female}} = \text{Female MDD}_{\text{Input}} \text{ vs }
 
 ## 🧬 4. Variant Calling Architecture
 
-The pipeline executes RNA-seq variant discovery and clinical interpretation in one dedicated module:
-1. **Variant Calling & Clinical Interpretation (`03_variant_calling/`)**: GATK joint calling on RNA-seq inputs followed by a 3-stage clinical translation pipeline:
-   - **Stage 1 (Functional)**: In silico deleteriousness (CADD, SpliceAI) and psychiatric brain domain localization (PsychENCODE, PGC MDD GWAS).
-   - **Stage 2 (Pathogenicity)**: ACMG/AMP 5-tier classification and ClinVar cross-referencing.
-   - **Stage 3 (Pharmacogenomics)**: CPIC clinical practice guidelines and ClinPGx antidepressant actionability (metabolism & target sensitivity).
+The pipeline executes RNA-seq variant discovery and burden analysis in one dedicated module:
+1. **Variant Calling, Annotation & Burden Testing (`03_variant_calling/`)**: GATK joint calling on the RNA-seq inputs (`01`–`07`), then the transcriptome SNP table (`08`), SnpEff functional annotation (`09`), the MDD candidate review table with its external evidence URLs (`10`), and the polygenic burden test (`11`–`22`, all statistics in `14`).
+   - The clinical translation arm (in silico deleteriousness scoring, ACMG/AMP classification, ClinVar cross-referencing, CPIC pharmacogenomics) is **retired**: no delivered script implements it, and the retirement is recorded in [`LEGACY.md`](LEGACY.md).
