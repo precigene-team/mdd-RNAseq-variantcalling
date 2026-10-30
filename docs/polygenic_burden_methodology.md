@@ -235,9 +235,9 @@ Negative binomial, not Poisson. Overdispersion is guaranteed given the 17-fold s
 
 ### 6.3 Layer 2 — permutation null preserving call count
 
-Condition labels are permuted **within sex**, so every donor retains their own call count. This is the mechanism that prevents the depth imbalance from masquerading as signal, and it is already implemented in `04_asm/06_test_mdd_enrichment.py`. It is implemented inside `14_gene_burden_test.py`, so the script has no import dependency; the archived `04_asm/06_test_mdd_enrichment.py` used the same logic.
+Condition labels are permuted **within sex**, so every donor retains their own call count. This is the mechanism that prevents the depth imbalance from masquerading as signal. It is implemented inside `14_gene_burden_test.py`, so the script has no import dependency; the same null is recorded in the archived MeRIP analysis (`docs/_archive/asm_postmortem.md:91-92`, `docs/_archive/asm_methods.md:239-241`).
 
-Duplicating the permutation would repeat exactly the failure mode found and fixed in `07_allele_specific_m6a.py`, where two implementations of one statistic disagreed between a results CSV and the prose — the CSV reported annotation counts over a different denominator than the concordance-filtered headline.
+Duplicating the permutation would repeat exactly the failure mode found and fixed in the retired MeRIP module (`docs/_archive/asm_postmortem.md:111-115`), where two implementations of one statistic disagreed between a results CSV and the prose — the CSV reported annotation counts over a different denominator than the concordance-filtered headline.
 
 ### 6.4 Layer 3 — the confound the offset does *not* fix
 
@@ -421,7 +421,7 @@ Recorded rather than guessed. Both are referenced elsewhere in this project and 
 
 | Reference | Used for | Status |
 |---|---|---|
-| Cao et al. 2023 | >90% cross-donor concordance criterion for allele-specific m6A (`04_asm/07_allele_specific_m6a.py`) | **DOI unverified.** Cited in `TODO.md`; searches returned no matching record. Confirm before citing externally. |
+| Cao et al. 2023 | >90% cross-donor concordance criterion for allele-specific m6A (`docs/_archive/asm_literature.md:127,141`) | **DOI unverified.** Cited in `TODO.md`; searches returned no matching record. Confirm before citing externally. |
 | PRS-CS (Choi, Achour & Speed) | the LD-aware PGS construction tool that would be used *if* tissue genotypes become available | **DOI unverified.** Referenced descriptively in §2.3 only; no DOI asserted. |
 
 ---

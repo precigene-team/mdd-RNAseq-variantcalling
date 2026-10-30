@@ -13,7 +13,8 @@
 # Panel A ordering by |effect| is the honest way to present a null: it shows
 # what the extremes of noise look like.
 #
-# Styling follows utils/plot_gtex_gwas_integration.R and plot_gtex_eqtl_summary.R:
+# Styling follows the archived GTEx plotting convention (`_legacy/utils/`, a gitignored
+# archive backup that is not part of this repository):
 #   theme_minimal(base_family="sans"), slate palette, bold titles, bg="white".
 #
 # Inputs (written by 16_burden_control_vs_mdd_table.R):

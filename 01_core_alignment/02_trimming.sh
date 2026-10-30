@@ -104,7 +104,7 @@ while read -r row; do
         continue
     fi
     
-    # Name outputs with single extension to match 03_trimmed_fastqc.sh and 04_star_align.sh
+    # Name outputs with single extension to match 04_trimmed_fastqc.sh and 05_star_align.sh
     r1_paired="$OUTDIR/${file1_base}_paired.fastq.gz"
     r1_unpaired="$OUTDIR/${file1_base}_unpaired.fastq.gz"
     r2_paired="$OUTDIR/${file2_base}_paired.fastq.gz"

@@ -10,6 +10,7 @@ module_order:
       path_filters:
         - "*qc_trim*"
   - star
+  - gatk
   - picard
   - qualimap
   - featurecounts

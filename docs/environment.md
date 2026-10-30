@@ -36,7 +36,7 @@ environment needs a Java SDK without listing a Java package.
 | `qualimap` | `01_core_alignment/06_qualimap_bamqc.sh`, `01_core_alignment/07_qualimap_rnaseq.sh` |
 | `subread` | `featureCounts` in `01_core_alignment/08_quantification.sh`, `01_core_alignment/09_counts_qc.sh` |
 | `multiqc` | `01_core_alignment/10_multiqc.sh`, `multiqc_config.yaml` |
-| `picard` | `multiqc_config.yaml` (BAM header fields MultiQC reports) |
+| `picard` | `multiqc_config.yaml` — no Picard run exists in the delivered scripts. `03_variant_calling/02_mark_duplicates.sh:41-46` uses **GATK MarkDuplicates**, whose `metrics_file` (`:44`) MultiQC reports under its `gatk` module (`multiqc_config.yaml:13`); `picard` is listed so MultiQC can parse any Picard report added later |
 | `samtools` | `03_variant_calling/01`–`04`, `utils/slice_igv_bams.sh` |
 | `gatk4` | `03_variant_calling/01`–`07` |
 | `bcftools` | `03_variant_calling/07_variant_filtration.sh` |
@@ -109,11 +109,11 @@ package `clusterProfiler` resolves GO term names from; declared explicitly so
 a delivered script and was previously installed only as a transitive dependency.
 A direct `library()` call deserves a pin, so they are declared. `bioconductor-biomart` is restored here: it is declared at HEAD, installed in env `mdd` (2.62.0), and loaded by `02_dge_analysis/06_annotate_results.R`, so a package list that omits it cannot build an environment the script can run in.
 
-## m6A-SNP resources
+## External resource URLs
 
-The m6A-SNP cross-validation arms (m6AVar, RMVar, m6A-TSHub) have **no conda
-package**: they are web resources, not installable libraries. This environment
-cannot reach them, so cross-validation is done by hand through the URL columns
-`03_variant_calling/10_prioritize_mdd_candidate_snps.py` attaches to every
-candidate row (OMIM, DECIPHER, PubMed, gnomAD gene and variant, GENCC,
-EBI GWAS Catalog).
+The m6A-SNP cross-validation arms (m6AVar, RMVar, m6A-TSHub) are **retired** with the
+MeRIP arm and have **no conda package**: they are web resources, not installable
+libraries. The delivered pipeline reaches its external evidence offline by string
+formatting, no network call: `03_variant_calling/10_prioritize_mdd_candidate_snps.py:42-51`
+attaches the URL columns OMIM, DECIPHER, PubMed, gnomAD gene and variant, GENCC, and the
+EBI GWAS Catalog to every candidate row.
