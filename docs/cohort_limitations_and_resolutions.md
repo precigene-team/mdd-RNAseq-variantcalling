@@ -1,6 +1,7 @@
 # Cohort Limitations & Resolutions Registry
 
-This document outlines potential technical and biological confounders in the MDD MeRIP-seq dataset (from raw FASTQ to differential gene expression) and defines the roadmap for resolving them.
+This document outlines potential technical and biological confounders in the MDD Input-only RNA-seq cohort (from raw FASTQ to differential gene expression) and defines the roadmap for resolving them.
+The MeRIP-dependent items (QC-03 gene-level vs. peak-level audit, QC-04 antibody cross-reactivity, QC-05 TRESS DMR covariates) are archived in [`_archive/cohort_limitations_and_resolutions.md`](_archive/cohort_limitations_and_resolutions.md).
 
 ---
 
@@ -10,8 +11,6 @@ This document outlines potential technical and biological confounders in the MDD
 | :--- | :--- | :--- | :--- | :--- |
 | **QC-01** | **Postmortem Confounders** (RIN, PMI, Age, pH, etc.) skewing expression profiles | Technical | Confirm cohort matching in paper and verify public availability of individual covariates | **Resolved (Baseline Model Final)** |
 | **QC-02** | **Cell-Type Heterogeneity** (neuronal atrophy making synaptic transcripts look downregulated) | Biological | Run signature-based cell-type deconvolution to estimate glial/neuronal proportions | **Resolved (Astrocyte Loss Documented)** |
-| **QC-03** | **Gene-Level vs. Peak-Level Resolution** (gene body sums canceling out site-specific changes) | Methodological | Peak-calling analysis (MACS2) on the HPC, followed by exonic overlap audit | **Resolved (Audit Completed)** |
-| **QC-04** | **Antibody Cross-Reactivity / Spike-In Absence** (inability to measure absolute methylation occupancy) | Technical | Document as relative methylation shift, check if synthetic spike-ins were sequenced | **Resolved (Relative Ratios Only)** |
 
 ---
 
@@ -23,49 +22,16 @@ This document outlines potential technical and biological confounders in the MDD
   1. Audited the paper text in `scratch/paper.txt` (Mitsuhashi et al. 2024, iScience): The authors explicitly **matched cases and controls for PMI, tissue pH, and RIN** during cohort recruitment to minimize confounding.
   2. Audited the SRA metadata and the `mmc1.pdf` supplement (specifically Page 2, Table S1): The authors only published **aggregated group means and SEMs** (e.g. Male Control Age: 56.9 ± 5.2, Male MDD Age: 44.9 ± 4.3). 
   3. Individual-level demographic/clinical covariates (e.g., the specific age or RIN for each of the 39 subjects) were **not publicly released** in either the GEO records (GSE275676) or the supplemental materials to protect donor privacy.
-  4. **The 12 Million (12e6) QC Gate:** By matching our count matrices against the paper's reported sample counts (specifically 9 Male Controls and 10 Male MDD), we deduced that a gate of **12 Million exonic counts** successfully filters out `male_ctrl_1` (11.6M counts), matching the published cohort size exactly and removing low-coverage outliers.
-  5. **Conclusion:** Because individual-level covariates are not public, running a covariate-adjusted DGE model is not possible. However, the rigorous matching of groups and our calibrated 12M library-size gate ensure that the unadjusted baseline models are clean, robust, and aligned with the published study.
-* **Status:** Resolved. The 12M-gated matched baseline model is finalized.
+  4. **The 2 Million (2e6) QC Gate:** [`04_deg_analysis.R`](../02_dge_analysis/04_deg_analysis.R) applies a **2 Million gene-mapped count floor** per subject; the delivered cohort is the 39 Input rows in `_data/_metadata/sample_sheet.csv` — 10 male MDD, 10 male ctrl, 10 female MDD, 9 female ctrl — and the gate drops any subject whose gene-level library falls below the floor.
+  5. **Conclusion:** Because individual-level covariates are not public, running a covariate-adjusted DGE model is not possible. However, the rigorous matching of groups and the 2M gene-level floor in `04_deg_analysis.R` ensure that the unadjusted baseline models are clean, robust, and aligned with the published study.
+* **Status:** Resolved. The 2M-gated matched baseline model is finalized.
 
 ### 🧠 QC-02: Cell-Type Heterogeneity Confounding
 * **The Risk:** A change in bulk RNA-seq could mean the cells are expressing less of a gene, or simply that the tissue contains fewer of those cells (e.g. neuronal loss in MDD).
 * **Resolution & Findings:**
-  1. Implemented a Marker Gene Profile (MGP) script in `scratch/cell_type_deconvolution.py` using consensus human brain markers for Neurons, Astrocytes, Oligodendrocytes, Microglia, and Endothelial cells.
-  2. Estimated cell-type enrichment scores across all 36 gated subjects and performed t-tests comparing MDD vs. Control.
+  1. Implemented a Marker Gene Profile (MGP) script in [`utils/qc02_cell_type_deconvolution.py`](../utils/qc02_cell_type_deconvolution.py) using consensus human brain markers for Neurons, Astrocytes, Oligodendrocytes, Microglia, and Endothelial cells.
+  2. Estimated cell-type enrichment scores across the 39 Input subjects and performed t-tests comparing MDD vs. Control.
   3. **Astrocyte Loss:** Found a **statistically significant overall reduction in Astrocyte markers in MDD brains compared to Controls (p-value = 0.0389)**.
   4. **Other Cell Types:** Neurons showed a slight trend of higher scores in MDD (p-value = 0.0956, not significant). Oligodendrocytes, Microglia, and Endothelial cells showed no significant differences (p > 0.25).
   5. **Biological Link:** The significant reduction in Astroglial markers is a well-established neuropathological hallmark of major depression in the human prefrontal cortex (reflecting glia-specific atrophy/loss). We have documented this cellular shift as a potential driver of astrocyte-related transcript changes in our report.
 * **Status:** Resolved. Astrocyte marker reduction documented.
-
----
-
-### 📊 QC-03: Gene-level vs. Peak-level resolution
-* **The Risk:** Summarizing read counts across the entire gene body ignores site-specific shifts.
-* **Resolution & Findings:**
-  1. We are using a gene-level count matrix, which acts as a robust proxy for absolute transcript-level methylation abundance.
-  2. For site-level or transcript-isoform methylation resolution, peak-calling runs were executed on the HPC using MACS2 on all 36 gated subjects, yielding local high-resolution narrowPeak files in `_data/peaks/`.
-  3. **Methodological Audit:** Implemented and executed a cohort-wide overlap analysis in [02_audit_gene_vs_peak.py](../04_peak_calling/02_audit_gene_vs_peak.py) mapping peak coordinates to exonic intervals.
-  4. **High Technical Consistency:** Across all 36 subjects, the exonic peak-mapping rate is extremely uniform at **~61% - 63%**.
-  5. **Sex-Specific Sensitivity Discordance:** 
-     * **Female Cohort**: Showed high concordance with **~81%** of the 25 female interaction DMGs supported by narrowPeaks.
-     * **Male Cohort**: Showed lower concordance (**~33%** of the 4 male interaction DMGs supported), showing that male cohort results are more sensitive to individual subject heterogeneity.
-  6. **Documentation**: Detailed statistics are saved in [02_cohort_audit_summary.txt](../results/04_peak_calling/tables/02_cohort_audit_summary.txt) and [02_cohort_audit_summary.csv](../results/04_peak_calling/tables/02_cohort_audit_summary.csv).
-* **Status:** Resolved (Audit Completed).
-
-### 🧪 QC-04: Antibody Cross-reactivity / Spike-ins
-* **The Risk:** MeRIP-seq antibodies can capture non-$m^6A$ sites and are semi-quantitative.
-* **Resolution & Findings:**
-  1. Audited the paper text in `scratch/paper.txt`: The authors generated standard cDNA libraries without synthetic spike-in controls.
-  2. Because no spike-ins were sequenced, absolute methylation stoichiometric fractions (the exact percentage of methylated copies for a given transcript) cannot be calculated.
-  3. **Conclusion:** All DGE and interaction results represents **relative abundance shifts** (ratios) between MDD and Controls, which is standard for clinical human postmortem cohorts. We have documented this parameter limitation.
-* **Status:** Resolved. Relative ratios are the standard and final output of this pipeline.
-
-### 🧪 QC-05: Missing Individual Covariates for TRESS DMR Analysis
-* **The Risk:** The Mitsuhashi et al. 2024 paper included RIN and age as covariates in their TRESS DMR model (`~ SampleType + RIN + Age`), producing 239 male / 696 female DMRs. Without these covariates, our model (`~ SampleType`) may call many more regions as significant.
-* **Findings:**
-  1. The paper's Supplementary Table S1 (mmc1.pdf) only publishes **group-level means ± SEM** for RIN, age, pH, and PMI — not per-subject values.
-  2. GEO submission (GSE275676) and BioSample records also lack individual RIN/age metadata, likely withheld for donor privacy.
-  3. Our unadjusted TRESS model found 8,508 male / 3,669 female significant DMRs — ~35× and ~5× the paper's counts respectively.
-  4. Post-hoc `lowcount=15` filtering (via `utils/filter_dmr_lowcount.sh`) had negligible effect (< 2% reduction), confirming the discrepancy is driven by covariates, not low-count filtering.
-* **Resolution:** The unadjusted DMR set is our best possible output given data constraints. Comparisons to the paper's DMR lists should note the covariate difference. Integration with m6A-SNPs (DRACH) and downstream GO/network analysis remains valid as relative comparisons within our model.
-* **Status:** Documented. DMR counts are inflated vs. the paper due to missing RIN/age covariates.

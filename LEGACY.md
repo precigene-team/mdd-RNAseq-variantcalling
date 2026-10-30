@@ -65,20 +65,61 @@ Biological Process and MSigDB Hallmark with clusterProfiler, and `08_enrichment_
 the NES barplots. `11`–`13` used `fgsea` on `.rnk` files with no `run` invocation
 (`run` invoked only `10`, at `:317`).
 
+## The retired thesis arm `04_asm/`
+
+Deleted from the tracked tree (`git rm -r 04_asm/`), archived in `_legacy/04_asm/` (sequence-level
+m6A-SNP arm, 7 scripts, 1,676 lines) and `_legacy/04_asm/scripts/` (the read-ratio ASM generation,
+14 files, 1,950 lines). The delivered pipeline is 3 modules, and the thesis arm was the
+MeRIP-dependent fourth: every one of the 7 scripts takes TRESS peak artifacts as input.
+
+| Script | Role |
+|---|---|
+| `01_find_drach_sites.R` (162 lines) | DRACH motif occurrences in `consensus_peaks.bed` + `consensus_peaks.fa` → BED |
+| `02_verify_drach_reference.py` (287) | Hard QC gate on motif geometry read from peak sequence; exits non-zero on corruption |
+| `03_intersect_drach_genotypes.sh` (102) | PASS biallelic genotypes × DRACH sites; delegates 02 then 04 |
+| `04_annotate_strand_aware_disruption.R` (164) | Variant × motif instance → DISRUPTS/PRESERVES writer competence |
+| `05_plot_m6asnp_funnel.py` (295) | Six-level discovery funnel + core-m6A site table consumed by 06 and 07 |
+| `06_test_mdd_enrichment.py` (291) | MDD-vs-Ctrl enrichment, donor labels permuted within sex |
+| `07_allele_specific_m6a.py` (375) | Per-donor IP-vs-Input ASm6A, concordant sites at >90% cross-donor agreement |
+
+History, as the git log states it: `23ceab9` renamed 14 MeRIP/ASM files out of
+`03_variant_calling/` into `04_asm/` (`R100`), so `run`'s `03_variant_calling/07_m6allele_asm.sh`
+path was already stale before this pass. `eb75c6e` — "replace read-ratio ASM with sequence-level
+m6A-SNP pipeline" — deleted that set and added the 7. `_legacy/04_asm/scripts/` is the `eb75c6e^`
+state, and the path the docs already cite (`docs/asm_filter_flow.md:5-6`,
+`docs/asm_analysis_methodology.md:15`, `docs/04_asm_methods.md:24`).
+
+## Input-only `_data/_metadata/sample_sheet.csv`
+
+`sample_sheet.csv` is now the header + 39 `DataType == "RNA-seq"` rows, in the original order:
+10 male mdd, 10 male ctrl, 10 female mdd, 9 female ctrl. The 78-row cohort record (39 `m6A` + 39
+`RNA-seq`) is copied verbatim to `_data/_metadata/sample_sheet_ip_included.csv`. 39 rows deleted.
+
+Consumers reading `sample_sheet.csv` all get the Input rows: `01_core_alignment` `01:26`, `02:20`,
+`03:21`, `04:30`, `05:27` (FastQC, trimming, rRNA, STAR — parse `File1`/`File2`),
+`02_dge_analysis` `01:42`, `02:34`, `03:205`, `04:37`, `06:31`, `03_variant_calling` `04b:28`,
+`05:30`, `15:53`. Effects: STAR aligns 39 samples, so `run`'s `RAW_BAM_LIST` no longer feeds IP
+samples into `01_read_groups.sh`, `02_mark_duplicates.sh`, `03_split_n_cigar.sh` (the wasted
+preprocessing the Input-only confirmation found), and `06:35-40`'s 39-VCF gate matches the
+39 gVCFs `04` produces. No delivered script gates on a 78-sample count — the `78` literals in
+`15:190,192,282,286`, `16:72,74`, `17:116-348` are rule widths.
+
+Consumers left reading `sample_sheet.csv` that want the full cohort — **reported, not fixed**:
+`_hpc/backup.sbatch:30`, `_hpc/generate_checksum_csv.sbatch:31`, `_hpc/migrate.sbatch:30`,
+`_hpc/rename.sbatch:30`, `_hpc/verify.sbatch:30`, `utils/qc02_cell_type_deconvolution.py:12`. `docs/_archive/pipeline_problem_list.md:38,110` prescribe adding
+`Age`/`RIN` columns to the sheet.
+
 ## Consumers of the retired artifacts, left untouched
 
 Peak-derived files, with no producer in the delivered tree:
 
-- `utils/ame_motif_enrichment.sh:25,31` — `consensus_peaks.bed` and `consensus_peaks.fa`
-- `utils/annotate_consensus_peaks.R:18` — `consensus_peaks.bed`
-- `utils/run_qc03_audit.sh:20` — `_data/peaks`
-- `04_asm/01_find_drach_sites.R:26-27` — `consensus_peaks.bed` and `consensus_peaks.fa` (thesis arm)
+- `_legacy/04_asm/01_find_drach_sites.R:26-27` — `consensus_peaks.bed` and `consensus_peaks.fa` (archived thesis arm)
 
 Retired-script consumers, with no producer in the delivered tree:
 
 - `environment.yml:85` — `bioconductor-rrho`, the RRHO2 dependency `10_rrho2_sex_comparison.R` bootstrapped
-- `docs/pipeline_problem_list.md:61-64` — Item 6 prescribes RRHO2 on "male and female DMR ranked lists"; `:115` lists it as pipeline step 10
-- `README.md:61-63,136-139` — name three `03_variant_calling/` scripts that do not exist (`07_clinical_pathogenicity.py`, `08_pharmacogenomics_actionability.py`, `09_plot_clinical_annotation_landscape.R`); `README.md:53-76` omits 5 real ones (`06_build_transcriptome_snp_table.py`, `07_functional_annotation.py`, `08_map_gtex_brain_eqtls.py`, `10_prioritize_mdd_candidate_snps.py`, `14_slice_igv_bams.sh`); `README.md:86` claims retired ASM scripts are archived in `_legacy/04_asm/`, which does not exist; `README.md:88-90` lists 2 of the 25 files in `docs/`; `README.md:172` omits R libraries the delivered 04–09 use (`ashr`, `clusterProfiler`, `msigdbr`, `org.Hs.eg.db`, `ComplexHeatmap`, `circlize`, `RColorBrewer`, `tidyverse`, `ggtext`) — all reported, not fixed
+- `docs/_archive/pipeline_problem_list.md:61-64` — Item 6 prescribes RRHO2 on "male and female DMR ranked lists"; `:115` lists it as pipeline step 10
+- `README.md:63-66` — names 4 `03_variant_calling/` scripts that do not exist (`06_functional_annotation.py`, `07_clinical_pathogenicity.py`, `08_pharmacogenomics_actionability.py`, `09_plot_clinical_annotation_landscape.R`; the real script is `07_functional_annotation.py`); `README.md:55-79` omits 5 real ones (`06_build_transcriptome_snp_table.py`, `07_functional_annotation.py`, `08_map_gtex_brain_eqtls.py`, `10_prioritize_mdd_candidate_snps.py`, `14_slice_igv_bams.sh`); `README.md:82-83` lists 2 of the 10 files in `docs/` (the `_legacy/04_asm/` claim at the old `:86` is gone with the `04_asm` block removal); `README.md:148` omits R libraries the delivered 02/03 use (`ashr` in `04_deg_analysis.R`, `clusterProfiler`/`org.Hs.eg.db` in `07`/`09`, `msigdbr` in `07`/`16b`/`17`/`20`, `ComplexHeatmap`/`circlize`/`RColorBrewer`/`tidyverse` in `09`, `ggtext` in `08`) — all reported, not fixed
 
 `08_enrichment_plotting.R` has no MeRIP content: it discovers work by globbing `07_*_gsea_*.csv`
 (`:47`) and parses the contrast name from the filename (`:58`), so the MeRIP plot names disappear
@@ -107,6 +148,16 @@ Removed:
   `p_adjust < 0.05` and `abs(log2FoldChange) > 1`, so the DE thresholds were not read by anything.
   `lfc_threshold` is kept: `07_enrichment_analysis.R:29` reads it (`lfc_cutoff` is kept too)
 
+## References to the archived thesis arm, reported not fixed
+
+- `README.md:83` links `docs/asm_analysis_methodology.md`, which is now `docs/_archive/asm_analysis_methodology.md`
+- `docs/` holds no MeRIP-era files: the MeRIP/ASM-era docs are in `docs/_archive/` (11 files), the retrospective narrative docs are in gitignored `_legacy/docs/` (3 files)
+- `environment.yml:71-72` — `bioconductor-tress` (served the retired `08/09/10` peak scripts) and `bioconductor-rrho` (served the retired `10_rrho2_sex_comparison.R`), no consumer in the delivered tree
+- `environment.yml:83` cites `_legacy/04_asm/scripts/07_validate_external.R`, not present in the archive (the archive holds the 14 files from `eb75c6e^`)
+- `03_variant_calling/15_build_burden_matrix.py:16` — comment cites `04_asm/07`
+- `utils/case_control_null.py` — absent from the tree, never tracked (`git ls-tree -r HEAD` and `git log --all -- utils/case_control_null.py` find nothing), so `17_gene_burden_test.py:52`'s `import case_control_null as ccn` fails at runtime and the helper is not recoverable from git; `docs/polygenic_burden_methodology.md:238,363` describe its `permute_within` role
+- the 5 `_hpc/` consumers of the 78-row sheet, and `utils/qc02_cell_type_deconvolution.py` reading `sample_sheet.csv` (Input-only is correct for it) — held by explicit choice; the 20 MeRIP-era `utils/` files are in gitignored `_legacy/utils/`
+
 ## Change log
 
 | Date | Files | Change |
@@ -125,3 +176,15 @@ Removed:
 | 2026-10-31 | `10_rrho2_sex_comparison.R`, `11_gsea_input.R`, `12_gsea_fgsea.R`, `13_gsea_figures.R` (deleted), `run:317` (deleted) | retired the 4 scripts after `09_heatmap_pathway.R`; `run dge` ends at `09`; copies archived in `_legacy/02_dge_analysis/`; no reference to any of them remains outside `_legacy/` |
 | 2026-10-31 | `02_dge_analysis/config.yaml` | 89 lines → 26 (16 insertions, 79 deletions): `ensembl_map:` kept as `ensembl_version` + `valid_biotypes` for `01:38` and `06:81`; header, `cohorts:`, `mirbase_version`, `outliers`, `min_count`/`min_frac`, `de:` cutoffs, and the `11`-`15` step numbering removed |
 | 2026-10-31 | `README.md` | `02_dge_analysis` section aligned to the delivered 9 scripts (`:43-53` listing, section 2 command block extended to `09`), `:45` reworded to ENSG -> HGNC from the Ensembl GTF, Input samples only |
+| 2026-10-31 | `run:194-232` (40 lines deleted) | removed the HPC variant-calling submissions of `06_ase_readcounter.sbatch`, `07_m6allele_asm.sh`, `08_find_drach_sites.py`, `09_intersect_drach_snps.sh` (all absent from the tree; paths stale since `23ceab9`) and the `_data/logs/ase`, `_data/logs/asm`, `_data/logs/drach` mkdirs, so the `run vc` submission path ends at Step 05 VariantFiltration |
+| 2026-10-31 | `04_asm/` (7 scripts, 1,676 lines, deleted), `_legacy/04_asm/`, `_legacy/04_asm/scripts/` (14 files, 1,950 lines) | thesis arm moved out of the tracked tree into gitignored `_legacy/04_asm/`; the read-ratio ASM generation from `eb75c6e^` archived under `_legacy/04_asm/scripts/`, folding in the 11 copies previously staged in `_legacy/03_variant_calling/` |
+| 2026-10-31 | `_data/_metadata/sample_sheet.csv` (39 rows deleted), `_data/_metadata/sample_sheet_ip_included.csv` (new, 78 rows, untracked) | delivered sheet reduced to the 39 Input rows in original order; the 78-row cohort record copied verbatim to `sample_sheet_ip_included.csv`; 13 delivered consumers read the reduced sheet, the 7 `_hpc/` and `utils/` consumers that need the full cohort left reading it |
+| 2026-10-31 | `README.md:81-90`, `README.md:148-167` (30 lines deleted) | removed the `04_asm/` module listing and section 4 "`m^6A`-SNP Analysis" command block (6 script invocations + the outputs paragraph), so the README describes 3 modules and its section headings are now 1, 2, 3 + Environment |
+| 2026-10-31 | `docs/04_asm_methods.md`, `docs/04_asm_postmortem.md`, `docs/asm_analysis_methodology.md`, `docs/asm_filter_flow.md`, `docs/asm_skew_and_shift_calculation.md` (5 files, `git mv`) | thesis-arm methodology, postmortem, filter-flow, and skew/shift write-ups archived in `docs/_archive/`; recorded as `R` renames, contents unchanged |
+| 2026-10-31 | `environment.yml` (1 insertion, 14 deletions) | removed `r-glmmtmb`, `r-lme4` (served the retired `12_asm_compare.R`), the m6A-SNP comment block, `bioconductor-biostrings` (DRACH motif matching, thesis arm only), and `r-r.utils` (retired `09_plot_m6asnp_funnel.R`); kept `r-data.table` — its comment named `04_annotate_strand_aware_disruption.R` but it is used by `03_variant_calling/16b`, `18`, `20-26` — and kept `r-ashr` (`02_dge_analysis/04_deg_analysis.R`); YAML verified with `yaml.safe_load`, 46 dependencies |
+| 2026-10-31 | `docs/04_asm_literature.md` -> `docs/_archive/asm_literature.md` | recorded as observed, not performed here: the MeRIP/ASM literature review (234 lines) sits in `docs/_archive/` as `asm_literature.md`, content byte-identical to HEAD, git state `D` unstaged + untracked; the "MeRIP-era files in `docs/`" bullet was corrected as the only edit, and now says `docs/` holds no MeRIP-era files |
+| 2026-10-31 | `docs/cohort_limitations_and_resolutions.md` (2 insertions, 36 deletions), `docs/_archive/cohort_limitations_and_resolutions.md` (new, untracked, verbatim 71 lines) | the registry rows and sections QC-03 (MACS2 narrowPeak audit, `_data/peaks/`, `../04_peak_calling/02_audit_gene_vs_peak.py`), QC-04 (antibody cross-reactivity, spike-in absence, methylation stoichiometry) and QC-05 (TRESS DMR covariate inflation, `utils/filter_dmr_lowcount.sh`) removed — all three measure MeRIP-dependent artifacts; the intro names the Input-only RNA-seq cohort and points at the archived copy; QC-01 (individual RIN/PMI/pH covariates not public) and QC-02 (signature-based deconvolution on bulk RNA-seq) are the retained items, both Input-only |
+| 2026-10-31 | `docs/_archive/` + `m6a_modifications.md` (88), `rna_vs_merip.md` (120), `asm_literature.md` (234), `pipeline_problem_list.md` (126), `asm_variant_calling_summaries.md` (169), `asm_methods.md` (335), `asm_postmortem.md` (288); `docs/report.md` -> `docs/upstream_report.md` (31); `_legacy/docs/` + `client_report.md` (234), `variant_calling_raw_review.md` (162), `thesis_defense_narrative_log.md` (208), and `_legacy/implementation_plan.md` (96, from `docs/implementation_plan.md`) | MeRIP-era docs moved out of `docs/` into `docs/_archive/`, and the retrospective narrative docs plus the implementation plan into gitignored `_legacy/`; the 3 `04_asm_*.md` were renamed `asm_*.md` and `report.md` became `upstream_report.md`; `asm_variant_calling_summaries.md` is the variant-calling-with-ASM doc, moved in its merged state; contents verbatim from HEAD, `client_report.md` having left the tracked tree in `b890d2e`; git state is `D`/`RD` deletions in `docs/` plus `??` untracked copies |
+| 2026-10-31 | `docs/cohort_limitations_and_resolutions.md` (4 lines rewritten) | QC-01 item 4's 12M exonic-count gate replaced by the 2M gene-mapped floor in `04_deg_analysis.R:95` (`MIN_LIBRARY_SIZE <- 2e6`) and the 39 delivered Input rows; item 5 and the QC-01 status line follow the 2M wording; QC-02 item 1 repointed from `scratch/cell_type_deconvolution.py` to `utils/qc02_cell_type_deconvolution.py` |
+| 2026-10-31 | `docs/cohort_limitations_and_resolutions.md:33` (1 line) | QC-02 item 2's "all 36 gated subjects" replaced by "the 39 Input subjects" — 36 was the 12M gate's surviving count, and the 2M floor in `04_deg_analysis.R:95` keeps all 39; the measured p-values are unchanged |
+| 2026-10-31 | `docs/polygenic_burden_methodology.md:431,432` (2 lines) | the two `Related documents` cites repointed from `docs/04_asm_methods.md` and `docs/04_asm_postmortem.md` to `docs/_archive/asm_methods.md` and `docs/_archive/asm_postmortem.md`, the paths as they now exist |

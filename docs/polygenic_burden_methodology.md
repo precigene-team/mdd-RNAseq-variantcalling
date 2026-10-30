@@ -428,7 +428,7 @@ Recorded rather than guessed. Both are referenced elsewhere in this project and 
 
 ## 14. Related documents
 
-- `docs/04_asm_methods.md` — m6A-SNP module methods; source of the shared permutation requirement
-- `docs/04_asm_postmortem.md` — the coverage-confound finding this methodology addresses
+- `docs/_archive/asm_methods.md` — m6A-SNP module methods; source of the shared permutation requirement
+- `docs/_archive/asm_postmortem.md` — the coverage-confound finding this methodology addresses
 - `docs/thesis_defense_narrative_log.md` §2.1 — the agreed analysis scope this implements, and §3.3 the retracted per-site carrier claims
 - `results/03_variant_calling/tables/07_functional_annotation.csv` — cohort variant table (61,685 rows)

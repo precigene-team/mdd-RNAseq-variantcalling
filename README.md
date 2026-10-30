@@ -78,16 +78,6 @@ Below is the layout of the analysis workspace:
   * [`26_plot_burden_go_mf.R`](03_variant_calling/26_plot_burden_go_mf.R): Same layout, GO Molecular Function.
   * Methodology: [`docs/polygenic_burden_methodology.md`](docs/polygenic_burden_methodology.md).
 
-* **[`04_asm/`](04_asm)**: Sequence-level $m^6A$-SNP analysis — DRACH motif disruption in consensus m6A peaks, plus per-donor allele-specific m6A.
-  * [`01_find_drach_sites.R`](04_asm/01_find_drach_sites.R): Scan consensus m6A peaks for the DRACH writer motif (Biostrings `vmatchPattern`, strand-aware).
-  * [`02_verify_drach_reference.py`](04_asm/02_verify_drach_reference.py): Hard QC gate on the motif set; exits non-zero on corruption.
-  * [`03_intersect_drach_genotypes.sh`](04_asm/03_intersect_drach_genotypes.sh): Join DRACH loci to cohort genotypes across all 39 donors; delegates to 02 then 04.
-  * [`04_annotate_strand_aware_disruption.R`](04_asm/04_annotate_strand_aware_disruption.R): Classify each variant × motif instance as DISRUPTS/PRESERVES DRACH, with strand-aware complementation.
-  * [`05_plot_m6asnp_funnel.py`](04_asm/05_plot_m6asnp_funnel.py): Single derivation point for the six-level funnel and the core $m^6A$ set.
-  * [`06_test_mdd_enrichment.py`](04_asm/06_test_mdd_enrichment.py): Pooled MDD-vs-Ctrl test with donor-label permutation within sex.
-  * [`07_allele_specific_m6a.py`](04_asm/07_allele_specific_m6a.py): Per-donor IP-vs-Input allele-specific m6A test; concordant sites called at >90% cross-donor agreement.
-  * Retired read-ratio ASM scripts (M6Allele / ASEReadCounter / glmmTMB) are archived in [`_legacy/04_asm/`](_legacy/04_asm).
-  * Methods: [`docs/04_asm_methods.md`](docs/04_asm_methods.md). Retrospective: [`docs/04_asm_postmortem.md`](docs/04_asm_postmortem.md).
 * **[`docs/`](docs)**: Documentation and background theory.
   * [`cohort_limitations_and_resolutions.md`](docs/cohort_limitations_and_resolutions.md): Gating thresholds and deconvolution results.
   * [`asm_analysis_methodology.md`](docs/asm_analysis_methodology.md): ASM group comparison methodology and statistical models.
@@ -144,26 +134,6 @@ python3 03_variant_calling/07_clinical_pathogenicity.py
 python3 03_variant_calling/08_pharmacogenomics_actionability.py
 Rscript 03_variant_calling/09_plot_clinical_annotation_landscape.R
 ```
-
-### 4. $m^6A$-SNP Analysis & Allele-Specific m6A
-Run in numeric order — script number == output number == execution order:
-```bash
-micromamba activate mdd
-
-Rscript 04_asm/01_find_drach_sites.R            # ~8 s
-python3 04_asm/02_verify_drach_reference.py      # ~40 s, hard gate
-bash    04_asm/03_intersect_drach_genotypes.sh   # runs 02 + 04 internally
-python3 04_asm/05_plot_m6asnp_funnel.py          # ~3 s
-python3 04_asm/06_test_mdd_enrichment.py         # ~9 s (20k permutations)
-python3 04_asm/07_allele_specific_m6a.py         # ~36 s
-
-# tighter null for the enrichment test
-N_PERM=100000 python3 04_asm/06_test_mdd_enrichment.py
-
-# tighten the allele-specific concordance gate
-CONCORDANCE=0.95 MIN_ALLELE_READS=3 python3 04_asm/07_allele_specific_m6a.py
-```
-Outputs land in `results/04_asm/tables/` (git-ignored; regenerate with the commands above).
 
 ---
 
