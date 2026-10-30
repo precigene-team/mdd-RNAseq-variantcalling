@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[03_variant_calling/04b_combine_gvcfs.sh]]
+# [[03_variant_calling/05_combine_gvcfs.sh]]
 # Goal: Combine per-sample GVCFs into a single cohort GVCF for joint genotyping.
 
 #SBATCH --job-name=combine_gvcfs

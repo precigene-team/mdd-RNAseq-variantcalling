@@ -1,14 +1,14 @@
-# [[03_variant_calling/18_plot_burden_results.R]]
+# [[03_variant_calling/15_plot_burden_results.R]]
 # Goal: Figures for the polygenic burden analysis. Consumes the tables written by
 #       17. No statistics here -- every number plotted comes from a result file.
 #
 # Outputs:
-#   18_burden_offset_effect.pdf/.png   the key figure: raw vs offset-corrected
-#   18_gene_burden_volcano.pdf/.png      gene-level burden, all genes
-#   18_panel_burden.pdf/.png            Open Targets panel at each threshold
+#   15_burden_offset_effect.pdf/.png   the key figure: raw vs offset-corrected
+#   15_gene_burden_volcano.pdf/.png      gene-level burden, all genes
+#   15_panel_burden.pdf/.png            Open Targets panel at each threshold
 #
 # Usage:
-#   Rscript 03_variant_calling/18_plot_burden_results.R
+#   Rscript 03_variant_calling/15_plot_burden_results.R
 
 suppressPackageStartupMessages({
   library(ggplot2)
@@ -29,7 +29,7 @@ dir.create(FIG, recursive = TRUE, showWarnings = FALSE)
 need <- function(f) {
   p <- file.path(TAB, f)
   if (!file.exists(p)) {
-    message("[18] missing ", f, " -- skipped (run 17_gene_burden_test.py)")
+    message("[15] missing ", f, " -- skipped (run 14_gene_burden_test.py)")
     return(NULL)
   }
   fread(p)
@@ -38,13 +38,13 @@ need <- function(f) {
 save_fig <- function(p, name, w = 8, h = 5.5) {
   ggsave(file.path(FIG, paste0(name, ".pdf")), p, width = w, height = h)
   ggsave(file.path(FIG, paste0(name, ".png")), p, width = w, height = h, dpi = 300)
-  message("[18] wrote ", name, ".pdf / .png")
+  message("[15] wrote ", name, ".pdf / .png")
 }
 
-sens <- need("17_sensitivity.csv")
-gene_burden <- need("17_gene_burden.csv")
-panel_burden <- need("17_panel_burden.csv")
-tot  <- need("15_donor_totals.csv")
+sens <- need("14_sensitivity.csv")
+gene_burden <- need("14_gene_burden.csv")
+panel_burden <- need("14_panel_burden.csv")
+tot  <- need("11_donor_totals.csv")
 
 # --- Figure 1: raw vs offset-corrected effect ---------------------------
 # This is the figure that answers "why did earlier results look inconsistent":
@@ -77,7 +77,7 @@ if (!is.null(sens)) {
     theme(legend.position = "none",
           panel.grid.minor = element_blank(),
           plot.subtitle = element_text(size = 8.5, colour = "grey30"))
-  save_fig(p, "18_burden_offset_effect", w = 8, h = 1.6 * length(unique(long$analysis)) + 2)
+  save_fig(p, "15_burden_offset_effect", w = 8, h = 1.6 * length(unique(long$analysis)) + 2)
 }
 
 # --- Figure 2: gene-level burden volcano --------------------------------------------
@@ -97,7 +97,7 @@ if (!is.null(gene_burden) && nrow(gene_burden)) {
          x = expression(-log[10]("nominal p")), y = "log10 rate ratio (MDD / Ctrl)", colour = NULL) +
     theme_bw(base_size = 11) +
     theme(panel.grid.minor = element_blank(), plot.subtitle = element_text(size = 9))
-  save_fig(p, "18_gene_burden_volcano")
+  save_fig(p, "15_gene_burden_volcano")
 }
 
 # --- Figure 3: panel burden panel across thresholds ----------------------------
@@ -116,7 +116,7 @@ if (!is.null(panel_burden) && nrow(panel_burden)) {
          y = "offset-corrected rate ratio (MDD / Ctrl)", fill = NULL) +
     theme_bw(base_size = 11) +
     theme(panel.grid.minor = element_blank(), plot.subtitle = element_text(size = 9))
-  save_fig(p, "18_panel_burden", w = 7, h = 4.5)
+  save_fig(p, "15_panel_burden", w = 7, h = 4.5)
 }
 
-message("[18] done")
+message("[15] done")

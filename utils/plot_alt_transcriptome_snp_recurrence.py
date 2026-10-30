@@ -26,12 +26,12 @@ out_png_utils = os.path.join(utils_fig_dir, "transcriptome_snp_recurrence.png")
 out_pdf_utils = os.path.join(utils_fig_dir, "transcriptome_snp_recurrence.pdf")
 
 # --- 2. Load Summary Data Dynamically ---
-summary_csv = os.path.join(project_root, "results", "03_variant_calling", "tables", "06_transcriptome_snp_summary.csv")
+summary_csv = os.path.join(project_root, "results", "03_variant_calling", "tables", "08_transcriptome_snp_summary.csv")
 
 if not os.path.exists(summary_csv):
     raise FileNotFoundError(
         f"[ERROR] Required summary table not found: {summary_csv}\n"
-        f"Please run 03_variant_calling/06_build_transcriptome_snp_table.py first."
+        f"Please run 03_variant_calling/08_build_transcriptome_snp_table.py first."
     )
 
 metrics = {}

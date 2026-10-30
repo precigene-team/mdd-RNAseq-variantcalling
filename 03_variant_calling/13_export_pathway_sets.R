@@ -1,4 +1,4 @@
-# [[03_variant_calling/16b_export_pathway_sets.R]]
+# [[03_variant_calling/13_export_pathway_sets.R]]
 # Goal: Export msigdbr gene sets to a flat TSV for the EXPLORATORY burden arm.
 #       Network-free (msigdbr ships its data); runs once, cached by 17 and 20.
 #
@@ -17,16 +17,16 @@
 #   nulls; supports no claim on its own.
 #
 # Naming note: letter-suffix convention already present in this module
-# (04b_combine_gvcfs.sh, 04c_genotype_gvcfs.sh) because msigdbr is an R package
+# (05_combine_gvcfs.sh, 06_genotype_gvcfs.sh) because msigdbr is an R package
 # and 16 is Python. One language per script.
 #
 # Output:
-#   16b_pathway_sets.tsv   collection, set_name, set_size, genes (';'-joined)
+#   13_pathway_sets.tsv   collection, set_name, set_size, genes (';'-joined)
 #   Collections: HALLMARK, REACTOME, KEGG, WIKIPATHWAYS, BIOCARTA,
 #                GO_BP, GO_CC, GO_MF
 #
 # Usage:
-#   Rscript 03_variant_calling/16b_export_pathway_sets.R
+#   Rscript 03_variant_calling/13_export_pathway_sets.R
 
 suppressPackageStartupMessages({
   library(msigdbr)
@@ -40,7 +40,7 @@ get_project_root <- function() {
 }
 project_root <- Sys.getenv("PROJECT_ROOT", get_project_root())
 
-out_file <- file.path(project_root, "results/03_variant_calling/tables/16b_pathway_sets.tsv")
+out_file <- file.path(project_root, "results/03_variant_calling/tables/13_pathway_sets.tsv")
 dir.create(dirname(out_file), recursive = TRUE, showWarnings = FALSE)
 
 # Map each source database to its canonical collection label. Keys are matched

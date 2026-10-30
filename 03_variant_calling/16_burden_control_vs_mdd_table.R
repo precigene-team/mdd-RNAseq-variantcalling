@@ -1,25 +1,25 @@
-# [[03_variant_calling/20_burden_control_vs_mdd_table.R]]
-# Goal: Build the per-donor and per-set burden tables consumed by the 21_*
+# [[03_variant_calling/16_burden_control_vs_mdd_table.R]]
+# Goal: Build the per-donor and per-set burden tables consumed by the 17_*
 #       plotting scripts. TABLES ONLY -- draws nothing.
 #
 # Why the collections are kept SEPARATE:
 #   17 computes BH-FDR WITHIN collection, so the denominator differs per tool by
-#   two orders of magnitude (HALLMARK 50 sets vs GO_BP 5,831). Each 21_* script
+#   two orders of magnitude (HALLMARK 50 sets vs GO_BP 5,831). Each 17_* script
 #   draws one collection and states that collection's own denominator; pooling
 #   them would present sets tested under different corrections as comparable.
 #
 # Reads:
-#   15_burden_matrix.tsv.gz  donor x variant carriage with gene annotation
-#   15_donor_totals.csv      donor, condition, sex, total variants (the offset)
-#   16b_pathway_sets.tsv     msigdbr sets, collection-labelled
-#   17_pathway_burden.csv    statistics from 17 (optional; attached if present)
+#   11_burden_matrix.tsv.gz  donor x variant carriage with gene annotation
+#   11_donor_totals.csv      donor, condition, sex, total variants (the offset)
+#   13_pathway_sets.tsv     msigdbr sets, collection-labelled
+#   14_pathway_burden.csv    statistics from 17 (optional; attached if present)
 #
 # Outputs:
-#   20_burden_per_donor.csv  one row per donor per set, all collections
-#   20_burden_summary.csv    group medians + p + FDR per set
+#   16_burden_per_donor.csv  one row per donor per set, all collections
+#   16_burden_summary.csv    group medians + p + FDR per set
 #
 # Usage:
-#   Rscript 03_variant_calling/20_burden_control_vs_mdd_table.R
+#   Rscript 03_variant_calling/16_burden_control_vs_mdd_table.R
 
 suppressPackageStartupMessages(library(data.table))
 
@@ -37,14 +37,14 @@ need <- function(f) {
   fread(p)
 }
 
-mat  <- need("15_burden_matrix.tsv.gz")
-tot  <- need("15_donor_totals.csv")
-sets <- need("16b_pathway_sets.tsv")
-stats <- tryCatch(need("17_pathway_burden.csv"), error = function(e) NULL)
+mat  <- need("11_burden_matrix.tsv.gz")
+tot  <- need("11_donor_totals.csv")
+sets <- need("13_pathway_sets.tsv")
+stats <- tryCatch(need("14_pathway_burden.csv"), error = function(e) NULL)
 
 mat[, condition := tot$condition[match(donor, tot$donor)]]
 genes_all <- unique(mat$gene)
-message("[20] matrix: ", nrow(mat), " carrier rows, ", length(unique(mat$donor)), " donors")
+message("[16] matrix: ", nrow(mat), " carrier rows, ", length(unique(mat$donor)), " donors")
 
 # --- Set -> gene membership -------------------------------------------------
 # One unnest for all 14k sets, then one join, instead of 14k merges and 14k
@@ -52,11 +52,11 @@ message("[20] matrix: ", nrow(mat), " carrier rows, ", length(unique(mat$donor))
 memb <- sets[, .(set_idx = .I, gene = strsplit(genes, ";", fixed = TRUE)[[1]]),
             by = .(collection, set_name, set_size, genes)]
 memb <- memb[gene %chin% genes_all]
-message("[20] membership rows after cohort intersection: ", nrow(memb))
+message("[16] membership rows after cohort intersection: ", nrow(memb))
 
 set_meta <- memb[, .(genes_in_cohort = uniqueN(gene)), by = .(set_idx, collection, set_name, set_size)]
 set_meta <- set_meta[genes_in_cohort >= 3]
-message("[20] sets with >=3 overlapping genes: ", nrow(set_meta), " of ", nrow(sets))
+message("[16] sets with >=3 overlapping genes: ", nrow(set_meta), " of ", nrow(sets))
 
 # --- Per-donor burden --------------------------------------------------------
 # carriage is unique on (donor, gene), so summing over a set's genes gives the
@@ -65,7 +65,7 @@ carriage <- mat[, .(burden = .N), by = .(donor, gene)]
 
 hits <- merge(memb[set_idx %in% set_meta$set_idx, .(set_idx, gene)],
               carriage, by = "gene", allow.cartesian = TRUE)
-message("[20] membership x carriage hits: ", nrow(hits))
+message("[16] membership x carriage hits: ", nrow(hits))
 
 per_donor <- merge(hits[, .(burden = sum(burden)), by = .(set_idx, donor)],
                    set_meta[, .(set_idx, collection, set_name, genes_in_cohort)],
@@ -93,13 +93,13 @@ if (!is.null(stats) && all(c("set_name", "p_glm_offset", "fdr_bh_within_collecti
   pd <- merge(pd, unique(stats[, .(set_name, p_glm_offset, fdr_bh_within_collection)]),
               by = "set_name", all.x = TRUE)
 } else {
-  warning("[20] 17_pathway_burden.csv not found or missing columns; p/FDR left NA")
+  warning("[16] 14_pathway_burden.csv not found or missing columns; p/FDR left NA")
   pd[, `:=`(p_glm_offset = NA_real_, fdr_bh_within_collection = NA_real_)]
 }
 
 fwrite(pd[, .(donor, condition, sex, collection, set_name, genes_in_cohort,
               burden, total_variants_detected, p_glm_offset, fdr_bh_within_collection)],
-       file.path(TAB, "20_burden_per_donor.csv"))
+       file.path(TAB, "16_burden_per_donor.csv"))
 
 summary_tab <- pd[, .(
   median_ctrl = median(burden[grp == "Control (n=19)"]),
@@ -111,14 +111,14 @@ summary_tab <- pd[, .(
   genes_in_cohort = genes_in_cohort[1]
 ), by = .(collection, set_name)]
 setorder(summary_tab, collection, log2rr)
-fwrite(summary_tab, file.path(TAB, "20_burden_summary.csv"))
+fwrite(summary_tab, file.path(TAB, "16_burden_summary.csv"))
 
-message("[20] wrote 20_burden_per_donor.csv (", nrow(pd), " rows)")
-message("[20] wrote 20_burden_summary.csv (", nrow(summary_tab), " sets)")
-message("[20] --- per collection (n_sets is the BH-FDR denominator in 17) ---")
+message("[16] wrote 16_burden_per_donor.csv (", nrow(pd), " rows)")
+message("[16] wrote 16_burden_summary.csv (", nrow(summary_tab), " sets)")
+message("[16] --- per collection (n_sets is the BH-FDR denominator in 17) ---")
 for (lab in summary_tab[, .N, by = collection]$collection) {
   s <- summary_tab[collection == lab]
   message(sprintf("   %-14s %5d sets | %d at FDR<0.05",
                   lab, nrow(s), sum(s$fdr < 0.05, na.rm = TRUE)))
 }
-message("[20] done")
+message("[16] done")

@@ -1,7 +1,7 @@
 # Polygenic Burden Analysis — Methodology and Design Rationale
 
 **Date:** 17 October 2026
-**Module:** `03_variant_calling` (steps 15–18)
+**Module:** `03_variant_calling` (steps 11–15)
 **Status:** Methodology locked. Implementation pending.
 
 ---
@@ -61,7 +61,7 @@ The obvious substitute — rare-variant gene-set burden — also fails, for a re
 
 ### 3.1 The measured allele frequency spectrum
 
-Derived from the cohort variant table `results/03_variant_calling/tables/07_functional_annotation.csv` (61,685 variants), using AF = (n_het + 2·n_hom_alt) / (2·n_subjects):
+Derived from the cohort variant table `results/03_variant_calling/tables/09_functional_annotation.csv` (61,685 variants), using AF = (n_het + 2·n_hom_alt) / (2·n_subjects):
 
 | MAF band | All variants | Coding (HIGH/MODERATE/LOW) |
 |---|---|---|
@@ -77,7 +77,7 @@ Derived from the cohort variant table `results/03_variant_calling/tables/07_func
 
 This is calling-method bias compounded by an upstream filter. RNA-seq variant calling recovers only variants visible in expressed sequence at sufficient depth; a genuinely private variant in a gene covered at 5× will not pass calling thresholds. Direct measurement of this effect: RNA sequencing recovers approximately 40% of the variants identifiable by DNA sequencing, at greater than 80% precision (Leonard et al., *BMC Genomics* 2024, doi:10.1186/s12864-024-10645-z).
 
-A second, more specific cause applies to the table used here: `07_functional_annotation.csv` contains only variants seen in ≥8 of 39 donors, so low-recurrence variants were removed before this analysis ever ran. See §4.2.
+A second, more specific cause applies to the table used here: `09_functional_annotation.csv` contains only variants seen in ≥8 of 39 donors, so low-recurrence variants were removed before this analysis ever ran. See §4.2.
 
 The practical consequence is that this dataset contains **common** germline variants that RNA-seq happens to observe, not the rare variants that burden testing is designed for.
 
@@ -103,7 +103,7 @@ The defensible framing is **common-variant genetic load**: how much genotyped va
 
 ### 4.1 An earlier claim, and why it was wrong
 
-An earlier draft of this document reported that `07_functional_annotation.csv` contained **1,942 rows with byte-identical carrier counts (`n_subjects=8`, `n_mdd=4`, `n_ctrl=4`)**, described them as placeholder padding, and excluded them. That finding was incorrect and the filter has been removed. It is recorded here because the same misreading produced an incorrect attribution in §3.
+An earlier draft of this document reported that `09_functional_annotation.csv` contained **1,942 rows with byte-identical carrier counts (`n_subjects=8`, `n_mdd=4`, `n_ctrl=4`)**, described them as placeholder padding, and excluded them. That finding was incorrect and the filter has been removed. It is recorded here because the same misreading produced an incorrect attribution in §3.
 
 The error was generalising from a partial view: the tail of the file was printed, where low-carrier rows had clustered, and a run of identical values was read as fabrication without checking the distribution.
 
@@ -125,7 +125,7 @@ So 1,942 rows at `(8,4,4)` is the product of the **modal carrier count** and the
 
 ### 4.2 The real constraint
 
-`06_build_transcriptome_snp_table.py` bins loci by recurrence:
+`08_build_transcriptome_snp_table.py` bins loci by recurrence:
 
 ```
 Private (1 Subject)
@@ -134,7 +134,7 @@ Moderate Recurrence (5-7 Subjects)
 High Recurrence (>=8 Subjects)   <-- the only tier present in this table
 ```
 
-`07_functional_annotation.csv` contains **only** the ≥8-carrier tier. Its minimum is exactly 8 and no row falls below.
+`09_functional_annotation.csv` contains **only** the ≥8-carrier tier. Its minimum is exactly 8 and no row falls below.
 
 **Consequence:** private and low-recurrence variants are absent by construction. The burden analysis never saw a private variant — not because the assay could not detect one, but because this table deliberately drops them. This is a stronger and more specific statement than the RNA-seq depth argument in §3.2, and it is the operative reason no rare-variant method applies here.
 
@@ -235,7 +235,7 @@ Negative binomial, not Poisson. Overdispersion is guaranteed given the 17-fold s
 
 ### 6.3 Layer 2 — permutation null preserving call count
 
-Condition labels are permuted **within sex**, so every donor retains their own call count. This is the mechanism that prevents the depth imbalance from masquerading as signal, and it is already implemented in `04_asm/06_test_mdd_enrichment.py`. It is extracted into a shared helper (`utils/case_control_null.py`) so both modules use one implementation.
+Condition labels are permuted **within sex**, so every donor retains their own call count. This is the mechanism that prevents the depth imbalance from masquerading as signal, and it is already implemented in `04_asm/06_test_mdd_enrichment.py`. It is implemented inside `14_gene_burden_test.py`, so the script has no import dependency; the archived `04_asm/06_test_mdd_enrichment.py` used the same logic.
 
 Duplicating the permutation would repeat exactly the failure mode found and fixed in `07_allele_specific_m6a.py`, where two implementations of one statistic disagreed between a results CSV and the prose — the CSV reported annotation counts over a different denominator than the concordance-filtered headline.
 
@@ -304,7 +304,7 @@ At N = 39 with a 1.25× coverage imbalance, residual variance after offsetting w
 
 ## 9b. Result — NULL across all four analyses
 
-Run on 17 October 2026, `N_PERM=20000`, seed 20261017. Every number below is read from a file written by `17_gene_burden_test.py`.
+Run on 17 October 2026, `N_PERM=20000`, seed 20261017. Every number below is read from a file written by `14_gene_burden_test.py`.
 
 | Analysis | Tests | Result |
 |---|---|---|
@@ -347,34 +347,34 @@ One responsibility per script, following the module convention that script numbe
 
 | Script | Sole responsibility | Output |
 |---|---|---|
-| `15_build_burden_matrix.py` | Parse GT from 39 per-sample VCFs into a donor × variant carrier matrix; join annotation; apply the impact filter | `15_burden_matrix.tsv.gz`, `15_donor_totals.csv` |
-| `16_fetch_opentargets_panel.py` | Single API call; cache panel with pinned retrieval date | `16_opentargets_mdd_panel.tsv` |
-| `16b_export_pathway_sets.R` | Export msigdbr sets, collections kept separate | `16b_pathway_sets.tsv` |
-| `17_gene_burden_test.py` | Collapse to gene burden; Analyses 1–3; negative binomial with offset; within-sex permutation; BH-FDR within collection; sensitivity sweeps | `17_*.csv` |
-| `18_plot_burden_results.R` | Before/after-offset comparison; gene-level burden FDR volcano; panel composition | `18_*.pdf/.png` |
-| `20_burden_control_vs_mdd_table.R` | Per-donor and per-set burden tables. Draws nothing | `20_burden_per_donor.csv`, `20_burden_summary.csv` |
-| `21_plot_burden_control_vs_mdd.R` | Shared plot helper, sourced by 22–26. Not run directly | — |
-| `22_plot_burden_reactome.R` | Reactome: top-10 reference panel + Reactome synapse sets | `22_burden_reactome.pdf/.png` |
-| `23_plot_burden_kegg.R` | KEGG | `23_burden_kegg.pdf/.png` |
-| `24_plot_burden_go_bp.R` | GO:BP | `24_burden_go_bp.pdf/.png` |
-| `25_plot_burden_go_cc.R` | GO:CC | `25_burden_go_cc.pdf/.png` |
-| `26_plot_burden_go_mf.R` | GO:MF | `26_burden_go_mf.pdf/.png` |
+| `11_build_burden_matrix.py` | Parse GT from 39 per-sample VCFs into a donor × variant carrier matrix; join annotation; apply the impact filter | `11_burden_matrix.tsv.gz`, `11_donor_totals.csv` |
+| `12_fetch_opentargets_panel.py` | Single API call; cache panel with pinned retrieval date | `12_opentargets_mdd_panel.tsv` |
+| `13_export_pathway_sets.R` | Export msigdbr sets, collections kept separate | `13_pathway_sets.tsv` |
+| `14_gene_burden_test.py` | Collapse to gene burden; Analyses 1–3; negative binomial with offset; within-sex permutation; BH-FDR within collection; sensitivity sweeps | `14_*.csv` |
+| `15_plot_burden_results.R` | Before/after-offset comparison; gene-level burden FDR volcano; panel composition | `15_*.pdf/.png` |
+| `16_burden_control_vs_mdd_table.R` | Per-donor and per-set burden tables. Draws nothing | `16_burden_per_donor.csv`, `16_burden_summary.csv` |
+| `17_plot_burden_control_vs_mdd.R` | Shared plot helper, sourced by 18–22. Not run directly | — |
+| `18_plot_burden_reactome.R` | Reactome: top-10 reference panel + Reactome synapse sets | `18_burden_reactome.pdf/.png` |
+| `19_plot_burden_kegg.R` | KEGG | `19_burden_kegg.pdf/.png` |
+| `20_plot_burden_go_bp.R` | GO:BP | `20_burden_go_bp.pdf/.png` |
+| `21_plot_burden_go_cc.R` | GO:CC | `21_burden_go_cc.pdf/.png` |
+| `22_plot_burden_go_mf.R` | GO:MF | `22_burden_go_mf.pdf/.png` |
 
-Plus one shared helper, `utils/case_control_null.py`, providing `permute_within_sex()` and the offset count model, imported by both `04_asm/06_test_mdd_enrichment.py` and `17_gene_burden_test.py`.
+Plus the case-control null statistics, implemented inside `14_gene_burden_test.py`: `permute_within_sex()`, `empirical_pvalue()`, `offset_count_model()`, `bh_fdr()`.
 
-Figure 22–26 share one layout: the LEFT panel is the ten largest effects **within that collection** (restricted to sets overlapping ≥10 cohort genes so the ranking is not filled by three-gene quotients), the RIGHT panel is that collection's synapse / neurotransmission sets. Both panels are scoped to one collection so a single database's BH-FDR denominator governs the whole figure, and so no half of a figure is a copy shared with the other four. HALLMARK and KEGG have too few sets on the synapse vocabulary for a meaningful strip, so their right panel falls back to ranks 11+ of the same collection — skipping ranks 1–10, which panel A already shows — and the subtitle states the substitution.
+Figure 18–22 share one layout: the LEFT panel is the ten largest effects **within that collection** (restricted to sets overlapping ≥10 cohort genes so the ranking is not filled by three-gene quotients), the RIGHT panel is that collection's synapse / neurotransmission sets. Both panels are scoped to one collection so a single database's BH-FDR denominator governs the whole figure, and so no half of a figure is a copy shared with the other four. HALLMARK and KEGG have too few sets on the synapse vocabulary for a meaningful strip, so their right panel falls back to ranks 11+ of the same collection — skipping ranks 1–10, which panel A already shows — and the subtitle states the substitution.
 
-Sets are matched to the synapse vocabulary by name, per collection, in `21_plot_burden_control_vs_mdd.R`. The GO:MF vocabulary is deliberately restricted to named neurotransmitter systems (glutamate, GABA, NMDA, kainate, adrenergic, dopaminergic, cholinergic, serotonergic) rather than the bare word "receptor", which in GO:MF is also satisfied by taste and interleukin receptor families and would fill the panel with sets unrelated to synaptic transmission.
+Sets are matched to the synapse vocabulary by name, per collection, in `17_plot_burden_control_vs_mdd.R`. The GO:MF vocabulary is deliberately restricted to named neurotransmitter systems (glutamate, GABA, NMDA, kainate, adrenergic, dopaminergic, cholinergic, serotonergic) rather than the bare word "receptor", which in GO:MF is also satisfied by taste and interleukin receptor families and would fill the panel with sets unrelated to synaptic transmission.
 
 ```bash
 micromamba activate mdd
-python3 03_variant_calling/15_build_burden_matrix.py    # ~40 s
-python3 03_variant_calling/16_fetch_opentargets_panel.py # seconds, then offline
-Rscript  03_variant_calling/16b_export_pathway_sets.R
-python3 03_variant_calling/17_gene_burden_test.py        # permutation-bound
-Rscript  03_variant_calling/18_plot_burden_results.R
-Rscript  03_variant_calling/20_burden_control_vs_mdd_table.R
-Rscript  03_variant_calling/22_plot_burden_reactome.R    # and 23–26
+python3 03_variant_calling/11_build_burden_matrix.py    # ~40 s
+python3 03_variant_calling/12_fetch_opentargets_panel.py # seconds, then offline
+Rscript  03_variant_calling/13_export_pathway_sets.R
+python3 03_variant_calling/14_gene_burden_test.py        # permutation-bound
+Rscript  03_variant_calling/15_plot_burden_results.R
+Rscript  03_variant_calling/16_burden_control_vs_mdd_table.R
+Rscript  03_variant_calling/18_plot_burden_reactome.R    # and 19–22
 ```
 
 ---
@@ -431,4 +431,4 @@ Recorded rather than guessed. Both are referenced elsewhere in this project and 
 - `docs/_archive/asm_methods.md` — m6A-SNP module methods; source of the shared permutation requirement
 - `docs/_archive/asm_postmortem.md` — the coverage-confound finding this methodology addresses
 - `docs/thesis_defense_narrative_log.md` §2.1 — the agreed analysis scope this implements, and §3.3 the retracted per-site carrier claims
-- `results/03_variant_calling/tables/07_functional_annotation.csv` — cohort variant table (61,685 rows)
+- `results/03_variant_calling/tables/09_functional_annotation.csv` — cohort variant table (61,685 rows)

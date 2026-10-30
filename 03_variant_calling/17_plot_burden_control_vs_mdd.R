@@ -1,7 +1,7 @@
-# [[03_variant_calling/21_plot_burden_control_vs_mdd.R]]
+# [[03_variant_calling/17_plot_burden_control_vs_mdd.R]]
 # Goal: Shared plotting helper for the per-collection burden figures
-#       (22_plot_burden_reactome.R, 23_*_kegg.R, 24_*_go_bp.R, 25_*_go_cc.R,
-#        26_*_go_mf.R). NOT run directly -- sourced by those scripts.
+#       (18_plot_burden_reactome.R, 19_*_kegg.R, 20_*_go_bp.R, 21_*_go_cc.R,
+#        22_*_go_mf.R). NOT run directly -- sourced by those scripts.
 #
 # Every figure has the same two-panel layout:
 #   LEFT   the ten most impacted sets OF THIS COLLECTION. Scoped to the
@@ -16,9 +16,9 @@
 # Styling follows utils/plot_gtex_gwas_integration.R and plot_gtex_eqtl_summary.R:
 #   theme_minimal(base_family="sans"), slate palette, bold titles, bg="white".
 #
-# Inputs (written by 15, 16b, 17, 20):
-#   20_burden_per_donor.csv
-#   20_burden_summary.csv
+# Inputs (written by 16_burden_control_vs_mdd_table.R):
+#   16_burden_per_donor.csv
+#   16_burden_summary.csv
 
 suppressPackageStartupMessages({
   library(data.table)
@@ -99,8 +99,8 @@ load_burden <- function() {
   root <- get_project_root()
   ctx <- list(TAB = file.path(root, "results/03_variant_calling/tables"),
               FIG = file.path(root, "results/03_variant_calling/figures"))
-  pd <- fread(file.path(ctx$TAB, "20_burden_per_donor.csv"))
-  sm <- fread(file.path(ctx$TAB, "20_burden_summary.csv"))
+  pd <- fread(file.path(ctx$TAB, "16_burden_per_donor.csv"))
+  sm <- fread(file.path(ctx$TAB, "16_burden_summary.csv"))
   pd[, grp := factor(ifelse(condition == "mdd", "MDD (n=20)", "Control (n=19)"),
                      levels = c("Control (n=19)", "MDD (n=20)"))]
   pd[, label := wrap_label(pretty_name(set_name), 32)]

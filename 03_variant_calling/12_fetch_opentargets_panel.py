@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# [[03_variant_calling/16_fetch_opentargets_panel.py]]
+# [[03_variant_calling/12_fetch_opentargets_panel.py]]
 # Goal: Fetch the primary gene panel -- Open Targets MDD, GENETIC evidence only
 #       -- and cache it locally. NETWORK STEP ONLY; no statistics.
 #
@@ -16,11 +16,11 @@
 #   a remote host is down. Re-running this script is opt-in via FORCE=1.
 #
 # Output:
-#   16_opentargets_mdd_panel.tsv   gene, genetic_score, ensembl_id, retrieved
+#   12_opentargets_mdd_panel.tsv   gene, genetic_score, ensembl_id, retrieved
 #
 # Usage:
-#   python3 03_variant_calling/16_fetch_opentargets_panel.py
-#   FORCE=1 python3 03_variant_calling/16_fetch_opentargets_panel.py
+#   python3 03_variant_calling/12_fetch_opentargets_panel.py
+#   FORCE=1 python3 03_variant_calling/12_fetch_opentargets_panel.py
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ from datetime import date
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT") or os.path.normpath(os.path.join(SCRIPT_DIR, ".."))
 TABLE_DIR = os.path.join(PROJECT_ROOT, "results", "03_variant_calling", "tables")
-OUT_PANEL = os.path.join(TABLE_DIR, "16_opentargets_mdd_panel.tsv")
+OUT_PANEL = os.path.join(TABLE_DIR, "12_opentargets_mdd_panel.tsv")
 
 API = "https://api.platform.opentargets.org/api/v4/graphql"
 DISEASE = "MONDO_0002009"  # major depressive disorder
@@ -52,7 +52,7 @@ QUERY = """
 
 
 def log(msg: str) -> None:
-    print(f"[16] {msg}", flush=True)
+    print(f"[12] {msg}", flush=True)
 
 
 def fetch() -> list[dict]:

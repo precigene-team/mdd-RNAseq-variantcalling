@@ -11,7 +11,7 @@ MeRIP-seq (m6A IP) analysis is out of scope for this repository.
 1. **Gene Expression Alterations (MDD vs. Control)**
    * **Differential Expression (RNA-seq DEGs)**: Identify differentially expressed genes (upregulated/downregulated) from the RNA-seq (Input) data and annotate gene names.
 2. **Variant Identification (SNPs)**
-   * Call SNPs on the RNA-seq (Input) data via GATK joint calling across the cohort, then hard filtration, functional annotation, and clinical actionability assessment.
+   * Call SNPs on the RNA-seq (Input) data via GATK joint calling across the cohort, then hard filtration, functional annotation, the MDD candidate review table, and the polygenic burden test.
 
 ---
 
@@ -52,35 +52,43 @@ Below is the layout of the analysis workspace:
   * [`08_enrichment_plotting.R`](02_dge_analysis/08_enrichment_plotting.R): GSEA NES barplots per contrast.
   * [`09_heatmap_pathway.R`](02_dge_analysis/09_heatmap_pathway.R): Leading-edge pathway heatmaps (row z-score).
 
-* **[`03_variant_calling/`](03_variant_calling)**: GATK joint calling and clinical translation.
+* **[`03_variant_calling/`](03_variant_calling)**: GATK joint calling, functional annotation, and polygenic burden testing.
   * [`01_read_groups.sh`](03_variant_calling/01_read_groups.sh): Add read groups to aligned BAMs.
   * [`02_mark_duplicates.sh`](03_variant_calling/02_mark_duplicates.sh): Flag PCR duplicate alignments.
   * [`03_split_n_cigar.sh`](03_variant_calling/03_split_n_cigar.sh): Split reads spanning exon-exon junctions.
   * [`04_haplotype_caller.sh`](03_variant_calling/04_haplotype_caller.sh): Call raw variants using HaplotypeCaller in GVCF mode.
-  * [`04b_combine_gvcfs.sh`](03_variant_calling/04b_combine_gvcfs.sh): Combine per-sample GVCFs into cohort GVCF.
-  * [`04c_genotype_gvcfs.sh`](03_variant_calling/04c_genotype_gvcfs.sh): Joint-genotype cohort GVCF.
-  * [`05_variant_filtration.sh`](03_variant_calling/05_variant_filtration.sh): Hard-filter SNPs and extract per-sample heterozygous calls.
-  * [`06_functional_annotation.py`](03_variant_calling/06_functional_annotation.py): Sequence Ontology, CADD, SpliceAI, and PsychENCODE/PGC domain mapping.
-  * [`07_clinical_pathogenicity.py`](03_variant_calling/07_clinical_pathogenicity.py): ClinVar cross-referencing and ACMG/AMP 5-tier classification.
-  * [`08_pharmacogenomics_actionability.py`](03_variant_calling/08_pharmacogenomics_actionability.py): CPIC antidepressant guidelines and ClinPGx actionability.
-  * [`09_plot_clinical_annotation_landscape.R`](03_variant_calling/09_plot_clinical_annotation_landscape.R): Multi-panel publication figure.
-  * [`15_build_burden_matrix.py`](03_variant_calling/15_build_burden_matrix.py): Build the donor × variant carrier matrix for burden analysis. Data munging only.
-  * [`16_fetch_opentargets_panel.py`](03_variant_calling/16_fetch_opentargets_panel.py): Fetch and cache the Open Targets MDD panel (genetic evidence only).
-  * [`16b_export_pathway_sets.R`](03_variant_calling/16b_export_pathway_sets.R): Export msigdbr gene sets, collections kept separate, for the exploratory pathway arm.
-  * [`17_gene_burden_test.py`](03_variant_calling/17_gene_burden_test.py): Four-arm burden test with detection-depth offset and within-sex permutation.
-  * [`18_plot_burden_results.R`](03_variant_calling/18_plot_burden_results.R): Raw-vs-offset figure, Arm 1 volcano, Arm 2 panel.
-  * [`20_burden_control_vs_mdd_table.R`](03_variant_calling/20_burden_control_vs_mdd_table.R): Per-donor and per-set burden tables. Draws nothing.
-  * [`21_plot_burden_control_vs_mdd.R`](03_variant_calling/21_plot_burden_control_vs_mdd.R): Shared plot helper for the per-collection figures below. Sourced, not run.
-  * [`22_plot_burden_reactome.R`](03_variant_calling/22_plot_burden_reactome.R): Control-vs-MDD burden, Reactome. Top-10 reference panel + Reactome synapse sets.
-  * [`23_plot_burden_kegg.R`](03_variant_calling/23_plot_burden_kegg.R): Same layout, KEGG.
-  * [`24_plot_burden_go_bp.R`](03_variant_calling/24_plot_burden_go_bp.R): Same layout, GO Biological Process.
-  * [`25_plot_burden_go_cc.R`](03_variant_calling/25_plot_burden_go_cc.R): Same layout, GO Cellular Component.
-  * [`26_plot_burden_go_mf.R`](03_variant_calling/26_plot_burden_go_mf.R): Same layout, GO Molecular Function.
+  * [`05_combine_gvcfs.sh`](03_variant_calling/05_combine_gvcfs.sh): Combine per-sample GVCFs into cohort GVCF.
+  * [`06_genotype_gvcfs.sh`](03_variant_calling/06_genotype_gvcfs.sh): Joint-genotype cohort GVCF.
+  * [`07_variant_filtration.sh`](03_variant_calling/07_variant_filtration.sh): Hard-filter SNPs and extract per-sample heterozygous calls.
+  * [`08_build_transcriptome_snp_table.py`](03_variant_calling/08_build_transcriptome_snp_table.py): Aggregate the per-sample filtered VCFs into the cohort transcriptome SNP master table (PASS, 0/1, DP>=10, GQ>=20) with carrier counts by condition and sex.
+  * [`09_functional_annotation.py`](03_variant_calling/09_functional_annotation.py): SnpEff GRCh38.115 annotation of recurrent SNPs (>=8 subjects): Sequence Ontology consequence, impact tier, HGVS c/p.
+  * [`10_prioritize_mdd_candidate_snps.py`](03_variant_calling/10_prioritize_mdd_candidate_snps.py): MDD-enriched protein-altering candidates (`n_ctrl <= 2` & `n_mdd >= 8`) with the external evidence URLs. Terminal review table.
+  * [`11_build_burden_matrix.py`](03_variant_calling/11_build_burden_matrix.py): Build the donor × variant carrier matrix for burden analysis. Data munging only.
+  * [`12_fetch_opentargets_panel.py`](03_variant_calling/12_fetch_opentargets_panel.py): Fetch and cache the Open Targets MDD panel (genetic evidence only).
+  * [`13_export_pathway_sets.R`](03_variant_calling/13_export_pathway_sets.R): Export msigdbr gene sets, collections kept separate, for the exploratory pathway arm.
+  * [`14_gene_burden_test.py`](03_variant_calling/14_gene_burden_test.py): Four-arm burden test with detection-depth offset and within-sex permutation.
+  * [`15_plot_burden_results.R`](03_variant_calling/15_plot_burden_results.R): Raw-vs-offset figure, Arm 1 volcano, Arm 2 panel.
+  * [`16_burden_control_vs_mdd_table.R`](03_variant_calling/16_burden_control_vs_mdd_table.R): Per-donor and per-set burden tables. Draws nothing.
+  * [`17_plot_burden_control_vs_mdd.R`](03_variant_calling/17_plot_burden_control_vs_mdd.R): Shared plot helper for the per-collection figures below. Sourced, not run.
+  * [`18_plot_burden_reactome.R`](03_variant_calling/18_plot_burden_reactome.R): Control-vs-MDD burden, Reactome. Top-10 reference panel + Reactome synapse sets.
+  * [`19_plot_burden_kegg.R`](03_variant_calling/19_plot_burden_kegg.R): Same layout, KEGG.
+  * [`20_plot_burden_go_bp.R`](03_variant_calling/20_plot_burden_go_bp.R): Same layout, GO Biological Process.
+  * [`21_plot_burden_go_cc.R`](03_variant_calling/21_plot_burden_go_cc.R): Same layout, GO Cellular Component.
+  * [`22_plot_burden_go_mf.R`](03_variant_calling/22_plot_burden_go_mf.R): Same layout, GO Molecular Function.
   * Methodology: [`docs/polygenic_burden_methodology.md`](docs/polygenic_burden_methodology.md).
 
 * **[`docs/`](docs)**: Documentation and background theory.
+  * [`aspera_setup.md`](docs/aspera_setup.md): Aspera CLI setup and configuration for fast downloads on the HPC.
   * [`cohort_limitations_and_resolutions.md`](docs/cohort_limitations_and_resolutions.md): Gating thresholds and deconvolution results.
-  * [`asm_analysis_methodology.md`](docs/asm_analysis_methodology.md): ASM group comparison methodology and statistical models.
+  * [`environment.md`](docs/environment.md): Full `mdd` package inventory, which script loads each package, and the rationale.
+  * [`mapping_qc_qa.md`](docs/mapping_qc_qa.md): RNA-seq mapping and quality-control Q&A summary.
+  * [`multiqc_summary.md`](docs/multiqc_summary.md): MultiQC upstream diagnostics summary report.
+  * [`pipeline_integrity_checklist.md`](docs/pipeline_integrity_checklist.md): Data-integrity checks for hybrid local-HPC processing.
+  * [`polygenic_burden_methodology.md`](docs/polygenic_burden_methodology.md): Design rationale for the `11`–`22` burden test, permutation offset, and stated limits.
+  * [`qc_raw_verdict.md`](docs/qc_raw_verdict.md): Raw-reads bioinformatics QC verdict.
+  * [`qc_trimmed_verdict.md`](docs/qc_trimmed_verdict.md): Trimmed-reads bioinformatics QC verdict.
+  * [`split_n_cigar_qa.md`](docs/split_n_cigar_qa.md): SplitNCigar and HaplotypeCaller execution progress Q&A.
+  * [`upstream_report.md`](docs/upstream_report.md): Upstream alignment and QC report.
 * **[`_data/`](_data)**: Reference annotation files, genome indices, and temporary directories.
 
 ---
@@ -116,23 +124,36 @@ Rscript 02_dge_analysis/08_enrichment_plotting.R
 Rscript 02_dge_analysis/09_heatmap_pathway.R
 ```
 
-### 3. Variant Calling & Clinical Translation
-Joint genotyping on RNA-seq data followed by 3-stage clinical translation:
+### 3. Variant Calling, Annotation & Burden Testing
+Joint genotyping on RNA-seq data, then the transcriptome SNP table, functional annotation, the MDD candidate review table, and the polygenic burden test:
 ```bash
 # GATK Joint Genotyping Core
 bash 03_variant_calling/01_read_groups.sh
 bash 03_variant_calling/02_mark_duplicates.sh
 bash 03_variant_calling/03_split_n_cigar.sh
 bash 03_variant_calling/04_haplotype_caller.sh
-sbatch 03_variant_calling/04b_combine_gvcfs.sh
-sbatch 03_variant_calling/04c_genotype_gvcfs.sh
-sbatch 03_variant_calling/05_variant_filtration.sh
+sbatch 03_variant_calling/05_combine_gvcfs.sh
+sbatch 03_variant_calling/06_genotype_gvcfs.sh
+sbatch 03_variant_calling/07_variant_filtration.sh
 
-# Clinical Translation & Pharmacogenomics
-python3 03_variant_calling/06_functional_annotation.py
-python3 03_variant_calling/07_clinical_pathogenicity.py
-python3 03_variant_calling/08_pharmacogenomics_actionability.py
-Rscript 03_variant_calling/09_plot_clinical_annotation_landscape.R
+# Transcriptome SNP table, SnpEff annotation, candidate URL table
+python3 03_variant_calling/08_build_transcriptome_snp_table.py
+python3 03_variant_calling/09_functional_annotation.py
+python3 03_variant_calling/10_prioritize_mdd_candidate_snps.py
+
+# Polygenic Burden Test
+python3 03_variant_calling/11_build_burden_matrix.py
+python3 03_variant_calling/12_fetch_opentargets_panel.py
+Rscript 03_variant_calling/13_export_pathway_sets.R
+python3 03_variant_calling/14_gene_burden_test.py
+Rscript 03_variant_calling/15_plot_burden_results.R
+Rscript 03_variant_calling/16_burden_control_vs_mdd_table.R
+Rscript 03_variant_calling/18_plot_burden_reactome.R
+Rscript 03_variant_calling/19_plot_burden_kegg.R
+Rscript 03_variant_calling/20_plot_burden_go_bp.R
+Rscript 03_variant_calling/21_plot_burden_go_cc.R
+Rscript 03_variant_calling/22_plot_burden_go_mf.R
+# 17_plot_burden_control_vs_mdd.R is the shared plot helper sourced by 18-22; not run directly.
 ```
 
 ---
@@ -142,8 +163,9 @@ Activate the custom Mamba environment configured for this analysis:
 ```bash
 mamba activate mdd
 ```
+Full package inventory, which script loads each one, and the rationale: [`docs/environment.md`](docs/environment.md).
 Required software includes:
 * **Java SDK** (v1.8+ or compatible runtime)
 * **GATK Toolkit** (v4.x)
-* **R Libraries**: `DESeq2`, `biomaRt`, `dplyr`, `yaml`, `ggplot2`, `ggrepel`, `plotly`, `htmlwidgets`
+* **R Libraries**: `tidyverse` (ggplot2, dplyr, readr, stringr), `DESeq2`, `biomaRt`, `limma`, `clusterProfiler`, `org.Hs.eg.db`, `ashr`, `msigdbr`, `data.table`, `yaml`, `ggtext`, `ggrepel`, `patchwork`, `ComplexHeatmap`, `circlize`, `RColorBrewer`, `scales`, `plotly`, `htmlwidgets`
 * **Python Libraries**: `pandas`, `pathlib`, `concurrent.futures`, `subprocess`

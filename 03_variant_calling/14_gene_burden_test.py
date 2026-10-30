@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-# [[03_variant_calling/17_gene_burden_test.py]]
+# [[03_variant_calling/14_gene_burden_test.py]]
 # Goal: Statistical step of the polygenic burden analysis. Consumes the matrix
-#       from 15 and the panel from 16; produces every burden test result.
+#       from 11 and the panel from 12; produces every burden test result.
 #
 # Analyses (see docs/polygenic_burden_methodology.md section 7):
 #   gene-level burden  unbiased gene-level, all genes, BH-FDR          -> PRIMARY inference
 #   panel burden  Open Targets MDD genetic panel >= 0.35           -> interpretable
-#   pathway burden  msigdbr Hallmark / C2 / C5, if 16b was run       -> EXPLORATORY only
+#   pathway burden  msigdbr Hallmark / C2 / C5, if 13 was run        -> EXPLORATORY only
 #   convergence  gene-level burden significant AND in panel burden                   -> credible set
 #
 # The statistic:
 #   Burden is a COUNT whose magnitude scales with detection depth, so the
 #   measured 1.254x MDD/Ctrl coverage imbalance must be cancelled. Two defences,
-#   both used here (utils/case_control_null.py):
+#   both used here, implemented in this file (see the Case-control null section):
 #     (a) offset. Rate is modelled per unit of the donor's full detected
 #         variant load: rate_d = burden_d / total_variants_d. This is
 #         library-size normalisation, the edgeR/DESeq2 principle.
@@ -26,16 +26,16 @@
 #   standard error, and the two agree by construction.
 #
 # Outputs:
-#   17_gene_burden.csv      per gene: burden, rate ratio, p, BH-FDR
-#   17_panel_burden.csv     per Open Targets threshold
-#   17_pathway_burden.csv   exploratory pathway sets (if 16b ran)
-#   17_convergence.csv      gene-level hits that are also in the panel
-#   17_sensitivity.csv           offset on/off, outlier, impact, MAF strata
-#   17_summary.csv               headline counts
+#   14_gene_burden.csv      per gene: burden, rate ratio, p, BH-FDR
+#   14_panel_burden.csv     per Open Targets threshold
+#   14_pathway_burden.csv   exploratory pathway sets (if 13 ran)
+#   14_convergence.csv      gene-level hits that are also in the panel
+#   14_sensitivity.csv           offset on/off, outlier, impact, MAF strata
+#   14_summary.csv               headline counts
 #
 # Usage:
-#   python3 03_variant_calling/17_gene_burden_test.py
-#   N_PERM=100000 python3 03_variant_calling/17_gene_burden_test.py
+#   python3 03_variant_calling/14_gene_burden_test.py
+#   N_PERM=100000 python3 03_variant_calling/14_gene_burden_test.py
 
 from __future__ import annotations
 
@@ -45,17 +45,23 @@ import sys
 import numpy as np
 import pandas as pd
 
+try:
+    import statsmodels.api as sm
+    from statsmodels.stats.multitest import multipletests
+    HAS_STATSMODELS = True
+    STATSMODELS_ERR = ""
+except ImportError as exc:  # environment guard
+    HAS_STATSMODELS = False
+    STATSMODELS_ERR = str(exc)
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT") or os.path.normpath(os.path.join(SCRIPT_DIR, ".."))
-sys.path.insert(0, os.path.join(PROJECT_ROOT, "utils"))
-
-import case_control_null as ccn  # noqa: E402
 
 TABLE_DIR = os.path.join(PROJECT_ROOT, "results", "03_variant_calling", "tables")
-MATRIX = os.path.join(TABLE_DIR, "15_burden_matrix.tsv.gz")
-TOTALS = os.path.join(TABLE_DIR, "15_donor_totals.csv")
-PANEL = os.path.join(TABLE_DIR, "16_opentargets_mdd_panel.tsv")
-PATHWAYS = os.path.join(TABLE_DIR, "16b_pathway_sets.tsv")
+MATRIX = os.path.join(TABLE_DIR, "11_burden_matrix.tsv.gz")
+TOTALS = os.path.join(TABLE_DIR, "11_donor_totals.csv")
+PANEL = os.path.join(TABLE_DIR, "12_opentargets_mdd_panel.tsv")
+PATHWAYS = os.path.join(TABLE_DIR, "13_pathway_sets.tsv")
 
 N_PERM = int(os.environ.get("N_PERM", "20000"))
 PRIMARY_THRESHOLD = float(os.environ.get("PANEL_THRESHOLD", "0.35"))
@@ -64,8 +70,262 @@ SEED = 20261017
 IMPACT_CLASSES = ("HIGH", "MODERATE", "LOW")
 
 
+# ---------------------------------------------------------------------------
+# Case-control null: the statistics the burden tests in this script use.
+# Inlined so this script has no import dependency. The shared helper lived as
+# utils/case_control_null.py in the old pipeline; its other consumer,
+# 04_asm/06_test_mdd_enrichment.py, is archived in _legacy/04_asm/, so this is
+# the only implementation in the delivered repo.
+#
+# Two independent defences against the measured coverage confound (MDD = 51.3%
+# of donors but 56.9% of calls; 1.254x ratio, 17x per-donor spread):
+#     (a) permute_within_sex()  - shuffles labels within sex so every donor
+#                                 keeps their own call count. Sufficient for
+#                                 SET-level stats, where call count is a nuisance.
+#     (b) offset_count_model() - NB GLM with log(total_variants) as a known
+#                                 offset, library-size style. Required for
+#                                 PER-DONOR counts, whose magnitude scales with depth.
+#   Neither alone is enough.
+#
+# Poisson is deliberately unused: the 17x spread guarantees overdispersion, and a
+# Poisson fit would understate variance and report anti-conservative p-values.
+#
+# Rationale and measurements: docs/polygenic_burden_methodology.md sections 4 and 6.
+# ---------------------------------------------------------------------------
+
+def _require_statsmodels() -> None:
+    if not HAS_STATSMODELS:
+        raise RuntimeError(
+            "statsmodels is required for the offset count model.\n"
+            "  install:  micromamba install -n mdd -c conda-forge statsmodels\n"
+            f"  import error was: {STATSMODELS_ERR}\n"
+            "See docs/polygenic_burden_methodology.md section 6."
+        )
+
+
+def _check_identifiable(condition: np.ndarray, sex: np.ndarray | None) -> None:
+    """Fail loudly if condition and sex are collinear.
+
+    If sex is constant within each condition level (e.g. all males MDD, all
+    females control) then `condition` and `sex` are the same column and the
+    design matrix is rank-deficient. statsmodels will still return a fit, but
+    beta_condition is then an arbitrary split of a single shared effect and is
+    meaningless. This is the same failure family as a degenerate permutation
+    stratum, so it is guarded rather than allowed to produce a silent number.
+    """
+    if sex is None:
+        return
+    s = pd.Series(np.asarray(sex)).astype(str)
+    c = pd.Series(np.asarray(condition)).astype(str)
+    per_condition = s.groupby(c.values).nunique()
+    if (per_condition == 1).any():
+        raise ValueError(
+            "condition and sex are collinear: sex is constant within at least one "
+            "condition level, so beta_condition is not identifiable. Check the "
+            "donor x condition x sex cross-tabulation before fitting."
+        )
+
+
+# --------------------------------------------------------------------------
+# Permutation null
+# --------------------------------------------------------------------------
+
+def permute_within_sex(
+    condition: pd.Series,
+    sex: pd.Series,
+    n_perm: int = 20000,
+    seed: int = 20261017,
+) -> np.ndarray:
+    """Permute case labels within sex strata; return an (n_perm, n) int matrix.
+
+    Each row is one permutation. Within each sex stratum the MDD/Ctrl label
+    vector is shuffled, so every donor retains their position (and therefore
+    their call count) while case membership moves. Permuting across sexes would
+    also destroy the sex imbalance in call count, which is not the confound
+    being tested for and would make the null too permissive.
+
+    Note on group sizes: this cohort has 20 MDD / 19 Ctrl overall, but the
+    female stratum is 10 MDD / 9 Ctrl and the male stratum is 10 / 10. The
+    female permutation therefore rests on 19 donors -- thin enough that its
+    null should be read as indicative rather than exact.
+
+    Parameters
+    ----------
+    condition : Series of 0/1 (or 'mdd'/'ctrl') indexed like `sex`.
+    sex       : Series of 'male'/'female' on the same index.
+    """
+    if not len(condition) == len(sex):
+        raise ValueError("condition and sex must be the same length")
+    if len(set(condition)) < 2:
+        raise ValueError("condition has fewer than two levels; nothing to permute")
+
+    rng = np.random.default_rng(seed)
+    cond = np.asarray(condition)
+    sx = np.asarray(sex)
+    strata = [np.flatnonzero(sx == level) for level in np.unique(sx)]
+
+    # Guard: a stratum that is entirely one class cannot be permuted. Shuffling
+    # it returns the same labels every time, so the null has zero variance and
+    # every p-value derived from it is meaningless -- not merely conservative.
+    # This arises when sex and condition are perfectly confounded (all males
+    # MDD, all females control). Fail loudly rather than emit a constant null.
+    degenerate = [str(level) for level, idx in zip(np.unique(sx), strata)
+                  if len(set(cond[idx])) < 2]
+    if degenerate:
+        raise ValueError(
+            "cannot permute within sex: stratum(s) %s contain only one condition "
+            "class. Sex and condition are perfectly confounded in that stratum, "
+            "so within-sex permutation has nothing to shuffle and the resulting "
+            "null would have zero variance. Either stratify differently, or rely "
+            "on offset_count_model() with the call-count offset as the sole "
+            "defence against the coverage confound."
+            % ", ".join(repr(d) for d in degenerate)
+        )
+
+    out = np.empty((n_perm, len(cond)), dtype=np.int8)
+    for p in range(n_perm):
+        shuffled = cond.copy()
+        for idx in strata:
+            shuffled[idx] = rng.permutation(shuffled[idx])
+        out[p] = shuffled
+    return out
+
+
+def empirical_pvalue(observed: float, null_draws: np.ndarray) -> tuple[float, float]:
+    """Two-sided empirical p with the standard +1 correction.
+
+    Returns (p_value, z_score) where z is measured in null standard deviations
+    and signed toward the observed value.
+    """
+    null = np.asarray(null_draws, dtype=float)
+    n = len(null)
+    if n == 0:
+        return float("nan"), float("nan")
+    # +1 in numerator and denominator: prevents p == 0 and is the standard
+    # permutation correction.
+    extreme = int(np.sum(np.abs(null) >= abs(observed)))
+    p = (extreme + 1) / (n + 1)
+    sd = null.std(ddof=1)
+    z = float((observed - null.mean()) / sd) if sd > 0 else float("nan")
+    return float(p), z
+
+
+# --------------------------------------------------------------------------
+# Offset count model
+# --------------------------------------------------------------------------
+
+def offset_count_model(
+    counts: np.ndarray,
+    condition: np.ndarray,
+    sex: np.ndarray | None = None,
+    offsets: np.ndarray | None = None,
+    exclude: np.ndarray | None = None,
+) -> dict:
+    """Negative-binomial GLM on a count response with a known log offset.
+
+        log E[y_d] = log(offset_d) + b0 + b1*condition + b2*sex
+                                             + b3*(condition*sex)
+
+    Parameters
+    ----------
+    counts   : per-donor count response (burden).
+    condition: 0/1 case label.
+    sex      : optional 0/1 or 'male'/'female' label.
+    offsets  : log of the per-donor exposure (e.g. log(total_variants)). If
+               None, unweighted Poisson-style exposure of 1 is used.
+    exclude  : optional boolean mask of donors to drop (e.g. an outlier).
+
+    Returns
+    -------
+    dict with beta_condition, p_condition, z, the full statsmodels result, and
+    n_used. `beta_condition` is the log rate ratio AFTER the offset, i.e. the
+    burden ratio corrected for detection depth.
+    """
+    _require_statsmodels()
+
+    counts = np.asarray(counts, dtype=float)
+    condition = np.asarray(condition)
+    keep = np.ones(len(counts), dtype=bool) if exclude is None else ~np.asarray(exclude, bool)
+
+    y = counts[keep]
+    c = condition[keep].astype(float)
+    off = np.zeros(int(keep.sum())) if offsets is None else np.asarray(offsets, float)[keep]
+    sex_keep = None if sex is None else np.asarray(sex)[keep]
+
+    _check_identifiable(c, sex_keep)
+
+    df = pd.DataFrame({"condition": c})
+    if sex_keep is not None:
+        levels = sorted(pd.Series(sex_keep).astype(str).unique())
+        df["sex"] = (pd.Series(sex_keep).astype(str) == levels[-1]).astype(float).values
+        df["condition:sex"] = df["condition"] * df["sex"]
+
+    X = sm.add_constant(df, has_constant="add")
+
+    # Negative binomial via GLM, with the dispersion parameter alpha estimated by
+    # method of moments and refitted (2 passes). statsmodels' GLM NB family
+    # silently assumes alpha=1.0 if left unset, which is not defensible for
+    # count data with this spread; the discrete sm.NegativeBinomial model
+    # estimates alpha but does not converge reliably here (converged=False,
+    # nan standard errors). MOM + GLM is stable and is the same
+    # estimate-then-fit logic edgeR uses for read-count dispersion.
+    alpha = 1.0
+    res = None
+    for _ in range(2):
+        model = sm.GLM(y, X, family=sm.families.NegativeBinomial(alpha=alpha), offset=off)
+        res = model.fit()
+        mu = np.asarray(res.fittedvalues, dtype=float)
+        denom = float(np.sum(mu ** 2))
+        if denom <= 0:
+            break
+        alpha_mom = float(np.sum((y - mu) ** 2 - y) / denom)
+        # A negative or vanishing estimate means the data are no more dispersed
+        # than Poisson; floor it so the NB family stays well defined.
+        alpha = max(alpha_mom, 1e-8)
+
+    key = "condition"
+    beta = float(res.params.get(key, np.nan))
+    return {
+        "beta_condition": beta,
+        "p_condition": float(res.pvalues.get(key, np.nan)),
+        "z": float(res.tvalues.get(key, np.nan)),
+        "se": float(res.bse.get(key, np.nan)),
+        "rate_ratio": float(np.exp(beta)) if np.isfinite(beta) else float("nan"),
+        "alpha": alpha,
+        "n_used": int(keep.sum()),
+        "converged": bool(getattr(res, "converged", False)),
+        "result": res,
+    }
+
+
+# --------------------------------------------------------------------------
+# Multiple testing
+# --------------------------------------------------------------------------
+
+def bh_fdr(pvals) -> np.ndarray:
+    """Benjamini-Hochberg adjusted p-values. NaNs pass through as NaN."""
+    p = np.asarray(pvals, dtype=float)
+    out = np.full(p.shape, np.nan)
+    ok = np.isfinite(p)
+    if ok.sum() == 0:
+        return out
+    if HAS_STATSMODELS:
+        out[ok] = multipletests(p[ok], method="fdr_bh")[1]
+    else:  # small local implementation so the module still works without statsmodels
+        pv = p[ok]
+        order = np.argsort(pv)
+        ranked = pv[order]
+        n = len(ranked)
+        adj = ranked * n / np.arange(1, n + 1)
+        adj = np.minimum.accumulate(adj[::-1])[::-1]
+        res = np.empty(n)
+        res[order] = np.clip(adj, 0, 1)
+        out[ok] = res
+    return out
+
+
 def log(msg: str) -> None:
-    print(f"[17] {msg}", flush=True)
+    print(f"[14] {msg}", flush=True)
 
 
 def offset_stat(rate: np.ndarray, cond: np.ndarray) -> float:
@@ -83,27 +343,27 @@ def permute_set(rate: np.ndarray, cond: np.ndarray, sex: np.ndarray, n_perm: int
     """Within-sex permutation null for one gene set."""
     obs = offset_stat(rate, cond)
     try:
-        perms = ccn.permute_within_sex(pd.Series(cond), pd.Series(sex), n_perm=n_perm, seed=seed)
+        perms = permute_within_sex(pd.Series(cond), pd.Series(sex), n_perm=n_perm, seed=seed)
     except ValueError as exc:
         return {"stat": obs, "p_perm": np.nan, "z_perm": np.nan, "n_perm": 0,
                 "note": f"permutation unavailable: {exc}"}
     draws = np.array([offset_stat(rate, p) for p in perms], dtype=float)
     draws = draws[np.isfinite(draws)]
-    p, z = ccn.empirical_pvalue(obs, draws)
+    p, z = empirical_pvalue(obs, draws)
     return {"stat": obs, "p_perm": p, "z_perm": z, "n_perm": int(len(draws)), "note": ""}
 
 
 def load_inputs():
     for path in (MATRIX, TOTALS):
         if not os.path.isfile(path):
-            raise SystemExit(f"FATAL: missing input {path}. Run 15_build_burden_matrix.py first.")
+            raise SystemExit(f"FATAL: missing input {path}. Run 11_build_burden_matrix.py first.")
     mat = pd.read_csv(MATRIX, sep="\t")
     tot = pd.read_csv(TOTALS)
     panel = None
     if os.path.isfile(PANEL):
         panel = pd.read_csv(PANEL, sep="\t")
     else:
-        log(f"WARNING: {PANEL} not found. panel burden skipped. Run 16_fetch_opentargets_panel.py.")
+        log(f"WARNING: {PANEL} not found. panel burden skipped. Run 12_fetch_opentargets_panel.py.")
     path_sets = None
     if os.path.isfile(PATHWAYS):
         path_sets = pd.read_csv(PATHWAYS, sep="\t")
@@ -143,6 +403,8 @@ def main() -> int:
     testable = gene_carriers >= MIN_CARRIERS
     log(f"genes with >= {MIN_CARRIERS} carriers: {int(testable.sum()):,} "
         f"(of {carriage.shape[1]:,}; {int((~testable).sum()):,} below threshold)")
+    if not testable.any():
+        raise SystemExit(f"FATAL: no gene has >= {MIN_CARRIERS} carriers in {carriage.shape[1]:,} genes; no burden test can run. Lower MIN_CARRIERS.")
 
     # ---------------- gene-level burden: unbiased gene-level, BH-FDR ----------------
     log("-" * 78)
@@ -153,7 +415,7 @@ def main() -> int:
     for j in np.flatnonzero(testable):
         y = carrier_counts[:, j].astype(float)
         rate = y / rate_denom
-        res = ccn.offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)))
+        res = offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)))
         rows.append({
             "gene": carriage.columns[j],
             "n_carriers": int(y.sum()),
@@ -168,9 +430,9 @@ def main() -> int:
             "alpha": res["alpha"],
         })
     gene_burden = pd.DataFrame(rows)
-    gene_burden["fdr_bh"] = ccn.bh_fdr(gene_burden["p_glm"].values)
+    gene_burden["fdr_bh"] = bh_fdr(gene_burden["p_glm"].values)
     gene_burden = gene_burden.sort_values("p_glm").reset_index(drop=True)
-    gene_burden.to_csv(os.path.join(TABLE_DIR, "17_gene_burden.csv"), index=False)
+    gene_burden.to_csv(os.path.join(TABLE_DIR, "14_gene_burden.csv"), index=False)
 
     n_fdr = int((gene_burden["fdr_bh"] < 0.05).sum())
     n_nom = int((gene_burden["p_glm"] < 0.05).sum())
@@ -197,7 +459,7 @@ def main() -> int:
             idx = [carriage.columns.get_loc(g) for g in present]
             y = carrier_counts[:, idx].sum(axis=1).astype(float)
             rate = y / rate_denom
-            res = ccn.offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)))
+            res = offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)))
             pm = permute_set(rate, cond, sex, N_PERM, SEED)
             panel_burden = pd.concat([panel_burden, pd.DataFrame([{
                 "genetic_threshold": thr,
@@ -218,7 +480,7 @@ def main() -> int:
             log(f"  thr>={thr:.2f}: {len(genes):>4} panel genes, {len(present):>3} in cohort | "
                 f"offset RR={res['rate_ratio']:.3f} p={res['p_condition']:.3f} | "
                 f"perm p={pm['p_perm']:.3f}")
-        panel_burden.to_csv(os.path.join(TABLE_DIR, "17_panel_burden.csv"), index=False)
+        panel_burden.to_csv(os.path.join(TABLE_DIR, "14_panel_burden.csv"), index=False)
 
     # ---------------- pathway burden: exploratory pathways ----------------
     pathway_burden = pd.DataFrame()
@@ -235,7 +497,7 @@ def main() -> int:
             idx = [carriage.columns.get_loc(g) for g in present]
             y = carrier_counts[:, idx].sum(axis=1).astype(float)
             rate = y / rate_denom
-            res = ccn.offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)))
+            res = offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)))
             rows3.append({
                 "collection": r.collection, "set_name": r.set_name,
                 "set_size": r.set_size, "genes_in_cohort": len(present),
@@ -244,9 +506,9 @@ def main() -> int:
         pathway_burden = pd.DataFrame(rows3)
         pathway_burden["fdr_bh_within_collection"] = np.nan
         for coll, grp in pathway_burden.groupby("collection"):
-            pathway_burden.loc[grp.index, "fdr_bh_within_collection"] = ccn.bh_fdr(grp["p_glm_offset"].values)
+            pathway_burden.loc[grp.index, "fdr_bh_within_collection"] = bh_fdr(grp["p_glm_offset"].values)
         pathway_burden = pathway_burden.sort_values("p_glm_offset").reset_index(drop=True)
-        pathway_burden.to_csv(os.path.join(TABLE_DIR, "17_pathway_burden.csv"), index=False)
+        pathway_burden.to_csv(os.path.join(TABLE_DIR, "14_pathway_burden.csv"), index=False)
         log(f"  pathway sets tested: {len(pathway_burden):,}")
         for coll, grp in pathway_burden.groupby("collection"):
             k = int((grp["fdr_bh_within_collection"] < 0.05).sum())
@@ -263,7 +525,7 @@ def main() -> int:
         hit = gene_burden[gene_burden["fdr_bh"] < 0.05]
         conv = hit[hit["gene"].isin(genes)].copy()
         convergence = conv
-        convergence.to_csv(os.path.join(TABLE_DIR, "17_convergence.csv"), index=False)
+        convergence.to_csv(os.path.join(TABLE_DIR, "14_convergence.csv"), index=False)
         log(f"  gene-level FDR<0.05: {len(hit)};  of which in the panel: {len(conv)}")
 
     # ---------------- Sensitivity ----------------
@@ -276,8 +538,8 @@ def main() -> int:
         y = np.asarray(y, dtype=float)
         rate = y / rate_denom
         pm = permute_set(rate, cond, sex, N_PERM, SEED)
-        off = ccn.offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)))
-        noff = ccn.offset_count_model(y, cond, sex, offsets=None)
+        off = offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)))
+        noff = offset_count_model(y, cond, sex, offsets=None)
         sens.append({
             "analysis": label,
             "burden_mdd_mean": float(y[cond == 1].mean()),
@@ -300,8 +562,8 @@ def main() -> int:
     y = carrier_counts[:, full_idx].sum(axis=1).astype(float)
     rate = y / rate_denom
     pm = permute_set(rate[~excl], cond[~excl], sex[~excl], N_PERM, SEED)
-    off = ccn.offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)), exclude=excl)
-    noff = ccn.offset_count_model(y, cond, sex, offsets=None, exclude=excl)
+    off = offset_count_model(y, cond, sex, offsets=np.log(np.nan_to_num(rate_denom)), exclude=excl)
+    noff = offset_count_model(y, cond, sex, offsets=None, exclude=excl)
     y_all = carrier_counts[:, full_idx].sum(axis=1).astype(float)
     keep_mdd = (cond == 1) & ~excl
     keep_ctrl = (cond == 0) & ~excl
@@ -321,7 +583,7 @@ def main() -> int:
         idx = [carriage.columns.get_loc(g) for g in genes_ic]
         add(f"impact {ic} only", carrier_counts[:, idx].sum(axis=1), "impact stratum")
 
-    pd.DataFrame(sens).to_csv(os.path.join(TABLE_DIR, "17_sensitivity.csv"), index=False)
+    pd.DataFrame(sens).to_csv(os.path.join(TABLE_DIR, "14_sensitivity.csv"), index=False)
 
     # ---------------- Summary ----------------
     summary = pd.DataFrame([
@@ -339,7 +601,7 @@ def main() -> int:
         ("n_perm", N_PERM),
         ("seed", SEED),
     ], columns=["metric", "value"])
-    summary.to_csv(os.path.join(TABLE_DIR, "17_summary.csv"), index=False)
+    summary.to_csv(os.path.join(TABLE_DIR, "14_summary.csv"), index=False)
 
     log("-" * 78)
     for _, r in summary.iterrows():

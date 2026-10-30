@@ -4,7 +4,7 @@
 
 # Steps:
 #   1. Dynamic project root resolution.
-#   2. Ingest 07_functional_annotation.csv.
+#   2. Ingest 09_functional_annotation.csv.
 #   3. Plot 1: Vertical bars for impact tiers (MODIFIER, LOW, MODERATE, HIGH).
 #   4. Plot 2: Vertical bars for high-impact consequences breakdown (N = 139).
 #   5. Export both standalone figures directly to scratch/.
@@ -30,7 +30,7 @@ tables_dir <- file.path(project_root, "results", "03_variant_calling", "tables")
 figures_dir <- file.path(project_root, "results", "utils", "figures")
 dir.create(figures_dir, recursive = TRUE, showWarnings = FALSE)
 
-in_csv <- file.path(tables_dir, "07_functional_annotation.csv")
+in_csv <- file.path(tables_dir, "09_functional_annotation.csv")
 if (!file.exists(in_csv)) {
   stop("[ERROR] Input annotation table not found: ", in_csv)
 }

@@ -32,7 +32,7 @@ def load_real_cohort_metrics(root_dir):
         "artifacts_removed": 12791467,
     }
     
-    summary_csv = os.path.join(root_dir, "results", "03_variant_calling", "tables", "06_transcriptome_snp_summary.csv")
+    summary_csv = os.path.join(root_dir, "results", "03_variant_calling", "tables", "08_transcriptome_snp_summary.csv")
     if os.path.exists(summary_csv):
         try:
             with open(summary_csv, "r") as f:

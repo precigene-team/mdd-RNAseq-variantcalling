@@ -1,17 +1,17 @@
-# [[03_variant_calling/24_plot_burden_go_bp.R]]
-# Goal: Control vs MDD burden for the Gene Ontology Biological Process branch --
-#       LEFT, the ten most impacted sets across all collections; RIGHT, the GO:BP
-#       synapse and neurotransmission sets. Tables from 20; styling from 21.
+# [[03_variant_calling/19_plot_burden_kegg.R]]
+# Goal: Control vs MDD burden for the KEGG collection -- LEFT, the ten most
+#       impacted sets across all collections; RIGHT, the KEGG synapse and
+#       neurotransmission sets. Tables come from 20; shared styling from 21.
 #
 # Reads:
-#   20_burden_per_donor.csv
-#   20_burden_summary.csv
+#   16_burden_per_donor.csv
+#   16_burden_summary.csv
 #
 # Outputs:
-#   24_burden_go_bp.pdf / .png
+#   19_burden_kegg.pdf / .png
 #
 # Usage:
-#   Rscript 03_variant_calling/24_plot_burden_go_bp.R
+#   Rscript 03_variant_calling/19_plot_burden_kegg.R
 
 suppressPackageStartupMessages(library(data.table))
 
@@ -20,10 +20,10 @@ get_project_root <- function() {
   while (curr != "/" && !file.exists(file.path(curr, "run"))) curr <- dirname(curr)
   curr
 }
-source(file.path(get_project_root(), "03_variant_calling/21_plot_burden_control_vs_mdd.R"))
+source(file.path(get_project_root(), "03_variant_calling/17_plot_burden_control_vs_mdd.R"))
 
-COLLECTION <- "GO_BP"
-OUT_NAME   <- "24_burden_go_bp"
+COLLECTION <- "KEGG"
+OUT_NAME   <- "19_burden_kegg"
 
 b <- load_burden()
 
@@ -34,11 +34,9 @@ pB <- collection_panel(b$pd, b$sm, COLLECTION,
 
 save_figure(compose_figure(pA, pB), b$ctx, OUT_NAME, MAX_PANEL_ROWS)
 
-
-
 in_coll <- b$sm[collection == COLLECTION]
 topA <- in_coll[genes_in_cohort >= MIN_GENES_PANEL][order(-abs(log2rr))][1:10]
-message(sprintf("[24] %s: %d sets tested, panel A = ranks 1-10 by |effect|",
+message(sprintf("[19] %s: %d sets tested, panel A = ranks 1-10 by |effect|",
                 COLLECTION, nrow(in_coll)))
 for (i in seq_len(nrow(topA))) {
   message(sprintf("   A  %-44s ctrl=%4.0f mdd=%4.0f ratio=%.2f p=%.3f",
@@ -46,6 +44,6 @@ for (i in seq_len(nrow(topA))) {
                   topA$median_ctrl[i], topA$median_mdd[i], topA$ratio[i], topA$p_glm[i]))
 }
 neuro <- in_coll[grepl(NEURO_PAT[[COLLECTION]], set_name)]
-message(sprintf("[24] panel B: %d of %d sets match the synapse vocabulary",
+message(sprintf("[19] panel B: %d of %d sets match the synapse vocabulary",
                 min(nrow(neuro), MAX_PANEL_ROWS), nrow(neuro)))
-message("[24] done")
+message("[19] done")

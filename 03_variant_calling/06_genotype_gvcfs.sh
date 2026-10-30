@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[03_variant_calling/04c_genotype_gvcfs.sh]]
+# [[03_variant_calling/06_genotype_gvcfs.sh]]
 # Goal: Joint-genotype the combined cohort GVCF to produce a multi-sample VCF.
 
 #SBATCH --job-name=genotype_gvcfs
@@ -32,7 +32,7 @@ COMBINED_GVCF="$RAW_VCF_DIR/cohort_combined.g.vcf.gz"
 JOINT_VCF="$RAW_VCF_DIR/cohort_joint.vcf.gz"
 
 if [ ! -f "$COMBINED_GVCF" ]; then
-    echo "Error: Combined GVCF not found at $COMBINED_GVCF. Run 04b_combine_gvcfs.sh first." >&2
+    echo "Error: Combined GVCF not found at $COMBINED_GVCF. Run 05_combine_gvcfs.sh first." >&2
     exit 1
 fi
 

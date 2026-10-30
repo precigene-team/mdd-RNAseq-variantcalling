@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[03_variant_calling/05_variant_filtration.sh]]
+# [[03_variant_calling/07_variant_filtration.sh]]
 # Goal: Filter the joint-genotyped cohort VCF and split into per-sample VCFs.
 
 #SBATCH --job-name=variant_filtration
@@ -36,7 +36,7 @@ COHORT_SNPS="$RAW_SNPS_DIR/cohort_snps.raw.vcf.gz"
 COHORT_FILTERED="$RAW_VCF_DIR/cohort_filtered.vcf.gz"
 
 if [ ! -f "$JOINT_VCF" ]; then
-    echo "Error: Joint VCF not found at $JOINT_VCF. Run 04c_genotype_gvcfs.sh first." >&2
+    echo "Error: Joint VCF not found at $JOINT_VCF. Run 06_genotype_gvcfs.sh first." >&2
     exit 1
 fi
 

@@ -2,7 +2,6 @@ name: mdd
 channels:
   - conda-forge
   - bioconda
-  # - defaults
 dependencies:
   # Upstream Core Tools
   - star
@@ -29,60 +28,41 @@ dependencies:
   - pygenometracks
   - igv-reports
   - pip
-  # --- polygenic burden (03_variant_calling/15, 17) ---
-  # numpy + scipy: were previously pulled in transitively by pandas, but
-  #   17_gene_burden_test.py depends on them directly (permutation resampling
-  #   and the negative-binomial likelihood), so they are now declared.
   - numpy
   - scipy
-  # statsmodels: negative-binomial GLM with a log(total_variants) offset, and
-  #   Benjamini-Hochberg FDR. This is the offset that cancels the measured
-  #   1.254x MDD/Control coverage imbalance -- see
-  #   docs/polygenic_burden_methodology.md section 6. Declared rather than
-  #   hand-rolling an MLE, so the count model is a standard, auditable one.
+  - requests
+  - pyfaidx
+  - lxml
   - statsmodels
-  
+
   # R Stack
   - r-base=4.3
+  - r-base-core=4.3
+  - r
+  - r-essentials
   - r-tidyverse
+  - r-dplyr
+  - r-readr
+  - r-stringr
   - r-yaml
+  - r-deseq2
+  - r-limma
+  - r-biocmanager
+  - r-ggplot2
+  - r-ggrepel
+  - r-ggtext
   - r-plotly
   - r-htmlwidgets
-  - r-ggrepel
+  - r-rcolorbrewer
+  - r-circlize
+  - r-complexheatmap
+  - r-patchwork
+  - r-scales
+  - r-clusterprofiler
+  - r-org.hs.eg.db
   - r-msigdbr
-  - r-ggtext
-  - r-biocmanager
-  - r-ashr
-  # data.table: fread + summary tables in 03_variant_calling/16b, 18, 20-26
-  - r-data.table
-  - bioconductor-deseq2
   - bioconductor-biomart
-  - bioconductor-apeglm
-  - bioconductor-limma
-  - bioconductor-clusterprofiler
-  - bioconductor-org.hs.eg.db
-  # GO.db: optional. Required only for the ontology-subtree arm described in
-  #   docs/polygenic_burden_methodology.md section 5.4, which is documented but
-  #   NOT implemented in the current pipeline. Safe to drop if that arm is
-  #   never built. Safe to KEEP: it supplies the term hierarchy needed to take
-  #   a complete GO subtree (e.g. GO:0045202 synapse) instead of hand-picking
-  #   neuronal gene sets.
+  - bioconductor-ashr
   - bioconductor-go.db
-  - bioconductor-tress
-  - bioconductor-rrho
-  - bioconductor-complexheatmap
-
-# NOTE on m6A-SNP cross-validation resources
-#   m6AVar   (Zhang et al., Database 2019)  -- web database, no package
-#   RMVar    (Liu et al., Nat Commun 2020)    -- published pipeline, web tool only
-#   m6A-TSHub (2023)                          -- web database, no package
-# None of these are distributed via conda/bioconda/CRAN/Bioconductor, so nothing
-# can be added here. They are unreachable from this host (m6avar.bioannotation.cn
-# and bioannotation.cn both refused connection). Cross-validation is therefore
-# performed against the GWAS Catalog and Ensembl REST instead -- see the retired
-# _legacy/04_asm/scripts/07_validate_external.R.
-#
-# Rebuild this environment with:
-#   micromamba env create -f environment.yml
-# or add the new packages to an existing environment with:
-#   micromamba install -n mdd -c conda-forge bioconductor-biostrings r-data.table
+  - r-jsonlite
+  - r-data.table

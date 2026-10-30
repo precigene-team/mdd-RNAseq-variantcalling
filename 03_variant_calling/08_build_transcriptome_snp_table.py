@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-# [[03_variant_calling/06_build_transcriptome_snp_table.py]]
+# [[03_variant_calling/08_build_transcriptome_snp_table.py]]
 # Goal: Build the unified transcriptome-wide heterozygous SNP cohort master table across 39 subjects without m6A peak filtering.
 #
 # Steps:
 #   1. Dynamic project root resolution and path setup.
-#   2. Locate all 39 per-sample filtered VCF files (_data/ase/*_het_snps.vcf.gz).
+#   2. Locate all 39 per-sample filtered VCF files (_data/variant/filtered_vcf/*.filtered.vcf.gz).
 #   3. Parse high-confidence biallelic heterozygous SNPs (PASS, 0/1, DP>=10, GQ>=20).
 #   4. Aggregate cohort-wide carrier metrics (total subjects, MDD count, Control count, sex breakdown).
 #   5. Apply strict data assertions (non-empty, valid chromosomes, coordinate bounds).
-#   6. Export compressed master TSV and cohort summary statistics to results/tables/06_transcriptome_snp_*.
+#   6. Export compressed master TSV and cohort summary statistics to results/tables/08_transcriptome_snp_*.
 
 import os
 import sys
@@ -21,23 +21,18 @@ from collections import defaultdict
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.environ.get("PROJECT_ROOT") or os.path.normpath(os.path.join(SCRIPT_DIR, ".."))
 
-ASE_DIR = os.path.join(PROJECT_ROOT, "_data", "ase")
 TABLES_DIR = os.path.join(PROJECT_ROOT, "results", "03_variant_calling", "tables")
 os.makedirs(TABLES_DIR, exist_ok=True)
 
-OUT_MASTER_TSV = os.path.join(TABLES_DIR, "06_transcriptome_snp_master.tsv.gz")
-OUT_SUMMARY_CSV = os.path.join(TABLES_DIR, "06_transcriptome_snp_summary.csv")
+OUT_MASTER_TSV = os.path.join(TABLES_DIR, "08_transcriptome_snp_master.tsv.gz")
+OUT_SUMMARY_CSV = os.path.join(TABLES_DIR, "08_transcriptome_snp_summary.csv")
 
 # --- Step 2: Discover VCF Files ---
 FILTERED_VCF_DIR = os.path.join(PROJECT_ROOT, "_data", "variant", "filtered_vcf")
 vcf_files = sorted(glob.glob(os.path.join(FILTERED_VCF_DIR, "*.filtered.vcf.gz")))
 source_label = "GATK filtered non-ref VCFs (_data/variant/filtered_vcf)"
 if len(vcf_files) != 39:
-    vcf_files = sorted(glob.glob(os.path.join(ASE_DIR, "*_het_snps.vcf.gz")))
-    source_label = "ASE heterozygous VCFs (_data/ase)"
-
-if len(vcf_files) != 39:
-    sys.exit(f"[ERROR] Expected 39 per-sample VCF files across cohort, found {len(vcf_files)}.")
+    sys.exit(f"[ERROR] Expected 39 per-sample VCF files in {FILTERED_VCF_DIR}, found {len(vcf_files)}.")
 
 print(f"[INFO] Discovered {len(vcf_files)} per-sample VCF files ({source_label}).")
 
@@ -60,7 +55,7 @@ total_hom_alt_observations = 0
 
 for idx, vcf_path in enumerate(vcf_files, 1):
     fname = os.path.basename(vcf_path)
-    subject = fname.replace(".filtered.vcf.gz", "").replace("_input.filtered.vcf.gz", "").replace("_het_snps.vcf.gz", "")
+    subject = fname.replace(".filtered.vcf.gz", "").removesuffix("_input")
     
     condition = "mdd" if "_mdd_" in subject else "ctrl"
     sex = "male" if subject.startswith("male_") else "female"
@@ -234,4 +229,4 @@ def write_summary(target_path):
 write_summary(OUT_SUMMARY_CSV)
 
 print(f"[SUCCESS] Exported summary statistics to: {OUT_SUMMARY_CSV}")
-print("[DONE] 06_build_transcriptome_snp_table.py executed successfully.")
+print("[DONE] 08_build_transcriptome_snp_table.py executed successfully.")

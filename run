@@ -164,32 +164,32 @@ while [ "$#" -gt 0 ]; do
                     fi
                 done
 
-                # --- Steps 04b-05: GVCF combine, genotype, filter (single jobs) ---
+                # --- Steps 05-07: GVCF combine, genotype, filter (single jobs) ---
                 mkdir -p "$PROJECT_ROOT/_data/logs/combine_gvcfs" \
                          "$PROJECT_ROOT/_data/logs/genotype_gvcfs" \
                          "$PROJECT_ROOT/_data/logs/variant_filtration"
                 
                 echo ""
-                echo "[INFO] Submitting Step 4b (CombineGVCFs)..."
+                echo "[INFO] Submitting Step 5 (CombineGVCFs)..."
                 COMBINE_JOB_ID=$(sbatch --parsable \
                     --dependency=afterok:$PREV_JOB_ID \
                     --job-name="vc_combine_gvcfs" \
-                    "$PROJECT_ROOT/03_variant_calling/04b_combine_gvcfs.sh")
-                echo "  -> Submitted Step 4b (CombineGVCFs) - Job ID: $COMBINE_JOB_ID"
+                    "$PROJECT_ROOT/03_variant_calling/05_combine_gvcfs.sh")
+                echo "  -> Submitted Step 5 (CombineGVCFs) - Job ID: $COMBINE_JOB_ID"
                 
-                echo "[INFO] Submitting Step 4c (GenotypeGVCFs)..."
+                echo "[INFO] Submitting Step 6 (GenotypeGVCFs)..."
                 GENOTYPE_JOB_ID=$(sbatch --parsable \
                     --dependency=afterok:$COMBINE_JOB_ID \
                     --job-name="vc_genotype_gvcfs" \
-                    "$PROJECT_ROOT/03_variant_calling/04c_genotype_gvcfs.sh")
-                echo "  -> Submitted Step 4c (GenotypeGVCFs) - Job ID: $GENOTYPE_JOB_ID"
+                    "$PROJECT_ROOT/03_variant_calling/06_genotype_gvcfs.sh")
+                echo "  -> Submitted Step 6 (GenotypeGVCFs) - Job ID: $GENOTYPE_JOB_ID"
                 
-                echo "[INFO] Submitting Step 5 (VariantFiltration + split)..."
+                echo "[INFO] Submitting Step 7 (VariantFiltration + split)..."
                 FILTER_JOB_ID=$(sbatch --parsable \
                     --dependency=afterok:$GENOTYPE_JOB_ID \
                     --job-name="vc_variant_filtration" \
-                    "$PROJECT_ROOT/03_variant_calling/05_variant_filtration.sh")
-                echo "  -> Submitted Step 5 (VariantFiltration + split) - Job ID: $FILTER_JOB_ID"
+                    "$PROJECT_ROOT/03_variant_calling/07_variant_filtration.sh")
+                echo "  -> Submitted Step 7 (VariantFiltration + split) - Job ID: $FILTER_JOB_ID"
                 echo ""
                 echo "========================================================="
                 echo "   All VC steps submitted. Pipeline is running."
@@ -385,14 +385,14 @@ if [ "$RUN_VC" = true ]; then
             done
 
             # Post-array steps: CombineGVCFs → GenotypeGVCFs → VariantFiltration + split
-            echo ">>> [Local] Running Step 4b: CombineGVCFs..."
-            bash "$PROJECT_ROOT/03_variant_calling/04b_combine_gvcfs.sh" || exit 1
+            echo ">>> [Local] Running Step 5: CombineGVCFs..."
+            bash "$PROJECT_ROOT/03_variant_calling/05_combine_gvcfs.sh" || exit 1
             
-            echo ">>> [Local] Running Step 4c: GenotypeGVCFs..."
-            bash "$PROJECT_ROOT/03_variant_calling/04c_genotype_gvcfs.sh" || exit 1
+            echo ">>> [Local] Running Step 6: GenotypeGVCFs..."
+            bash "$PROJECT_ROOT/03_variant_calling/06_genotype_gvcfs.sh" || exit 1
             
-            echo ">>> [Local] Running Step 5: VariantFiltration + split..."
-            bash "$PROJECT_ROOT/03_variant_calling/05_variant_filtration.sh" || exit 1
+            echo ">>> [Local] Running Step 7: VariantFiltration + split..."
+            bash "$PROJECT_ROOT/03_variant_calling/07_variant_filtration.sh" || exit 1
         fi
     ) || { echo "Variant Calling failed. Exiting."; exit 1; }
     echo "VARIANT CALLING COMPLETE."

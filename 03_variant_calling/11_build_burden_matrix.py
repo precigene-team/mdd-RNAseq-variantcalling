@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# [[03_variant_calling/15_build_burden_matrix.py]]
+# [[03_variant_calling/11_build_burden_matrix.py]]
 # Goal: Build the donor x variant carrier matrix consumed by the burden steps.
 #       DATA MUNGING ONLY -- no statistics, no network access.
 #
 # Inputs:
 #   _data/variant/filtered_vcf/*_input.filtered.vcf.gz -> per-sample hard GT
-#   results/03_variant_calling/tables/07_functional_annotation.csv -> SnpEff impact
+#   results/03_variant_calling/tables/09_functional_annotation.csv -> SnpEff impact
 #   _data/_metadata/sample_sheet.csv -> donor, condition, sex
 #
 # Filters applied here (single derivation point, so every later figure and test
@@ -26,13 +26,13 @@
 #   4. Emit tidy long form plus the per-donor totals used as the GLM offset.
 #
 # Outputs:
-#   15_burden_matrix.tsv.gz  donor x variant carriers
-#   15_donor_totals.csv      per-donor totals; total_variants_detected is the
+#   11_burden_matrix.tsv.gz  donor x variant carriers
+#   11_donor_totals.csv      per-donor totals; total_variants_detected is the
 #                            offset consumed by 17
-#   15_build_summary.csv     row counts and exclusions
+#   11_build_summary.csv     row counts and exclusions
 #
 # Usage:
-#   python3 03_variant_calling/15_build_burden_matrix.py
+#   python3 03_variant_calling/11_build_burden_matrix.py
 
 from __future__ import annotations
 
@@ -52,12 +52,12 @@ PROJECT_ROOT = os.environ.get("PROJECT_ROOT") or os.path.normpath(os.path.join(S
 VCF_DIR = os.path.join(PROJECT_ROOT, "_data", "variant", "filtered_vcf")
 META_FILE = os.path.join(PROJECT_ROOT, "_data", "_metadata", "sample_sheet.csv")
 ANNOT_FILE = os.path.join(PROJECT_ROOT, "results", "03_variant_calling", "tables",
-                          "07_functional_annotation.csv")
+                          "09_functional_annotation.csv")
 TABLE_DIR = os.path.join(PROJECT_ROOT, "results", "03_variant_calling", "tables")
 
-OUT_MATRIX = os.path.join(TABLE_DIR, "15_burden_matrix.tsv.gz")
-OUT_TOTALS = os.path.join(TABLE_DIR, "15_donor_totals.csv")
-OUT_SUMMARY = os.path.join(TABLE_DIR, "15_build_summary.csv")
+OUT_MATRIX = os.path.join(TABLE_DIR, "11_burden_matrix.tsv.gz")
+OUT_TOTALS = os.path.join(TABLE_DIR, "11_donor_totals.csv")
+OUT_SUMMARY = os.path.join(TABLE_DIR, "11_build_summary.csv")
 
 IMPACT_KEEP = ("HIGH", "MODERATE", "LOW")
 
@@ -73,7 +73,7 @@ UNPLACED_PREFIXES = ("GL", "KI", "JH", "chrUn")
 
 
 def log(msg: str) -> None:
-    print(f"[15] {msg}", flush=True)
+    print(f"[11] {msg}", flush=True)
 
 
 def load_metadata() -> dict[str, dict]:
@@ -286,7 +286,7 @@ def main() -> int:
     log("-" * 78)
     log(f"matrix -> {OUT_MATRIX}")
     log(f"totals -> {OUT_TOTALS}")
-    log("next: 16_fetch_opentargets_panel.py, then 17_gene_burden_test.py")
+    log("next: 12_fetch_opentargets_panel.py, then 14_gene_burden_test.py")
     return 0
 
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# [[03_variant_calling/14_slice_igv_bams.sh]]
+# [[utils/slice_igv_bams.sh]]
 # Goal: Extract +/-100bp BAM slices around ZNF419 and CCDC30 candidate SNPs for IGV visualization.
 
 #SBATCH --job-name=slice_igv_bams

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-# [[03_variant_calling/07_functional_annotation.py]]
+# [[03_variant_calling/09_functional_annotation.py]]
 # Goal: SnpEff GRCh38.115 functional annotation across recurrent transcriptome-wide SNPs (>=8 subjects).
 #
 # Steps:
 #   1. Dynamic project root resolution and path setup.
-#   2. Ingest recurrent SNPs (>=8 subjects) from 06_transcriptome_snp_master.tsv.gz.
+#   2. Ingest recurrent SNPs (>=8 subjects) from 08_transcriptome_snp_master.tsv.gz.
 #   3. Format candidate loci into a standard VCF and execute SnpEff (GRCh38.115).
 #   4. Parse standard SnpEff INFO/ANN fields (Sequence Ontology consequence, impact, HGVS notations).
 #   5. Prioritize transcript consequences with explicit protein annotations (hgvs_p).
 #   6. Perform data integrity assertions.
-#   7. Save annotated results to results/03_variant_calling/tables/07_functional_annotation.csv.
+#   7. Save annotated results to results/03_variant_calling/tables/09_functional_annotation.csv.
 
 import os
 import sys
@@ -30,11 +30,11 @@ SCRATCH_DIR = os.path.join(PROJECT_ROOT, "scratch")
 os.makedirs(TABLES_DIR, exist_ok=True)
 os.makedirs(SCRATCH_DIR, exist_ok=True)
 
-IN_MASTER_TSV = os.path.join(TABLES_DIR, "06_transcriptome_snp_master.tsv.gz")
-OUT_CSV = os.path.join(TABLES_DIR, "07_functional_annotation.csv")
+IN_MASTER_TSV = os.path.join(TABLES_DIR, "08_transcriptome_snp_master.tsv.gz")
+OUT_CSV = os.path.join(TABLES_DIR, "09_functional_annotation.csv")
 
 if not os.path.exists(IN_MASTER_TSV):
-    sys.exit(f"[ERROR] Master SNP table not found: {IN_MASTER_TSV}. Run 06_build_transcriptome_snp_table.py first.")
+    sys.exit(f"[ERROR] Master SNP table not found: {IN_MASTER_TSV}. Run 08_build_transcriptome_snp_table.py first.")
 
 # --- Step 2: Ingest Recurrent SNPs ---
 print(f"[INFO] Ingesting recurrent SNPs (>=8 subjects) from: {IN_MASTER_TSV}")
