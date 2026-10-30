@@ -1,9 +1,9 @@
 # [[02_dge_analysis/02_rna_processing.R]]
-# Goal: Filter low-expression genes and normalize RNA-seq and RIP-seq counts using DESeq2.
+# Goal: Filter low-expression genes and normalize RNA-seq (Input) counts using DESeq2.
 #
 # Pipeline steps:
 #   1. Load annotated counts and sample metadata sheet
-#   2. Clean metadata: map sample names (strip _1) and align DataType to RNAseq/RIPseq
+#   2. Clean metadata: map sample names (strip _1) and align DataType to RNAseq
 #   3. Intersect expression columns and metadata samples to align common samples
 #   4. Split common metadata and counts by DataType
 #   5. Filter out low-expressed genes (cumulative counts >= 10)
@@ -67,10 +67,9 @@ message("Expression matrix contains ", nrow(expr_df), " unique genes.")
 metadata <- metadata %>%
   mutate(
     Sample = sub("_1$", "", File1),
-    # Map DataType to match downstream expectations (RNAseq and RIPseq)
+    # Map DataType to match downstream expectations (RNAseq)
     DataType = case_when(
       DataType == "RNA-seq" ~ "RNAseq",
-      DataType == "m6A" ~ "RIPseq",
       TRUE ~ DataType
     )
   )

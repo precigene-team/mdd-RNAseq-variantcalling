@@ -1,89 +1,26 @@
 # ==============================================================================
-# Pipeline Configuration  —  src/pipeline/config.yaml
+# Pipeline Configuration  —  02_dge_analysis/config.yaml
 #
 # Execution order:
-#   00_get_metadata  →  01_get_data  →  02_gdc_parser
-#   →  03_gencode_map  →  04_ensembl_map  →  05_data_processing
-#   →  06_DE  →  07_meta_analysis
-#   →  08_target_prediction  →  09_cerna_network  →  10_enrichment
+#   01_core_alignment (08_quantification.sh → 09_counts_qc.sh → 10_multiqc.sh)
+#   →  02_dge_analysis (01_gene_mapping.R → … → 09_heatmap_pathway.R)
+#   →  03_variant_calling
 #
-# Rule: every step's "output" block feeds the next step's "input" block.
-# {cohort} is a runtime placeholder substituted from the top-level cohorts list.
-# All paths are relative to the project root.
+# This file supplies the Ensembl annotation parameters consumed by the DGE
+# module. Paths are not configured here: scripts 01–09 resolve their own
+# inputs from the project root.
+#
+# Consumers:
+#   01_gene_mapping.R:38      cfg$ensembl_map$valid_biotypes
+#   06_annotate_results.R:81  cfg$ensembl_map$ensembl_version
 # ==============================================================================
 
-
-# ==============================================================================
-# COHORTS  (shared by every step that loops over datasets)
-# ==============================================================================
-cohorts:
-  #- "CPTAC"
-  #- "TCGA"
-  - "Datset"
-
-
-# ==============================================================================
-# STEP 03 — Mapping (src/pipeline/1_prepare_data/03_geneMapping/04_ensemblMap.R)
-# ==============================================================================
+# Key name `ensembl_map` is the path 01 and 06 read.
 ensembl_map:
-  input:
-    annotated: "raw_expression/raw_expression.csv"  # ← 03 output
-
-  output:
-    rna_counts:      "raw_expression/final/expression.csv"
-    gene_mapper:     "raw_expression/final/gene_mapper.csv"
-
+  # Ensembl release used by BioMart in 06_annotate_results.R (useEnsembl).
+  # Matches the GTF 01_gene_mapping.R parses: Homo_sapiens.GRCh38.115.gtf.
   ensembl_version: 115
+
+  # Biotypes kept when ENSG IDs are resolved to HGNC symbols in 01_gene_mapping.R.
   valid_biotypes:
     - "protein_coding"
-
-
-# ==============================================================================
-# STEP 05 — Data Processing / edgeR  (src/pipeline/1_prepare_data/05_dataProcessing.R)
-# ==============================================================================
-data_processing:
-  input:
-    metadata:     "raw_expression/sample_metadata.csv"             
-    rna_counts:   "raw_expression/final/expression.csv" 
-    gene_mapper:  "raw_expression/final/gene_mapper.csv"         
- 
-  output:
-    dge_dir:      "cleaned_expression/data"
-    filtered_dir: "cleaned_expression/data/filtered"
-    metadata:     "cleaned_expression/data/filtered/metadata.csv"
-    pca_dir:      "cleaned_expression/QC"
- 
-  min_count:  10
-  min_frac:   0.5
-  mirbase_version: "v22"
- 
-  # Outlier sample IDs — leave empty on first run.
-  # After inspecting PCA plots, add IDs per cohort and re-run from this step only.
-  # Example:
-  #   outliers:
-  #     CPTAC: ["C3L-07212", "C243048"] 383391
-  #     TCGA:  ["TCGA-06-0001"]
-  outliers:
-    #CPTAC: ["GTEX-RN5K-0011-R10A-SM-HAKXU"] #["GTEX-RN5K-0011-R10A-SM-HAKXU", "C383391", "C3N-04687"]
-    #TCGA:  [""] #TCGA-06-AABW
-
-
-# ==============================================================================
-# STEP 06 — Differential Expression  (src/pipeline/2_DE/DE.R)
-# ==============================================================================
-de:
-  input:
-    filtered_dir: "cleaned_data/{cohort}/data/filtered"              # ← 05 output
-    metadata:     "cleaned_data/{cohort}/data/filtered/metadata.csv" # ← 05 output
-
-  output:
-    de_dir: "cleaned_data/{cohort}/DE"
-    plot_dir: "cleaned_data/{cohort}/DE/plots"
-
-  logfc_cutoff: 1
-  q_cutoff:     0.05
-  
-  # Heterogeneity thresholds for per-gene Cochran's Q model selection:
-  #   p_het < het_p_cutoff  OR  I² > het_i2_cutoff  →  random-effect IVW in step 07
-  het_p_cutoff:  0.05
-  het_i2_cutoff: 0.50

@@ -155,223 +155,67 @@ for (gsea_path in gsea_files) {
     str_replace_all("(?i)ctrl", "Ctrl") %>%
     str_replace_all("(?i)mdd", "MDD") %>%
     str_replace_all("(?i)input", "In") %>%
-    str_replace_all("(?i)m6A_1|m6a_1|m6A|m6a", "IP") %>%
     str_replace_all("_+", "_") %>%
     str_remove("^_|_$")
   
   # Update the underlying vsd object names to match the new format
   colnames(vsd) <- colnames(mat)
 
-  # Track if this contrast started with fraction design matrices
-  had_fraction_originally <- "Fraction" %in% colnames(colData(vsd)) && length(unique(colData(vsd)$Fraction)) > 1
-  is_paired_delta_mode <- FALSE
-
-  # Scale fractions independently by checking the cleaned matrix column names directly
-  input_cols <- which(grepl("_In$", colnames(mat)))
-  ip_cols    <- which(grepl("_IP$", colnames(mat)))
-  
-  if (length(input_cols) > 0 && length(ip_cols) > 0) {
-    message("  [INFO] Scaling Input and IP fractions independently...")
-    mat_input <- mat[, input_cols, drop=FALSE]
-    mat_ip    <- mat[, ip_cols, drop=FALSE]
-    
-    # Row-scale each fraction separately
-    mat_input_scaled <- t(scale(t(mat_input)))
-    mat_ip_scaled    <- t(scale(t(mat_ip)))
-    
-    mat_input_scaled[is.nan(mat_input_scaled)] <- 0
-    mat_ip_scaled[is.nan(mat_ip_scaled)]       <- 0
-    
-    # Reassemble to tracking matrix
-    mat_scaled <- mat
-    mat_scaled[, input_cols] <- mat_input_scaled
-    mat_scaled[, ip_cols]    <- mat_ip_scaled
-    
-    # --- Compute Delta Matrix (IP - Input) per paired Subject ---
-    sample_names <- colnames(mat_scaled)
-    subject_ids  <- unique(sub("_(In|IP)$", "", sample_names))
-    
-    delta_mat <- matrix(NA, nrow = nrow(mat_scaled), ncol = length(subject_ids),
-                        dimnames = list(rownames(mat_scaled), subject_ids))
-    
-    for (sub_id in subject_ids) {
-      in_idx  <- which(sample_names == paste0(sub_id, "_In"))
-      ip_idx  <- which(sample_names == paste0(sub_id, "_IP"))
-      
-      if (length(in_idx) == 1 && length(ip_idx) == 1) {
-        delta_mat[, sub_id] <- mat_scaled[, ip_idx] - mat_scaled[, in_idx]
-      }
-    }
-    
-    # Drop unmatched samples
-    mat <- delta_mat[, colSums(is.na(delta_mat)) == 0, drop = FALSE]
-    message("  [INFO] Delta matrix generated successfully for ", ncol(mat), " paired subjects.")
-    
-    # Update downstream annotation metadata to match the new delta columns
-    vsd <- vsd[, which(colnames(vsd) %in% paste0(colnames(mat), "_In"))]
-    colnames(vsd) <- sub("_In$", "", colnames(vsd))
-    is_paired_delta_mode <- TRUE
-    
-  } else {
-    # Standard scaling fallback for non-fraction baseline DGE designs
-    mat <- t(scale(t(mat)))
-  }
+  # Scale rows (z-score)
+  mat <- t(scale(t(mat)))
+  mat[is.nan(mat)] <- 0
   
   # Cap values at +/- 1.5 for optimal visual dynamic range
   mat <- pmin(pmax(mat, -1.5), 1.5)
   
-  # Define annotations dynamically depending on whether Fraction and Sex Interaction are active
+  # Define annotations depending on whether the contrast is the Sex Interaction model
   is_sex_interaction <- grepl("sex_interaction", contrast)
   
   if (is_sex_interaction) {
-    if (is_paired_delta_mode) {
-      # Columns are now collapsed to subjects, no distinct fraction columns remain in mat
-      col_meta <- as.data.frame(colData(vsd)[, c("SampleType", "Gender"), drop=FALSE])
-      colnames(col_meta) <- c("Condition", "Sex")
-      col_meta$Condition <- tolower(as.character(col_meta$Condition))
-      col_meta$Sex <- tolower(as.character(col_meta$Sex))
-      
-      col_order <- order(factor(col_meta$Sex, levels = c("male", "female")), col_meta$Condition)
-      mat <- mat[, col_order, drop=FALSE]
-      col_meta_ordered <- col_meta[col_order, , drop=FALSE]
-      
-      cond_colors <- c("ctrl" = "grey85", "mdd" = "#E41A1C")
-      sex_colors <- c("male" = "#377EB8", "female" = "#F781BF")
-      ha_list <- list(Condition = cond_colors, Sex = sex_colors)
-      
-      top_ha <- HeatmapAnnotation(
-        df = col_meta_ordered,
-        col = ha_list,
-        show_legend = FALSE,
-        annotation_name_gp = gpar(fontsize = 13, fontface = "bold")
-      )
-      
-      column_split_factor <- factor(col_meta_ordered$Sex, levels = c("male", "female"))
-    } else if (had_fraction_originally) {
-      col_meta <- as.data.frame(colData(vsd)[, c("SampleType", "Fraction", "Gender"), drop=FALSE])
-      colnames(col_meta) <- c("Condition", "Fraction", "Sex")
-      col_meta$Condition <- tolower(as.character(col_meta$Condition))
-      col_meta$Sex <- tolower(as.character(col_meta$Sex))
-      col_meta$Fraction <- ifelse(tolower(as.character(col_meta$Fraction)) == "ip", "IP", "input")
-      
-      col_order <- order(
-        factor(col_meta$Sex, levels = c("male", "female")), 
-        factor(col_meta$Fraction, levels = c("input", "IP")), 
-        col_meta$Condition
-      )
-      mat <- mat[, col_order, drop=FALSE]
-      col_meta_ordered <- col_meta[col_order, , drop=FALSE]
-      
-      cond_colors <- c("ctrl" = "grey85", "mdd" = "#E41A1C")
-      frac_colors <- c("input" = "#4DAF4A", "IP" = "#984EA3")
-      sex_colors <- c("male" = "#377EB8", "female" = "#F781BF")
-      ha_list <- list(Condition = cond_colors, Fraction = frac_colors, Sex = sex_colors)
-      
-      top_ha <- HeatmapAnnotation(
-        df = col_meta_ordered,
-        col = ha_list,
-        show_legend = FALSE,
-        annotation_name_gp = gpar(fontsize = 13, fontface = "bold")
-      )
-      
-      column_split_factor <- list(
-        factor(col_meta_ordered$Sex, levels = c("male", "female")),
-        factor(col_meta_ordered$Fraction, levels = c("input", "IP"))
-      )
-    } else {
-      col_meta <- as.data.frame(colData(vsd)[, c("SampleType", "Gender"), drop=FALSE])
-      colnames(col_meta) <- c("Condition", "Sex")
-      col_meta$Condition <- tolower(as.character(col_meta$Condition))
-      col_meta$Sex <- tolower(as.character(col_meta$Sex))
-      
-      col_order <- order(factor(col_meta$Sex, levels = c("male", "female")), col_meta$Condition)
-      mat <- mat[, col_order, drop=FALSE]
-      col_meta_ordered <- col_meta[col_order, , drop=FALSE]
-      
-      cond_colors <- c("ctrl" = "grey85", "mdd" = "#E41A1C")
-      sex_colors <- c("male" = "#377EB8", "female" = "#F781BF")
-      ha_list <- list(Condition = cond_colors, Sex = sex_colors)
-      
-      top_ha <- HeatmapAnnotation(
-        df = col_meta_ordered,
-        col = ha_list,
-        show_legend = FALSE,
-        annotation_name_gp = gpar(fontsize = 13, fontface = "bold")
-      )
-      
-      column_split_factor <- factor(col_meta_ordered$Sex, levels = c("male", "female"))
-    }
+    col_meta <- as.data.frame(colData(vsd)[, c("SampleType", "Gender"), drop=FALSE])
+    colnames(col_meta) <- c("Condition", "Sex")
+    col_meta$Condition <- tolower(as.character(col_meta$Condition))
+    col_meta$Sex <- tolower(as.character(col_meta$Sex))
+
+    col_order <- order(factor(col_meta$Sex, levels = c("male", "female")), col_meta$Condition)
+    mat <- mat[, col_order, drop=FALSE]
+    col_meta_ordered <- col_meta[col_order, , drop=FALSE]
+
+    cond_colors <- c("ctrl" = "grey85", "mdd" = "#E41A1C")
+    sex_colors <- c("male" = "#377EB8", "female" = "#F781BF")
+    ha_list <- list(Condition = cond_colors, Sex = sex_colors)
+
+    top_ha <- HeatmapAnnotation(
+      df = col_meta_ordered,
+      col = ha_list,
+      show_legend = FALSE,
+      annotation_name_gp = gpar(fontsize = 13, fontface = "bold")
+    )
+
+    column_split_factor <- factor(col_meta_ordered$Sex, levels = c("male", "female"))
   } else {
     # Non-sex interaction contrasts
-    if (is_paired_delta_mode) {
-      col_meta <- as.data.frame(colData(vsd)[, c("SampleType", "Gender"), drop=FALSE])
-      colnames(col_meta) <- c("Condition", "Sex")
-      col_meta$Condition <- tolower(as.character(col_meta$Condition))
-      col_meta$Sex <- tolower(as.character(col_meta$Sex))
-      
-      col_order <- order(col_meta$Condition)
-      mat <- mat[, col_order, drop=FALSE]
-      col_meta_ordered <- col_meta[col_order, , drop=FALSE]
-      
-      cond_colors <- c("ctrl" = "grey85", "mdd" = "#E41A1C")
-      sex_colors <- c("male" = "#377EB8", "female" = "#F781BF")
-      ha_list <- list(Condition = cond_colors, Sex = sex_colors)
-      
-      top_ha <- HeatmapAnnotation(
-        df = col_meta_ordered,
-        col = ha_list,
-        show_legend = FALSE,
-        annotation_name_gp = gpar(fontsize = 13, fontface = "bold")
-      )
-      
-      column_split_factor <- factor(col_meta_ordered$Condition, levels = c("ctrl", "mdd"))
-    } else if (had_fraction_originally) {
-      col_meta <- as.data.frame(colData(vsd)[, c("SampleType", "Fraction", "Gender"), drop=FALSE])
-      colnames(col_meta) <- c("Condition", "Fraction", "Sex")
-      col_meta$Condition <- tolower(as.character(col_meta$Condition))
-      col_meta$Sex <- tolower(as.character(col_meta$Sex))
-      col_meta$Fraction <- ifelse(tolower(as.character(col_meta$Fraction)) == "ip", "IP", "input")
-      
-      col_order <- order(factor(col_meta$Fraction, levels = c("input", "IP")), col_meta$Condition)
-      mat <- mat[, col_order, drop=FALSE]
-      col_meta_ordered <- col_meta[col_order, , drop=FALSE]
-      
-      cond_colors <- c("ctrl" = "grey85", "mdd" = "#E41A1C")
-      frac_colors <- c("input" = "#4DAF4A", "IP" = "#984EA3")
-      sex_colors <- c("male" = "#377EB8", "female" = "#F781BF")
-      ha_list <- list(Condition = cond_colors, Fraction = frac_colors, Sex = sex_colors)
-      
-      top_ha <- HeatmapAnnotation(
-        df = col_meta_ordered,
-        col = ha_list,
-        show_legend = FALSE,
-        annotation_name_gp = gpar(fontsize = 13, fontface = "bold")
-      )
-      
-      column_split_factor <- factor(col_meta_ordered$Fraction, levels = c("input", "IP"))
-    } else {
-      col_meta <- as.data.frame(colData(vsd)[, c("SampleType", "Gender"), drop=FALSE])
-      colnames(col_meta) <- c("Condition", "Sex")
-      col_meta$Condition <- tolower(as.character(col_meta$Condition))
-      col_meta$Sex <- tolower(as.character(col_meta$Sex))
-      
-      col_order <- order(col_meta$Condition)
-      mat <- mat[, col_order, drop=FALSE]
-      col_meta_ordered <- col_meta[col_order, , drop=FALSE]
-      
-      cond_colors <- c("ctrl" = "grey85", "mdd" = "#E41A1C")
-      sex_colors <- c("male" = "#377EB8", "female" = "#F781BF")
-      ha_list <- list(Condition = cond_colors, Sex = sex_colors)
-      
-      top_ha <- HeatmapAnnotation(
-        df = col_meta_ordered,
-        col = ha_list,
-        show_legend = FALSE,
-        annotation_name_gp = gpar(fontsize = 13, fontface = "bold")
-      )
-      
-      column_split_factor <- factor(col_meta_ordered$Condition, levels = c("ctrl", "mdd"))
-    }
+    col_meta <- as.data.frame(colData(vsd)[, c("SampleType", "Gender"), drop=FALSE])
+    colnames(col_meta) <- c("Condition", "Sex")
+    col_meta$Condition <- tolower(as.character(col_meta$Condition))
+    col_meta$Sex <- tolower(as.character(col_meta$Sex))
+
+    col_order <- order(col_meta$Condition)
+    mat <- mat[, col_order, drop=FALSE]
+    col_meta_ordered <- col_meta[col_order, , drop=FALSE]
+
+    cond_colors <- c("ctrl" = "grey85", "mdd" = "#E41A1C")
+    sex_colors <- c("male" = "#377EB8", "female" = "#F781BF")
+    ha_list <- list(Condition = cond_colors, Sex = sex_colors)
+
+    top_ha <- HeatmapAnnotation(
+      df = col_meta_ordered,
+      col = ha_list,
+      show_legend = FALSE,
+      annotation_name_gp = gpar(fontsize = 13, fontface = "bold")
+    )
+
+    column_split_factor <- factor(col_meta_ordered$Condition, levels = c("ctrl", "mdd"))
   }
   
   pathway_factor <- factor(heatmap_df$pathway_display, levels = unique(heatmap_df$pathway_display))
@@ -387,11 +231,6 @@ for (gsea_path in gsea_files) {
       "deg_male_input" = "Male Baseline Gene Expression (RNA-seq)",
       "deg_female_input" = "Female Baseline Gene Expression (RNA-seq)",
       "deg_sex_interaction_input" = "Sex-Differential Gene Expression Interaction (RNA-seq)",
-      "deg_male_ip" = "Male Absolute Methylated RNA Abundance (IP)",
-      "deg_female_ip" = "Female Absolute Methylated RNA Abundance (IP)",
-      "meth_male_interaction" = "Male Relative Methylation (IP vs Input Delta)",
-      "meth_female_interaction" = "Female Relative Methylation (IP vs Input Delta)",
-      "meth_sex_interaction" = "Sex-Differential Relative Methylation (3-Way Interaction Delta)",
       stringr::str_to_title(gsub("_", " ", cntrst))
     )
   }
@@ -400,7 +239,7 @@ for (gsea_path in gsea_files) {
   
   ht <- Heatmap(
     mat,
-    name = ifelse(is_paired_delta_mode, "Δ z-score", "z-score"),
+    name = "z-score",
     col = col_fun,
     row_split = pathway_factor,
     row_title_side = "right",
@@ -435,12 +274,6 @@ for (gsea_path in gsea_files) {
                                             at = c("ctrl", "mdd"), 
                                             labels = c("Control", "MDD"),
                                             legend_gp = gpar(fill = cond_colors))
-  if (had_fraction_originally && !is_paired_delta_mode) {
-    lgd_list[[length(lgd_list) + 1]] <- Legend(title = "Fraction", 
-                                              at = c("input", "IP"), 
-                                              labels = c("Input (RNA)", "IP (m6A)"),
-                                              legend_gp = gpar(fill = frac_colors))
-  }
   
   # Check if Sex variable exists inside ha_list mapping context
   if ("Sex" %in% names(ha_list)) {
@@ -451,7 +284,7 @@ for (gsea_path in gsea_files) {
                                               legend_gp = gpar(fill = sex_colors))
   }
   
-  lgd_list[[length(lgd_list) + 1]] <- Legend(title = ifelse(is_paired_delta_mode, "Δ z-score", "z-score"), 
+  lgd_list[[length(lgd_list) + 1]] <- Legend(title = "z-score", 
                                             col_fun = col_fun, 
                                             at = c(-1.5, 0, 1.5))
   

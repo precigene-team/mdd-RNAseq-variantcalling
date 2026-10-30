@@ -1,25 +1,18 @@
 # [[02_dge_analysis/04_deg_analysis.R]]
 # Goal: Run DESeq2 differential expression analysis (DGE) with stratified sex-specific contrasts
-#       and relative methylation interaction modeling, saving results to tables/ and _data/.
+#       on the Input (RNA-seq) samples, saving results to tables/ and _data/.
 #
 # Steps:
-#   1. Load dds RDS objects for RNA-seq (Input) and RIP-seq (IP)
-#   2. Load metadata from sample_sheet.csv and annotate dds objects (Gender, Subject, Fraction)
-#   3. Apply a relaxed, peak-aware QC library size gate (2M floor) to protect sample pairings
+#   1. Load the dds RDS object for the Input (RNA-seq) samples
+#   2. Load metadata from sample_sheet.csv and annotate the dds object (Gender, Subject)
+#   3. Apply a relaxed, gene-level QC library size gate (2M floor) on the Input samples
 #   4. Run Baseline DGE (Input/RNA-seq only) for:
 #      - Male DGE (stratified)
 #      - Female DGE (stratified)
 #      - Sex Interaction Model (sex-differential response)
-#   5. Run Baseline DGE (IP/RIP-seq only) for:
-#      - Male IP DGE (stratified)
-#      - Female IP DGE (stratified)
-#   6. Run Relative Methylation Interaction DGE on intersecting peaks for:
-#      - Male Relative Methylation (paired interaction with nested subjects)
-#      - Female Relative Methylation (paired interaction with nested subjects)
-#      - Three-Way Interaction (sex-specific methylation change)
-#   7. Shrink log fold changes globally using ashr to ensure statistical consistency across all phases
-#   8. Save results tables (full and significant) to results/02_dge_analysis/tables/ prefixed with 04_
-#   9. Save serialized dds and results objects to _data/RData/02_dge_analysis/ prefixed with 04_
+#   5. Shrink log fold changes globally using ashr to ensure statistical consistency across all contrasts
+#   6. Save results tables (full and significant) to results/02_dge_analysis/tables/ prefixed with 04_
+#   7. Save serialized dds and results objects to _data/RData/02_dge_analysis/ prefixed with 04_
 
 suppressPackageStartupMessages({
   library(DESeq2)
@@ -55,11 +48,10 @@ metadata <- read_csv(meta_file, show_col_types = FALSE) %>%
   mutate(
     Sample = sub("_1$", "", File1),
     Subject = sub("_(input|m6A)$", "", Sample),
-    Fraction = ifelse(DataType == "RNA-seq", "Input", "IP"),
     Gender = factor(Gender),
     SampleType = factor(SampleType)
   ) %>%
-  select(Sample, Subject, Gender, SampleType, Fraction) %>%
+  select(Sample, Subject, Gender, SampleType) %>%
   distinct()
 
 # Helper function to add full metadata annotations to a dds object
@@ -74,7 +66,6 @@ annotate_dds <- function(dds) {
   
   colData(dds)$Gender <- factor(cd_annot$Gender)
   colData(dds)$Subject <- factor(cd_annot$Subject)
-  colData(dds)$Fraction <- factor(cd_annot$Fraction)
   
   # Set reference levels safely
   s_type <- factor(colData(dds)$SampleType)
@@ -87,52 +78,40 @@ annotate_dds <- function(dds) {
     colData(dds)$Gender <- relevel(gender_f, ref = "female")
   }
   
-  fraction_f <- factor(colData(dds)$Fraction)
-  if ("Input" %in% levels(fraction_f)) {
-    colData(dds)$Fraction <- relevel(fraction_f, ref = "Input")
-  }
-  
   return(dds)
 }
 
-# Load dds RDS files
+# Load dds RDS file
 dds_rnaseq_file <- file.path(rdata_dir, "02_RNAseq_dds.rds")
-dds_ripseq_file <- file.path(rdata_dir, "02_RIPseq_dds.rds")
 
-if (!file.exists(dds_rnaseq_file) || !file.exists(dds_ripseq_file)) {
-  stop("DDS RDS files not found in ", rdata_dir)
+if (!file.exists(dds_rnaseq_file)) {
+  stop("DDS RDS file not found: ", dds_rnaseq_file)
 }
 
-message("[INFO] Loading and annotating input DDS objects...")
+message("[INFO] Loading and annotating the Input DDS object...")
 dds_rnaseq <- annotate_dds(readRDS(dds_rnaseq_file))
-dds_ripseq <- annotate_dds(readRDS(dds_ripseq_file))
 
-# --- Dynamic QC Gating (Exclude extreme outlier subjects) ---
+# --- Dynamic QC Gating (Exclude extreme outlier samples) ---
 MIN_LIBRARY_SIZE <- 2e6 
 
-# Calculate total peak-mapped counts for each sample
+# Calculate total gene-mapped counts for each sample
 rna_lib_sizes <- colSums(counts(dds_rnaseq))
-rip_lib_sizes <- colSums(counts(dds_ripseq))
 
-# Identify subjects where either Input or IP library falls below the 2M floor
-low_qual_rna_subs <- colData(dds_rnaseq)$Subject[rna_lib_sizes < MIN_LIBRARY_SIZE]
-low_qual_rip_subs <- colData(dds_ripseq)$Subject[rip_lib_sizes < MIN_LIBRARY_SIZE]
-excluded_subjects <- unique(c(as.character(low_qual_rna_subs), as.character(low_qual_rip_subs)))
+# Identify samples falling below the 2M floor
+low_qual_subs <- colData(dds_rnaseq)$Subject[rna_lib_sizes < MIN_LIBRARY_SIZE]
+excluded_subjects <- unique(as.character(low_qual_subs))
 
 if (length(excluded_subjects) > 0) {
-  message("[QC GATE] Excluding subjects with at least one library < ", 
+  message("[QC GATE] Excluding samples below ", 
           format(MIN_LIBRARY_SIZE, scientific = FALSE), " counts: ", 
           paste(excluded_subjects, collapse = ", "))
   
-  # Exclude from both datasets to maintain proper subject pairing for interaction models
   dds_rnaseq <- dds_rnaseq[, !colData(dds_rnaseq)$Subject %in% excluded_subjects]
-  dds_ripseq <- dds_ripseq[, !colData(dds_ripseq)$Subject %in% excluded_subjects]
   
   # Drop unused subject levels to prevent design matrix rank deficiency
   colData(dds_rnaseq)$Subject <- droplevels(colData(dds_rnaseq)$Subject)
-  colData(dds_ripseq)$Subject <- droplevels(colData(dds_ripseq)$Subject)
 } else {
-  message("[QC GATE] All subjects successfully passed the library size gate (", 
+  message("[QC GATE] All samples successfully passed the library size gate (", 
           format(MIN_LIBRARY_SIZE, scientific = FALSE), ").")
 }
 
@@ -236,12 +215,12 @@ run_deseq_and_save <- function(dds_sub, design_formula, coef_regex, contrast_spe
 }
 
 #--------------------------------------------------
-# Phase A: Baseline DGE (Input/RNA-seq Only)
+# Baseline DGE (Input/RNA-seq Only)
 #--------------------------------------------------
-message("\n--- Running Phase A: Baseline DGE (RNA-seq / Input) ---")
+message("\n--- Running Baseline DGE (RNA-seq / Input) ---")
 
-# A1. Male DGE
-message("A1. Running Male Input DGE...")
+# 1. Male DGE
+message("1. Running Male Input DGE...")
 dds_male_input <- dds_rnaseq[, colData(dds_rnaseq)$Gender == "male"]
 colData(dds_male_input)$Subject <- droplevels(colData(dds_male_input)$Subject)
 run_deseq_and_save(
@@ -252,8 +231,8 @@ run_deseq_and_save(
   output_name = "deg_male_input"
 )
 
-# A2. Female DGE
-message("A2. Running Female Input DGE...")
+# 2. Female DGE
+message("2. Running Female Input DGE...")
 dds_female_input <- dds_rnaseq[, colData(dds_rnaseq)$Gender == "female"]
 colData(dds_female_input)$Subject <- droplevels(colData(dds_female_input)$Subject)
 run_deseq_and_save(
@@ -264,124 +243,14 @@ run_deseq_and_save(
   output_name = "deg_female_input"
 )
 
-# A3. Sex Interaction Model (All Input samples)
-message("A3. Running Sex-Differential Input Response (Interaction)...")
+# 3. Sex Interaction Model (All Input samples)
+message("3. Running Sex-Differential Input Response (Interaction)...")
 run_deseq_and_save(
   dds_sub = dds_rnaseq,
   design_formula = ~ Gender + SampleType + Gender:SampleType,
   coef_regex = "Gender.*male.*SampleType.*mdd",
   contrast_spec = NULL,
   output_name = "deg_sex_interaction_input"
-)
-
-#--------------------------------------------------
-# Phase B: Baseline DGE (IP/RIP-seq Only)
-#--------------------------------------------------
-message("\n--- Running Phase B: Baseline DGE (RIP-seq / IP) ---")
-
-# B1. Male IP DGE
-message("B1. Running Male IP DGE...")
-dds_male_ip <- dds_ripseq[, colData(dds_ripseq)$Gender == "male"]
-colData(dds_male_ip)$Subject <- droplevels(colData(dds_male_ip)$Subject)
-run_deseq_and_save(
-  dds_sub = dds_male_ip,
-  design_formula = ~ SampleType,
-  coef_regex = "SampleType_mdd_vs_ctrl",
-  contrast_spec = c("SampleType", "mdd", "ctrl"),
-  output_name = "deg_male_ip"
-)
-
-# B2. Female IP DGE
-message("B2. Running Female IP DGE...")
-dds_female_ip <- dds_ripseq[, colData(dds_ripseq)$Gender == "female"]
-colData(dds_female_ip)$Subject <- droplevels(colData(dds_female_ip)$Subject)
-run_deseq_and_save(
-  dds_sub = dds_female_ip,
-  design_formula = ~ SampleType,
-  coef_regex = "SampleType_mdd_vs_ctrl",
-  contrast_spec = c("SampleType", "mdd", "ctrl"),
-  output_name = "deg_female_ip"
-)
-
-#--------------------------------------------------
-# Phase C: Relative Methylation (MeRIP-seq Interaction Model)
-#--------------------------------------------------
-message("\n--- Running Phase C: Relative Methylation Interactions ---")
-
-# Combine counts on intersecting genes
-common_genes <- intersect(rownames(dds_rnaseq), rownames(dds_ripseq))
-combined_counts <- cbind(counts(dds_rnaseq)[common_genes, ], counts(dds_ripseq)[common_genes, ])
-colData_combined <- rbind(as.data.frame(colData(dds_rnaseq)), as.data.frame(colData(dds_ripseq)))
-
-dds_combined <- DESeqDataSetFromMatrix(
-  countData = combined_counts,
-  colData = colData_combined,
-  design = ~ 1
-)
-
-# C1. Male Relative Methylation
-message("C1. Running Male Relative Methylation (Interaction)...")
-dds_male_combined <- dds_combined[, colData(dds_combined)$Gender == "male"]
-colData(dds_male_combined)$Subject <- droplevels(colData(dds_male_combined)$Subject)
-
-# Reconstruct nested subject factor for male subset
-cd_male <- as.data.frame(colData(dds_male_combined))
-cd_male <- cd_male %>%
-  group_by(SampleType) %>%
-  mutate(Subject.nested = factor(as.integer(factor(Subject)))) %>%
-  ungroup()
-colData(dds_male_combined)$Subject.nested <- factor(cd_male$Subject.nested)
-
-run_deseq_and_save(
-  dds_sub = dds_male_combined,
-  design_formula = ~ SampleType + SampleType:Subject.nested + Fraction + Fraction:SampleType,
-  coef_regex = "(Fraction.*IP.*SampleType.*mdd|SampleType.*mdd.*Fraction.*IP)",
-  contrast_spec = NULL,
-  output_name = "meth_male_interaction",
-  use_model_matrix = TRUE
-)
-
-# C2. Female Relative Methylation
-message("C2. Running Female Relative Methylation (Interaction)...")
-dds_female_combined <- dds_combined[, colData(dds_combined)$Gender == "female"]
-colData(dds_female_combined)$Subject <- droplevels(colData(dds_female_combined)$Subject)
-
-# Reconstruct nested subject factor for female subset (unbalanced: 9 ctrl vs 10 mdd)
-cd_female <- as.data.frame(colData(dds_female_combined))
-cd_female <- cd_female %>%
-  group_by(SampleType) %>%
-  mutate(Subject.nested = factor(as.integer(factor(Subject)))) %>%
-  ungroup()
-colData(dds_female_combined)$Subject.nested <- factor(cd_female$Subject.nested)
-
-run_deseq_and_save(
-  dds_sub = dds_female_combined,
-  design_formula = ~ SampleType + SampleType:Subject.nested + Fraction + Fraction:SampleType,
-  coef_regex = "(Fraction.*IP.*SampleType.*mdd|SampleType.*mdd.*Fraction.*IP)",
-  contrast_spec = NULL,
-  output_name = "meth_female_interaction",
-  use_model_matrix = TRUE
-)
-
-# C3. Three-Way Interaction (Sex-Specific Methylation Change)
-message("C3. Running Three-Way Sex-Specific Methylation Change (Interaction)...")
-colData(dds_combined)$Subject <- droplevels(colData(dds_combined)$Subject)
-
-# Reconstruct nested subject factor for all samples
-cd_all <- as.data.frame(colData(dds_combined))
-cd_all <- cd_all %>%
-  group_by(Gender, SampleType) %>%
-  mutate(Subject.nested = factor(as.integer(factor(Subject)))) %>%
-  ungroup()
-colData(dds_combined)$Subject.nested <- factor(cd_all$Subject.nested)
-
-run_deseq_and_save(
-  dds_sub = dds_combined,
-  design_formula = ~ Gender*SampleType + Gender:SampleType:Subject.nested + Fraction + Fraction:Gender + Fraction:SampleType + Fraction:Gender:SampleType,
-  coef_regex = "(Fraction.*IP.*Gender.*male.*SampleType.*mdd|Gender.*male.*SampleType.*mdd.*Fraction.*IP)",
-  contrast_spec = NULL,
-  output_name = "meth_sex_interaction",
-  use_model_matrix = TRUE
 )
 
 message("\n04_deg_analysis.R completed successfully.")

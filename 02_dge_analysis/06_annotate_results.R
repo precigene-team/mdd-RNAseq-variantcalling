@@ -1,9 +1,9 @@
 # [[02_dge_analysis/06_annotate_results.R]]
 # Goal: Map significant DEG gene names to Ensembl IDs, biotypes, genomic coordinates,
-#       and export SRA run accessions linked to each cohort subgroup.
+#       and export SRA run accessions linked to each Input (RNA-seq) cohort subgroup.
 #
 # Steps:
-#   1. Load metadata from sample_sheet.csv and export SRA accession lists per subgroup.
+#   1. Load metadata from sample_sheet.csv and export SRA accession lists for the Input subgroups.
 #   2. Load significant DGE results from results/02_dge_analysis/tables/04_*_sig.csv
 #   3. Connect to Ensembl BioMart to fetch genomic coordinate and biotype annotations.
 #   4. Join annotations to each significant DGE table.
@@ -34,13 +34,14 @@ if (!file.exists(meta_file)) {
   stop("Metadata file not found: ", meta_file)
 }
 
-# 1. Export SRA Accessions per Cohort Subgroup
-message("[INFO] Exporting SRA run accessions per subgroup...")
-metadata <- read_csv(meta_file, show_col_types = FALSE)
+# 1. Export SRA Accessions per Input Cohort Subgroup
+message("[INFO] Exporting SRA run accessions per Input subgroup...")
+metadata <- read_csv(meta_file, show_col_types = FALSE) %>%
+  filter(DataType == "RNA-seq")
 
-# Generate list of accessions for each combination of Gender, SampleType, and DataType
+# Generate list of accessions for each combination of Gender and SampleType
 subgroups <- metadata %>%
-  group_by(Gender, SampleType, DataType) %>%
+  group_by(Gender, SampleType) %>%
   summarise(Accessions = paste(sort(unique(Accession)), collapse = ", "), .groups = "drop")
 
 # Save accession lists to a text file

@@ -41,13 +41,16 @@ Below is the layout of the analysis workspace:
   * [`10_multiqc.sh`](01_core_alignment/10_multiqc.sh): Centralized report aggregator.
 
 * **[`02_dge_analysis/`](02_dge_analysis)**: Expression statistical testing.
-  * [`config.yaml`](02_dge_analysis/config.yaml): Parameter configurations.
-  * [`01_gene_mapping.R`](02_dge_analysis/01_gene_mapping.R): Ensembl database mapping via BioMart.
+  * [`config.yaml`](02_dge_analysis/config.yaml): Ensembl annotation parameters (`ensembl_version`, `valid_biotypes`).
+  * [`01_gene_mapping.R`](02_dge_analysis/01_gene_mapping.R): ENSG → HGNC symbol mapping from the Ensembl GTF, Input samples only.
   * [`02_rna_processing.R`](02_dge_analysis/02_rna_processing.R): Low-count filtering and normalization.
   * [`03_pca_analysis.R`](02_dge_analysis/03_pca_analysis.R): Cohort dimensionality reduction.
   * [`04_deg_analysis.R`](02_dge_analysis/04_deg_analysis.R): Differential expression testing.
   * [`05_dge_plotting.R`](02_dge_analysis/05_dge_plotting.R): Generate Volcano/MA plots.
   * [`06_annotate_results.R`](02_dge_analysis/06_annotate_results.R): Map genes to functional labels.
+  * [`07_enrichment_analysis.R`](02_dge_analysis/07_enrichment_analysis.R): GO/KEGG over-representation and GSEA on significant genes.
+  * [`08_enrichment_plotting.R`](02_dge_analysis/08_enrichment_plotting.R): GSEA NES barplots per contrast.
+  * [`09_heatmap_pathway.R`](02_dge_analysis/09_heatmap_pathway.R): Leading-edge pathway heatmaps (row z-score).
 
 * **[`03_variant_calling/`](03_variant_calling)**: GATK joint calling and clinical translation.
   * [`01_read_groups.sh`](03_variant_calling/01_read_groups.sh): Add read groups to aligned BAMs.
@@ -118,6 +121,9 @@ Rscript 02_dge_analysis/03_pca_analysis.R
 Rscript 02_dge_analysis/04_deg_analysis.R
 Rscript 02_dge_analysis/05_dge_plotting.R
 Rscript 02_dge_analysis/06_annotate_results.R
+Rscript 02_dge_analysis/07_enrichment_analysis.R
+Rscript 02_dge_analysis/08_enrichment_plotting.R
+Rscript 02_dge_analysis/09_heatmap_pathway.R
 ```
 
 ### 3. Variant Calling & Clinical Translation

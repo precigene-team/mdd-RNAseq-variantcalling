@@ -39,7 +39,7 @@ if (!file.exists(mapper_file)) {
   stop("Gene mapper file not found: ", mapper_file)
 }
 
-# Load gene mapping (peak_id → gene_name mapping)
+# Load gene mapping (ensg → gene_name, gene_type)
 message("[INFO] Loading gene mapper...")
 gene_mapper <- read_csv(mapper_file, show_col_types = FALSE)
 
@@ -52,12 +52,7 @@ h_t2g <- msigdbr(species = "Homo sapiens", category = "H") %>%
 contrasts <- c(
   "deg_male_input",
   "deg_female_input",
-  "deg_sex_interaction_input",
-  "deg_male_ip",
-  "deg_female_ip",
-  "meth_male_interaction",
-  "meth_female_interaction",
-  "meth_sex_interaction"
+  "deg_sex_interaction_input"
 )
 
 message("\n--- Running clusterProfiler Enrichment Analysis ---")

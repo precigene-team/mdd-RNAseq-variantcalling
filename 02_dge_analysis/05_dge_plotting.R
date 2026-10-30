@@ -1,5 +1,5 @@
 # [[02_dge_analysis/05_dge_plotting.R]]
-# Goal: Load multi-factor DGE and relative methylation results to generate Volcano and MA plots.
+# Goal: Load DGE results for the Input (RNA-seq) samples to generate Volcano and MA plots.
 #
 # Pipeline steps:
 #   1. Load shrunken results RDS objects and raw results RDS objects for each contrast
@@ -171,40 +171,10 @@ contrasts_list <- list(
     title = "Female RNA-seq DGE (MDD vs Ctrl)"
   ),
   list(
-    rds_prefix = "deg_male_ip",
-    volcano = "05_volcano_male_ip.png",
-    ma = "05_ma_male_ip.png",
-    title = "Male IP DGE (MDD vs Ctrl)"
-  ),
-  list(
-    rds_prefix = "deg_female_ip",
-    volcano = "05_volcano_female_ip.png",
-    ma = "05_ma_female_ip.png",
-    title = "Female IP DGE (MDD vs Ctrl)"
-  ),
-  list(
-    rds_prefix = "meth_male_interaction",
-    volcano = "05_volcano_male_meth.png",
-    ma = "05_ma_male_meth.png",
-    title = "Male Relative Methylation (Interaction)"
-  ),
-  list(
-    rds_prefix = "meth_female_interaction",
-    volcano = "05_volcano_female_meth.png",
-    ma = "05_ma_female_meth.png",
-    title = "Female Relative Methylation (Interaction)"
-  ),
-  list(
     rds_prefix = "deg_sex_interaction_input",
     volcano = "05_volcano_sex_interaction_input.png",
     ma = "05_ma_sex_interaction_input.png",
     title = "Sex-Specific MDD Response\n(Gender × Condition Interaction)"
-  ),
-  list(
-    rds_prefix = "meth_sex_interaction",
-    volcano = "05_volcano_sex_interaction_meth.png",
-    ma = "05_ma_sex_interaction_meth.png",
-    title = "Sex-Specific m⁶A Methylation\n(Gender × Condition × Fraction)"
   )
 )
 

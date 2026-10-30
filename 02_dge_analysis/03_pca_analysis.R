@@ -251,7 +251,7 @@ process_pca <- function(datatype) {
   message("Finished PCA variants for ", datatype)
 }
 
-datatypes <- c("RNAseq", "RIPseq")
+datatypes <- c("RNAseq")
 for (dt in datatypes) {
   tryCatch({
     process_pca(dt)
