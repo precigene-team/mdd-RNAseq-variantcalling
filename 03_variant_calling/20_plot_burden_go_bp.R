@@ -1,7 +1,7 @@
 # [[03_variant_calling/20_plot_burden_go_bp.R]]
 # Goal: Control vs MDD burden for the Gene Ontology Biological Process branch --
 #       LEFT, the ten most impacted sets across all collections; RIGHT, the GO:BP
-#       synapse and neurotransmission sets. Tables from 20; styling from 21.
+#       synapse and neurotransmission sets. Tables from 16; styling from 17.
 #
 # Reads:
 #   16_burden_per_donor.csv

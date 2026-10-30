@@ -12,7 +12,7 @@
 #   11_burden_matrix.tsv.gz  donor x variant carriage with gene annotation
 #   11_donor_totals.csv      donor, condition, sex, total variants (the offset)
 #   13_pathway_sets.tsv     msigdbr sets, collection-labelled
-#   14_pathway_burden.csv    statistics from 17 (optional; attached if present)
+#   14_pathway_burden.csv    statistics from 14 (optional; attached if present)
 #
 # Outputs:
 #   16_burden_per_donor.csv  one row per donor per set, all collections

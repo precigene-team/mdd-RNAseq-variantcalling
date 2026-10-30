@@ -39,6 +39,37 @@ VC_STEPS=(
     "03_split_n_cigar.sh|Split N Cigar|12G|4"
     "04_haplotype_caller.sh|Haplotype Caller|24G|4"
 )
+
+# 4. Post-Calling Steps (Steps 08-22, README order; 17 is the shared plot helper
+#    sourced by 18-22, so it is never invoked directly)
+VC_POST_STEPS=(
+    "python3|08_build_transcriptome_snp_table.py"
+    "python3|09_functional_annotation.py"
+    "python3|10_prioritize_mdd_candidate_snps.py"
+    "python3|11_build_burden_matrix.py"
+    "python3|12_fetch_opentargets_panel.py"
+    "Rscript|13_export_pathway_sets.R"
+    "python3|14_gene_burden_test.py"
+    "Rscript|15_plot_burden_results.R"
+    "Rscript|16_burden_control_vs_mdd_table.R"
+    "Rscript|18_plot_burden_reactome.R"
+    "Rscript|19_plot_burden_kegg.R"
+    "Rscript|20_plot_burden_go_bp.R"
+    "Rscript|21_plot_burden_go_cc.R"
+    "Rscript|22_plot_burden_go_mf.R"
+)
+
+run_vc_post() {
+    local tag="${1:-Local}"
+    for step in "${VC_POST_STEPS[@]}"; do
+        interp="${step%%|*}"
+        script="${step##*|}"
+        step_num="${script:0:2}"
+        echo ">>> [$tag] Running Step $step_num: $script..."
+        "$interp" "$PROJECT_ROOT/03_variant_calling/$script" || { echo "ERROR: Step $step_num ($script) failed." >&2; exit 1; }
+    done
+    echo ">>> [$tag] Steps 08-22 (Annotation + Burden) complete."
+}
 # --------------------------------------
 
 # --- Logging Setup ---
@@ -91,9 +122,10 @@ fi
 RUN_CORE=false
 RUN_DGE=false
 RUN_VC=false
+RUN_VC_POST=false
 
 if [ "$#" -eq 0 ]; then
-    echo "Usage: ./run {core|dge|vc|all}"
+    echo "Usage: ./run {core|dge|vc|vc-post|all}"
     exit 1
 fi
 
@@ -167,7 +199,8 @@ while [ "$#" -gt 0 ]; do
                 # --- Steps 05-07: GVCF combine, genotype, filter (single jobs) ---
                 mkdir -p "$PROJECT_ROOT/_data/logs/combine_gvcfs" \
                          "$PROJECT_ROOT/_data/logs/genotype_gvcfs" \
-                         "$PROJECT_ROOT/_data/logs/variant_filtration"
+                         "$PROJECT_ROOT/_data/logs/variant_filtration" \
+                         "$PROJECT_ROOT/_data/logs/vc_annotation_burden"
                 
                 echo ""
                 echo "[INFO] Submitting Step 5 (CombineGVCFs)..."
@@ -190,6 +223,23 @@ while [ "$#" -gt 0 ]; do
                     --job-name="vc_variant_filtration" \
                     "$PROJECT_ROOT/03_variant_calling/07_variant_filtration.sh")
                 echo "  -> Submitted Step 7 (VariantFiltration + split) - Job ID: $FILTER_JOB_ID"
+
+                # --- Steps 08-22: transcriptome SNP table, annotation, burden test (single job) ---
+                echo "[INFO] Submitting Steps 8-22 (Annotation + Burden)..."
+                POST_JOB_ID=$(sbatch --parsable \
+                    --dependency=afterok:$FILTER_JOB_ID \
+                    --job-name="vc_annotation_burden" \
+                    --cpus-per-task="${VC_TASK_CPUS}" \
+                    --mem="${VC_TASK_MEM}" \
+                    --time="${VC_TASK_TIME}" \
+                    --output="_data/logs/vc_annotation_burden/annot_burden_%j.log" \
+                    --error="_data/logs/vc_annotation_burden/annot_burden_%j.err" \
+                    "$PROJECT_ROOT/run" vc-post)
+                if [ -z "$POST_JOB_ID" ]; then
+                    echo "  [WARN] Steps 8-22 submission failed. Run them manually: ./run vc-post" >&2
+                else
+                    echo "  -> Submitted Steps 8-22 (Annotation + Burden) - Job ID: $POST_JOB_ID (Dependent on $FILTER_JOB_ID)"
+                fi
                 echo ""
                 echo "========================================================="
                 echo "   All VC steps submitted. Pipeline is running."
@@ -198,6 +248,10 @@ while [ "$#" -gt 0 ]; do
                 exit 0
             fi
             ;;
+        vc-post)
+            RUN_VC_POST=true
+            shift
+        ;;
         vc-task)
             # Executed by Slurm inside each array task
             if [ -z "$SLURM_ARRAY_TASK_ID" ]; then
@@ -393,9 +447,22 @@ if [ "$RUN_VC" = true ]; then
             
             echo ">>> [Local] Running Step 7: VariantFiltration + split..."
             bash "$PROJECT_ROOT/03_variant_calling/07_variant_filtration.sh" || exit 1
+
+            # Post-calling steps: transcriptome SNP table, annotation, burden test (08-22)
+            run_vc_post "Local"
         fi
     ) || { echo "Variant Calling failed. Exiting."; exit 1; }
     echo "VARIANT CALLING COMPLETE."
+    echo ""
+fi
+
+# --- Annotation & Burden Module (Steps 08-22, standalone) ---
+if [ "$RUN_VC_POST" = true ]; then
+    echo ">>> Running ANNOTATION & BURDEN Module (Steps 08-22)..."
+    (
+        run_vc_post "Local"
+    ) || { echo "Annotation & Burden failed. Exiting."; exit 1; }
+    echo "ANNOTATION & BURDEN COMPLETE."
     echo ""
 fi
 

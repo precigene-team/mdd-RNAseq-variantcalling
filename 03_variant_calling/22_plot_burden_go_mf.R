@@ -1,7 +1,7 @@
 # [[03_variant_calling/22_plot_burden_go_mf.R]]
 # Goal: Control vs MDD burden for the Gene Ontology Molecular Function branch --
 #       LEFT, the ten most impacted sets across all collections; RIGHT, the GO:MF
-#       synaptic and neurotransmitter receptor sets. Tables from 20; styling 21.
+#       synaptic and neurotransmitter receptor sets. Tables from 16; styling 17.
 #
 # Reads:
 #   16_burden_per_donor.csv

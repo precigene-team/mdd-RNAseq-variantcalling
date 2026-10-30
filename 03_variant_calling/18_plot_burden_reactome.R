@@ -1,7 +1,7 @@
 # [[03_variant_calling/18_plot_burden_reactome.R]]
 # Goal: Control vs MDD burden for the Reactome collection -- LEFT, the ten most
 #       impacted sets across all collections; RIGHT, the Reactome synapse and
-#       neurotransmission sets. Tables come from 20; shared styling from 21.
+#       neurotransmission sets. Tables come from 16; shared styling from 17.
 #
 # Reads:
 #   16_burden_per_donor.csv

@@ -1,7 +1,7 @@
 # [[03_variant_calling/21_plot_burden_go_cc.R]]
 # Goal: Control vs MDD burden for the Gene Ontology Cellular Component branch --
 #       LEFT, the ten most impacted sets across all collections; RIGHT, the GO:CC
-#       synapse and neuron sets. Tables from 20; styling from 21.
+#       synapse and neuron sets. Tables from 16; styling from 17.
 #
 # Reads:
 #   16_burden_per_donor.csv

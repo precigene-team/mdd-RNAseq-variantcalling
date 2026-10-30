@@ -9,14 +9,14 @@
 
 ## 📋 1. Executive Summary & Verdict
 
-We have completed the trimmed quality control assessment of the reads in the `_data/trimmed_fastq` directory using MultiQC (results located in `scratch/multitrim/`).
+We have completed the trimmed quality control assessment of the reads in the `_data/trimmed_fastq` directory using MultiQC (per-library FastQC reports in `_data/qc_trim/`, aggregated by [`10_multiqc.sh`](../01_core_alignment/10_multiqc.sh) into `_data/multiqc/`).
 
 *   **Overall Sequence Quality:** **Outstanding**. The quality filtering trimmed away poor bases and adapters while preserving the integrity and depth of the libraries. Average Q30 rate is **93.66%**.
 *   **Sequencing Depth:** **Excellent**. Average read depth is **133.43M** reads per library (R1 + R2). The minimum depth sample (`female_ctrl_6_input`) contains **45.11M** reads, which is more than double the standard 20M QC threshold.
 *   **Read Survival Rate:** **Excellent**. An average of **98.36%** of raw reads survived filtering. No libraries suffered from excessive read loss (minimum survival is **96.22%**).
 *   **Adapter Removal:** **Highly Effective**. An average of **12.07%** of reads contained adapter sequences that were successfully trimmed. 
 *   **Verdict:** **Proceed directly to Step 04 (STAR Alignment)**. The trimmed libraries are exceptionally clean and fully optimized for alignment.
-*   **Analysis Reference**: Compiled via the analysis script [summarize_trim_qc.py](../scratch/summarize_trim_qc.py). (ON HPC)
+*   **Analysis Reference**: Stats compiled from the FastQC reports in `_data/qc_trim/`, produced on the HPC by [`04_trimmed_fastqc.sh`](../01_core_alignment/04_trimmed_fastqc.sh).
 
 ---
 

@@ -1,6 +1,6 @@
 # [[03_variant_calling/15_plot_burden_results.R]]
 # Goal: Figures for the polygenic burden analysis. Consumes the tables written by
-#       17. No statistics here -- every number plotted comes from a result file.
+#       14. No statistics here -- every number plotted comes from a result file.
 #
 # Outputs:
 #   15_burden_offset_effect.pdf/.png   the key figure: raw vs offset-corrected
