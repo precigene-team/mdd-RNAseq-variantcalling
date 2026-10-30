@@ -1,6 +1,6 @@
 # [[03_variant_calling/13_export_pathway_sets.R]]
 # Goal: Export msigdbr gene sets to a flat TSV for the EXPLORATORY burden arm.
-#       Network-free (msigdbr ships its data); runs once, cached by 17 and 20.
+#       Network-free (msigdbr ships its data); runs once, cached by 14 and 16.
 #
 # Why collections are kept SEPARATE rather than lumped:
 #   msigdbr C2 merges several databases into one "CURATED" bag and C5 merges the
@@ -89,7 +89,7 @@ collapse <- function(d, tag) {
 
 rows <- list()
 
-message("[16b] fetching Hallmark (H) ...")
+message("[13] fetching Hallmark (H) ...")
 h <- tryCatch(msigdbr(species = "Homo sapiens", category = "H"),
               error = function(e) { warning("H failed: ", conditionMessage(e)); NULL })
 if (!is.null(h)) {
@@ -97,7 +97,7 @@ if (!is.null(h)) {
   if (!is.null(x)) { rows[["HALLMARK"]] <- x; message("   HALLMARK: ", nrow(x), " sets") }
 }
 
-message("[16b] fetching curated pathways (C2) ...")
+message("[13] fetching curated pathways (C2) ...")
 c2 <- tryCatch(msigdbr(species = "Homo sapiens", category = "C2"),
                error = function(e) { warning("C2 failed: ", conditionMessage(e)); NULL })
 if (!is.null(c2)) {
@@ -111,7 +111,7 @@ if (!is.null(c2)) {
   }
 }
 
-message("[16b] fetching Gene Ontology (C5) ...")
+message("[13] fetching Gene Ontology (C5) ...")
 c5 <- tryCatch(msigdbr(species = "Homo sapiens", category = "C5"),
                error = function(e) { warning("C5 failed: ", conditionMessage(e)); NULL })
 if (!is.null(c5)) {
@@ -139,7 +139,7 @@ out[, collection := as.character(collection)]
 
 fwrite(out[, .(collection, set_name, set_size, genes)], out_file, sep = "\t")
 
-message("[16b] wrote ", nrow(out), " sets -> ", out_file)
+message("[13] wrote ", nrow(out), " sets -> ", out_file)
 for (lab in out[, .N, by = collection]$collection) {
   s <- out[collection == lab]
   message(sprintf("   %-14s %5d sets, median size %3d", lab, nrow(s), median(s$set_size)))

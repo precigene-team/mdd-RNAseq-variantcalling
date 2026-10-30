@@ -1,10 +1,10 @@
 # [[03_variant_calling/16_burden_control_vs_mdd_table.R]]
-# Goal: Build the per-donor and per-set burden tables consumed by the 17_*
-#       plotting scripts. TABLES ONLY -- draws nothing.
+# Goal: Build the per-donor and per-set burden tables consumed by the 18_*
+#       through 22_* plotting scripts. TABLES ONLY -- draws nothing.
 #
 # Why the collections are kept SEPARATE:
-#   17 computes BH-FDR WITHIN collection, so the denominator differs per tool by
-#   two orders of magnitude (HALLMARK 50 sets vs GO_BP 5,831). Each 17_* script
+#   14 computes BH-FDR WITHIN collection, so the denominator differs per tool by
+#   two orders of magnitude (HALLMARK 50 sets vs GO_BP 5,831). Each 18_*-22_* script
 #   draws one collection and states that collection's own denominator; pooling
 #   them would present sets tested under different corrections as comparable.
 #
@@ -33,7 +33,7 @@ project_root <- Sys.getenv("PROJECT_ROOT", get_project_root())
 TAB <- file.path(project_root, "results/03_variant_calling/tables")
 need <- function(f) {
   p <- file.path(TAB, f)
-  if (!file.exists(p)) stop("missing input: ", p, "\nrun 15 and 16b first")
+  if (!file.exists(p)) stop("missing input: ", p, "\nrun 11 and 13 first")
   fread(p)
 }
 
@@ -115,7 +115,7 @@ fwrite(summary_tab, file.path(TAB, "16_burden_summary.csv"))
 
 message("[16] wrote 16_burden_per_donor.csv (", nrow(pd), " rows)")
 message("[16] wrote 16_burden_summary.csv (", nrow(summary_tab), " sets)")
-message("[16] --- per collection (n_sets is the BH-FDR denominator in 17) ---")
+message("[16] --- per collection (n_sets is the BH-FDR denominator in 14) ---")
 for (lab in summary_tab[, .N, by = collection]$collection) {
   s <- summary_tab[collection == lab]
   message(sprintf("   %-14s %5d sets | %d at FDR<0.05",

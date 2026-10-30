@@ -28,7 +28,7 @@
 # Outputs:
 #   11_burden_matrix.tsv.gz  donor x variant carriers
 #   11_donor_totals.csv      per-donor totals; total_variants_detected is the
-#                            offset consumed by 17
+#                            offset consumed by 14
 #   11_build_summary.csv     row counts and exclusions
 #
 # Usage:
@@ -153,7 +153,7 @@ def parse_vcf(path: str, annot: dict[str, dict]) -> tuple[list[tuple], int, int,
     """Return (carrier rows, panel sites seen, off-panel records, total records).
 
     `total records` is the donor's FULL detected variant load and is the value
-    used as the GLM offset in 17. It must NOT be the panel count: the panel
+    used as the GLM offset in 14. It must NOT be the panel count: the panel
     count is the outcome being modelled, so using it as its own offset would
     be circular. Total records scale with the donor's detection depth across
     the whole transcriptome and are independent of any specific gene set.
@@ -244,7 +244,7 @@ def main() -> int:
     df.to_csv(OUT_MATRIX, sep="\t", index=False, compression="gzip")
 
     # total_variants_detected is the donor's FULL detected load (all VCF
-    # records, on and off panel). It is the GLM offset consumed by 17 and must
+    # records, on and off panel). It is the GLM offset consumed by 14 and must
     # be independent of the panel outcome -- see parse_vcf.
     totals = pd.DataFrame([
         {
