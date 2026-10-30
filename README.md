@@ -82,13 +82,11 @@ Below is the layout of the analysis workspace:
   * [`cohort_limitations_and_resolutions.md`](docs/cohort_limitations_and_resolutions.md): Gating thresholds and deconvolution results.
   * [`environment.md`](docs/environment.md): Full `mdd` package inventory, which script loads each package, and the rationale.
   * [`mapping_qc_qa.md`](docs/mapping_qc_qa.md): RNA-seq mapping and quality-control Q&A summary.
-  * [`multiqc_summary.md`](docs/multiqc_summary.md): MultiQC upstream diagnostics summary report.
   * [`pipeline_integrity_checklist.md`](docs/pipeline_integrity_checklist.md): Data-integrity checks for hybrid local-HPC processing.
   * [`polygenic_burden_methodology.md`](docs/polygenic_burden_methodology.md): Design rationale for the `11`–`22` burden test, permutation offset, and stated limits.
-  * [`qc_raw_verdict.md`](docs/qc_raw_verdict.md): Raw-reads bioinformatics QC verdict.
-  * [`qc_trimmed_verdict.md`](docs/qc_trimmed_verdict.md): Trimmed-reads bioinformatics QC verdict.
   * [`split_n_cigar_qa.md`](docs/split_n_cigar_qa.md): SplitNCigar and HaplotypeCaller execution progress Q&A.
   * [`upstream_report.md`](docs/upstream_report.md): Upstream alignment and QC report.
+  * **[`docs/_archive/`](docs/_archive)**: 14 archived MeRIP/TRESS-era documents, including `multiqc_summary.md` and the two QC verdict reports (156 FastQC reports across 78 libraries; the IP arm is out of scope, so those numbers cannot be reproduced from the 39 Input libraries).
 * **[`_data/`](_data)**: Reference annotation files, genome indices, and temporary directories.
 
 ---
@@ -154,6 +152,8 @@ Rscript 03_variant_calling/20_plot_burden_go_bp.R
 Rscript 03_variant_calling/21_plot_burden_go_cc.R
 Rscript 03_variant_calling/22_plot_burden_go_mf.R
 # 17_plot_burden_control_vs_mdd.R is the shared plot helper sourced by 18-22; not run directly.
+# The same 08-22 chain in one command: ./run vc-post runs it locally; ./run vc submits
+# it as the vc_annotation_burden Slurm job after the filtration job.
 ```
 
 ---

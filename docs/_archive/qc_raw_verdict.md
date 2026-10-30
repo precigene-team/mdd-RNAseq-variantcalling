@@ -9,13 +9,13 @@
 
 ## 📋 1. Executive Summary & Verdict
 
-We have completed the raw quality control assessment of the sequencing reads in the `_data/qc_raw` directory using MultiQC (per-library FastQC reports in `_data/qc_raw/`, aggregated by [`10_multiqc.sh`](../01_core_alignment/10_multiqc.sh) into `_data/multiqc/`).
+We have completed the raw quality control assessment of the sequencing reads in the `_data/qc_raw` directory using MultiQC (per-library FastQC reports in `_data/qc_raw/`, aggregated by [`10_multiqc.sh`](../../01_core_alignment/10_multiqc.sh) into `_data/multiqc/`).
 
 *   **Overall Sequence Quality:** **Excellent**. All libraries show high-confidence base calling with perfect Phred score profiles across the entire read length (101 bp).
 *   **Sequencing Depth:** **Excellent**. Average read depth is **67.92M** reads per library. All 78 libraries significantly exceed the typical minimum 10M read depth threshold (minimum sample has **23.23M** reads).
 *   **Adapter Contamination:** **High (expected)**. Out of 156 files, **52 failed** and **26 warned** on adapter content checks. 
 *   **Verdict:** **Proceed directly to Step 02 (Trimming)**. Raw data is highly robust, but adapter trimming is strictly necessary to clean contamination before mapping.
-*   **Analysis Reference:** Detailed stats compiled from the FastQC reports in `_data/qc_raw/`, produced on the HPC by [`01_raw_fastqc.sh`](../01_core_alignment/01_raw_fastqc.sh).
+*   **Analysis Reference:** Detailed stats compiled from the FastQC reports in `_data/qc_raw/`, produced on the HPC by [`01_raw_fastqc.sh`](../../01_core_alignment/01_raw_fastqc.sh).
 
 ---
 

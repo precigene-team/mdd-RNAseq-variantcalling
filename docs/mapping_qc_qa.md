@@ -1,18 +1,18 @@
 # RNA-seq Mapping & Quality Control Q&A Summary
 
-This document summarizes the technical discussion and decisions made regarding upstream mapping issues, library size gating, and statistical power in the MDD MeRIP-seq cohort.
+This document summarizes the technical discussion and decisions made regarding upstream mapping issues, library size gating, and statistical power in the MDD Input RNA-seq cohort.
 
 ---
 
 ### Q1: Does low count mapping upstream affect the downstream processes?
 **Answer:** Yes, absolutely. Low mapping rates or low read counts upstream have a cascading negative effect:
-1. **DGE & Methylation (DESeq2):** Low counts mean high random sampling variation. DESeq2 estimates high dispersions for these genes, reducing statistical power and failing to call genes as significant. Furthermore, DESeq2's independent filtering will discard low-expression genes before testing.
-2. **Variant Calling (GATK & ASM):** `HaplotypeCaller` requires sufficient read coverage at a specific position to call a variant. Low counts lead to high false-negative rates and make it impossible to compute reliable allele ratios for Allele-Specific Methylation (ASM).
+1. **DGE (DESeq2):** Low counts mean high random sampling variation. DESeq2 estimates high dispersions for these genes, reducing statistical power and failing to call genes as significant. Furthermore, DESeq2's independent filtering will discard low-expression genes before testing.
+2. **Variant Calling (GATK):** `HaplotypeCaller` requires sufficient read coverage at a specific position to call a variant. Low counts lead to high false-negative rates.
 
 ---
 
 ### Q2: What are the worst samples in our cohort?
-**Answer:** The lowest count samples are all in the Input (RNA-seq) fraction:
+**Answer:** The lowest count samples are Input samples:
 * **`female_mdd_2_input`** — **5.8 Million** counts (extremely low)
 * **`female_ctrl_6_input`** — **9.9 Million** counts
 * **`male_ctrl_1_input`** — **11.6 Million** counts
@@ -32,10 +32,8 @@ Standard quality thresholds are:
 
 ---
 
-### Q4: Why do the Input samples have such high multi-mapping rates (up to 96%) while the IP samples are clean (>90% uniquely mapped)?
-**Answer:** This is a signature of **incomplete Ribosomal RNA (rRNA) depletion** during the Input library preparation:
-1. **The Input:** rRNA makes up ~90% of total RNA. If the lab's rRNA depletion step is incomplete, the library is dominated by rRNA. Since rRNA genes are highly repetitive, STAR maps them to many locations, and `featureCounts` discards them as multimappers.
-2. **The IP:** The anti-$m^6A$ antibody specifically pulls down poly-A/methylated mRNA, naturally excluding the unmethylated rRNA. Thus, the IP library is biologically self-depleted and clean.
+### Q4: Why do Input samples have such high multi-mapping rates (up to 96%)?
+**Answer:** This is a signature of **incomplete Ribosomal RNA (rRNA) depletion** during the Input library preparation: rRNA makes up ~90% of total RNA. If the lab's rRNA depletion step is incomplete, the library is dominated by rRNA. Since rRNA genes are highly repetitive, STAR maps them to many locations, and `featureCounts` discards them as multimappers.
 
 For example, `female_mdd_2_input` had **360 Million total reads**, but **96.5% (347.8M)** were discarded as multimappers, leaving only **1.7%** assigned to exons.
 
@@ -53,9 +51,9 @@ Unique mapping is determined by the **physical sequence of the reads**, not alig
 
 ### Q6: How should we filter out these low-quality samples?
 **Answer:** Rather than hardcoding a blacklist of sample IDs, we implement an **objective QC Library Size Gate** in `02_dge_analysis/04_deg_analysis.R`:
-* **Gate:** `MIN_LIBRARY_SIZE <- 10e6` (10 Million exonic counts).
-* **Pairing Preservation:** If either the Input or IP library for a subject fails the gate, the script dynamically excludes both samples for that subject to keep the cohort pairing intact for the interaction model.
-* **Result:** This dynamically excludes `female_mdd_2`, `female_ctrl_6`, and `male_ctrl_1` without needing hardcoded lists.
+* **Gate:** `MIN_LIBRARY_SIZE <- 2e6` (2 Million gene-mapped counts), applied to the Input samples at `02_dge_analysis/04_deg_analysis.R:95`.
+* **Runtime exclusion:** `colSums(counts(dds_rnaseq))` is compared with the floor, failing subjects are dropped, their `Subject` levels are `droplevels()`d to keep the design matrix full rank, and the names are printed by the `[QC GATE]` message (`:101-112`). No sample list is hardcoded.
+* **Retired pairing rule:** the 10 Million floor and the Input+IP pairing-preservation rule belonged to the 78-library two-fraction analysis. The MeRIP/IP arm is out of scope (`README.md:5`), so the gate constrains Input samples only; `female_mdd_2`, `female_ctrl_6`, `male_ctrl_1` is the 10M-era exclusion set, not the shipped 2M result.
 
 ---
 

@@ -1,5 +1,5 @@
-# Upstream RNA-seq & MeRIP-seq Pipeline Report
-**MDD PFC Cohort (78 Libraries)**
+# Upstream RNA-seq Pipeline Report
+**MDD PFC Cohort (78 Libraries Downloaded, 39 Input Libraries In Scope)**
 
 ## 📅 Timeline
 
@@ -28,5 +28,5 @@
 * **How it was dealt with**: We rebuilt the genome index. The remaining low mapping rate issue is currently under investigation and will be analyzed further once the Qualimap RNA-seq QC step is completed to inspect transcript region distributions.
 
 ### 2. Artificially Low Assignment Rates in Input Samples
-* **What went wrong**: Counts QC flagged a warning for all 39 input samples showing $<50\%$ assignment rates (typically 5–15%), while the IP (m6A) samples passed.
+* **What went wrong**: Counts QC flagged a warning for all 39 input samples showing $<50\%$ assignment rates (typically 5–15%).
 * **How it was dealt with**: Identified that the QC script was counting raw multi-mapping alignments in its denominator (which were highly inflated due to some escaped rRNA mapping to repetitive rDNA units). The delivered [09_counts_qc.sh](../01_core_alignment/09_counts_qc.sh) keeps that denominator: `:154-165` divides `Assigned` by the sum of every `.summary` category, `Unassigned_MultiMapping` included, so the uniquely-mapped-denominator refactor was not carried into this tree. Against the gene-level counts, that shipped rate reads **2.3–15.8% (median 8.2%)** for Input samples, and the `>= 50%` gate at `:167-183` prints a `WARNING` only — `09` exits 0. The **50.5%** figure is an observation under the uniquely mapped denominator (total minus `Unassigned_MultiMapping`): there Input samples read **42.9–54.0% (median 48.9%)**, and 7 of the 22 quantified so far clear 50%.
