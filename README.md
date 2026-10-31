@@ -41,7 +41,7 @@ Below is the layout of the analysis workspace:
   * [`10_multiqc.sh`](01_core_alignment/10_multiqc.sh): Centralized report aggregator.
 
 * **[`02_dge_analysis/`](02_dge_analysis)**: Expression statistical testing.
-  * [`config.yaml`](02_dge_analysis/config.yaml): Ensembl annotation parameters (`ensembl_version`, `valid_biotypes`).
+  * [`config.yaml`](02_dge_analysis/config.yaml): Ensembl annotation parameters — `valid_biotypes` (read by `01_gene_mapping.R:38`) and `ensembl_version` (reference only: no script reads it since `06` annotates through the Ensembl REST lookup).
   * [`01_gene_mapping.R`](02_dge_analysis/01_gene_mapping.R): ENSG → HGNC symbol mapping from the Ensembl GTF, Input samples only.
   * [`02_rna_processing.R`](02_dge_analysis/02_rna_processing.R): Low-count filtering and normalization.
   * [`03_pca_analysis.R`](02_dge_analysis/03_pca_analysis.R): Cohort dimensionality reduction.
@@ -167,5 +167,5 @@ Full package inventory, which script loads each one, and the rationale: [`docs/e
 Required software includes:
 * **Java SDK** (v1.8+ or compatible runtime)
 * **GATK Toolkit** (v4.x)
-* **R Libraries**: `tidyverse` (ggplot2, dplyr, readr, stringr), `DESeq2`, `biomaRt`, `limma`, `clusterProfiler`, `org.Hs.eg.db`, `ashr`, `msigdbr`, `data.table`, `yaml`, `ggtext`, `ggrepel`, `patchwork`, `ComplexHeatmap`, `circlize`, `RColorBrewer`, `scales`, `plotly`, `htmlwidgets`
+* **R Libraries**: `tidyverse` (ggplot2, dplyr, readr, stringr), `DESeq2`, `jsonlite`, `limma`, `clusterProfiler`, `org.Hs.eg.db`, `ashr`, `msigdbr`, `data.table`, `yaml`, `ggtext`, `ggrepel`, `patchwork`, `ComplexHeatmap`, `circlize`, `RColorBrewer`, `scales`, `plotly`, `htmlwidgets`
 * **Python Libraries**: `pandas`, `pathlib`, `concurrent.futures`, `subprocess`

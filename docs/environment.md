@@ -86,7 +86,7 @@ The delivered scripts load these libraries:
 | `plotly` + `htmlwidgets` | `r-plotly` `r-htmlwidgets` | `02_dge_analysis/03_pca_analysis.R` |
 | `ComplexHeatmap` + `circlize` + `RColorBrewer` | `r-complexheatmap` `r-circlize` `r-rcolorbrewer` | `02_dge_analysis/09_heatmap_pathway.R:15,16` |
 | `patchwork` | `r-patchwork` | `03_variant_calling/17_plot_burden_control_vs_mdd.R:26` |
-| `biomaRt` | `bioconductor-biomart` | `02_dge_analysis/06_annotate_results.R` |
+| `jsonlite` | `r-jsonlite` | `02_dge_analysis/06_annotate_results.R:88` — the Ensembl REST gene lookup |
 | `clusterProfiler` | `r-clusterprofiler` | `02_dge_analysis/07_enrichment_analysis.R` |
 | `org.Hs.eg.db` | `r-org.hs.eg.db` | `02_dge_analysis/07`, `09` |
 | `msigdbr` | `r-msigdbr` | `02_dge_analysis/07`, `03_variant_calling/13_export_pathway_sets.R` |
@@ -94,20 +94,22 @@ The delivered scripts load these libraries:
 
 Declared, not loaded by any delivered script: `r-limma` (the linear-model arm
 of a previous DGE design), `r-biocmanager` (package-install helper),
-`r-jsonlite` (transitive), `bioconductor-go.db` (the Gene Ontology annotation
+`bioconductor-go.db` (the Gene Ontology annotation
 package `clusterProfiler` resolves GO term names from; declared explicitly so
 `02_dge_analysis/07_enrichment_analysis.R` runs offline).
 
 ### Packages removed from the environment
 
 `bioconductor-tress`, `bioconductor-rrho` (the DGE plots, removed from 02),
-`bioconductor-apeglm` (the previous DE shrink estimator, replaced by `ashr`).
+`bioconductor-apeglm` (the previous DE shrink estimator, replaced by `ashr`),
+`bioconductor-biomart` (the `biomaRt` BioMart annotation in `06`, replaced by the
+Ensembl REST gene lookup — Ensembl's legacy archive/BioMart service is down).
 
 ### Packages added to the environment
 
 `r-patchwork`, `r-circlize`, `r-rcolorbrewer`, `r-scales` — each is loaded by
 a delivered script and was previously installed only as a transitive dependency.
-A direct `library()` call deserves a pin, so they are declared. `bioconductor-biomart` is restored here: it is declared at HEAD, installed in env `mdd` (2.62.0), and loaded by `02_dge_analysis/06_annotate_results.R`, so a package list that omits it cannot build an environment the script can run in.
+A direct `library()` call deserves a pin, so they are declared. `r-jsonlite` moves from the transitive list to the table above: `02_dge_analysis/06_annotate_results.R:88` loads it directly.
 
 ## External resource URLs
 

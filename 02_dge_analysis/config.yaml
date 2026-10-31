@@ -12,12 +12,12 @@
 #
 # Consumers:
 #   01_gene_mapping.R:38      cfg$ensembl_map$valid_biotypes
-#   06_annotate_results.R:81  cfg$ensembl_map$ensembl_version
 # ==============================================================================
 
-# Key name `ensembl_map` is the path 01 and 06 read.
+# Key name `ensembl_map` is the path `01_gene_mapping.R:38` reads.
 ensembl_map:
-  # Ensembl release used by BioMart in 06_annotate_results.R (useEnsembl).
+  # Ensembl release the annotation is aligned to (reference only: no script reads
+  # it since 06 annotates through the Ensembl REST lookup).
   # Matches the GTF 01_gene_mapping.R parses: Homo_sapiens.GRCh38.115.gtf.
   ensembl_version: 115
 

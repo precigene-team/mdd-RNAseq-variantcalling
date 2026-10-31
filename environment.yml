@@ -61,7 +61,6 @@ dependencies:
   - r-clusterprofiler
   - r-org.hs.eg.db
   - r-msigdbr
-  - bioconductor-biomart
   - bioconductor-ashr
   - bioconductor-go.db
   - r-jsonlite
