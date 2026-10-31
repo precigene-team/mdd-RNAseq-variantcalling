@@ -299,16 +299,16 @@ if [ "$RUN_CORE" = true ]; then
     echo ">>> Running CORE ALIGNMENT Module..."
     (
         cd 01_core_alignment/
-        bash 01_raw_fastqc.sh
-        bash 02_trimming.sh
-        bash 03_rrna_filter.sh
-        bash 04_trimmed_fastqc.sh
-        bash 05_star_align.sh
-        bash 06_qualimap_bamqc.sh
-        bash 07_qualimap_rnaseq.sh
-        bash 08_quantification.sh
-        bash 09_counts_qc.sh
-        bash 10_multiqc.sh
+        bash 01_raw_fastqc.sh || { echo "ERROR: Step 01 (01_raw_fastqc.sh) failed." >&2; exit 1; }
+        bash 02_trimming.sh || { echo "ERROR: Step 02 (02_trimming.sh) failed." >&2; exit 1; }
+        bash 03_rrna_filter.sh || { echo "ERROR: Step 03 (03_rrna_filter.sh) failed." >&2; exit 1; }
+        bash 04_trimmed_fastqc.sh || { echo "ERROR: Step 04 (04_trimmed_fastqc.sh) failed." >&2; exit 1; }
+        bash 05_star_align.sh || { echo "ERROR: Step 05 (05_star_align.sh) failed." >&2; exit 1; }
+        bash 06_qualimap_bamqc.sh || { echo "ERROR: Step 06 (06_qualimap_bamqc.sh) failed." >&2; exit 1; }
+        bash 07_qualimap_rnaseq.sh || { echo "ERROR: Step 07 (07_qualimap_rnaseq.sh) failed." >&2; exit 1; }
+        bash 08_quantification.sh || { echo "ERROR: Step 08 (08_quantification.sh) failed." >&2; exit 1; }
+        bash 09_counts_qc.sh || { echo "ERROR: Step 09 (09_counts_qc.sh) failed." >&2; exit 1; }
+        bash 10_multiqc.sh || { echo "ERROR: Step 10 (10_multiqc.sh) failed." >&2; exit 1; }
     ) || { echo "Core Alignment failed. Exiting."; exit 1; }
     echo "CORE ALIGNMENT COMPLETE."
     echo ""
@@ -319,15 +319,15 @@ if [ "$RUN_DGE" = true ]; then
     echo ">>> Running DGE ANALYSIS Module..."
     (
         cd 02_dge_analysis/
-        Rscript 01_gene_mapping.R
-        Rscript 02_rna_processing.R
-        Rscript 03_pca_analysis.R
-        Rscript 04_deg_analysis.R
-        Rscript 05_dge_plotting.R
-        Rscript 06_annotate_results.R
-        Rscript 07_enrichment_analysis.R
-        Rscript 08_enrichment_plotting.R
-        Rscript 09_heatmap_pathway.R
+        Rscript 01_gene_mapping.R || { echo "ERROR: Step 01 (01_gene_mapping.R) failed." >&2; exit 1; }
+        Rscript 02_rna_processing.R || { echo "ERROR: Step 02 (02_rna_processing.R) failed." >&2; exit 1; }
+        Rscript 03_pca_analysis.R || { echo "ERROR: Step 03 (03_pca_analysis.R) failed." >&2; exit 1; }
+        Rscript 04_deg_analysis.R || { echo "ERROR: Step 04 (04_deg_analysis.R) failed." >&2; exit 1; }
+        Rscript 05_dge_plotting.R || { echo "ERROR: Step 05 (05_dge_plotting.R) failed." >&2; exit 1; }
+        Rscript 06_annotate_results.R || { echo "ERROR: Step 06 (06_annotate_results.R) failed." >&2; exit 1; }
+        Rscript 07_enrichment_analysis.R || { echo "ERROR: Step 07 (07_enrichment_analysis.R) failed." >&2; exit 1; }
+        Rscript 08_enrichment_plotting.R || { echo "ERROR: Step 08 (08_enrichment_plotting.R) failed." >&2; exit 1; }
+        Rscript 09_heatmap_pathway.R || { echo "ERROR: Step 09 (09_heatmap_pathway.R) failed." >&2; exit 1; }
     ) || { echo "DGE Analysis failed. Exiting."; exit 1; }
     echo "DGE ANALYSIS COMPLETE."
     echo ""

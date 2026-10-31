@@ -5,15 +5,16 @@
 # Steps:
 #   1. Load metadata from sample_sheet.csv and export SRA accession lists for the Input subgroups.
 #   2. Load significant DGE results from results/02_dge_analysis/tables/04_*_sig.csv
-#   3. Connect to Ensembl BioMart to fetch genomic coordinate and biotype annotations.
+#   3. Fetch genomic coordinate and biotype annotations from the Ensembl REST gene lookup
+#      (/lookup/symbol). Ensembl's legacy BioMart archive service is down, so biomaRt
+#      cannot connect to any mirror; the REST endpoint answers.
 #   4. Join annotations to each significant DGE table.
 #   5. Save the annotated significant tables as results/02_dge_analysis/tables/04_*_sig_annotated.csv
 
 suppressPackageStartupMessages({
-  library(biomaRt)
   library(readr)
   library(dplyr)
-  library(yaml)
+  library(jsonlite)
 })
 
 # Dynamically resolve project root
@@ -56,7 +57,7 @@ if (length(sig_files) == 0) {
   stop("No significant results tables (04_*_sig.csv) found in ", tables_dir)
 }
 
-# Extract all unique significant gene names across all tables to minimize BioMart query size
+# Extract all unique significant gene names across all tables (one REST lookup per gene)
 message("[INFO] Reading significant gene lists...")
 all_sig_genes <- c()
 for (f in sig_files) {
@@ -67,75 +68,65 @@ for (f in sig_files) {
 }
 
 if (length(all_sig_genes) == 0) {
-  message("[INFO] No significant genes detected across any tables. Skipping BioMart annotation.")
+  message("[INFO] No significant genes detected across any tables. Skipping REST annotation.")
   q(save = "no")
 }
 
 message("  Total unique significant genes to annotate: ", length(all_sig_genes))
 
-# 3. Connect to Ensembl BioMart
-config_path <- file.path(project_root, "02_dge_analysis/config.yaml")
-ensembl_version <- NULL
-if (file.exists(config_path)) {
-  cfg <- yaml::read_yaml(config_path)
-  ensembl_version <- cfg$ensembl_map$ensembl_version
-}
+# 3. Fetch genomic coordinates and biotypes from Ensembl REST
+#    One lookup per significant gene: /lookup/symbol/homo_sapiens/<symbol>
+#    Ensembl REST rate limit is 15 requests/second, so requests are spaced.
+rest_base <- "https://rest.ensembl.org/lookup/symbol/homo_sapiens/"
+message("[REST] Querying Ensembl REST /lookup/symbol for genomic coordinates and biotypes...")
 
-mart <- NULL
-for (attempt in 1:5) {
-  mart <- tryCatch({
-    if (attempt == 1 && !is.null(ensembl_version)) {
-      message("[ENSEMBL] Attempt 1: Connecting via useEnsembl with version = ", ensembl_version)
-      useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = ensembl_version)
-    } else if (attempt == 2) {
-      message("[ENSEMBL] Attempt 2: Connecting via useEnsembl with mirror = 'useast'")
-      useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", mirror = "useast")
-    } else if (attempt == 3) {
-      message("[ENSEMBL] Attempt 3: Connecting via useEnsembl with mirror = 'uswest'")
-      useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", mirror = "uswest")
-    } else if (attempt == 4) {
-      message("[ENSEMBL] Attempt 4: Connecting via useEnsembl with mirror = 'www'")
-      useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", mirror = "www")
-    } else {
-      message("[ENSEMBL] Attempt 5: Connecting via useMart with host = 'https://www.ensembl.org'")
-      useMart(biomart = "ensembl", dataset = "hsapiens_gene_ensembl", host = "https://www.ensembl.org")
+bm_annot <- data.frame()
+for (g in all_sig_genes) {
+  res <- NULL
+  for (attempt in 1:3) {
+    res <- tryCatch(
+      jsonlite::fromJSON(paste0(rest_base, g)),
+      error = function(e) {
+        message("  [WARN] REST lookup for ", g, " (attempt ", attempt, "): ", conditionMessage(e))
+        NULL
+      }
+    )
+    if (!is.null(res) && !is.null(res$id)) break
+    if (is.null(res$id)) {
+      message("  [WARN] REST lookup for ", g, " (attempt ", attempt, "): no gene returned")
+      res <- NULL
     }
-  }, error = function(e) {
-    message("  Connection failed: ", conditionMessage(e))
-    NULL
-  })
-  if (!is.null(mart)) break
-}
+    Sys.sleep(2)
+  }
+  if (is.null(res)) {
+    message("  [WARN] No annotation returned for ", g)
+    next
+  }
 
-if (is.null(mart)) {
-  stop("Failed to connect to Ensembl BioMart after multiple attempts.")
-}
-
-# Query genomic coordinates and biotypes
-message("[BIOMART] Querying genomic coordinates and biotypes...")
-bm_annot <- getBM(
-  attributes = c("hgnc_symbol", "ensembl_gene_id", "gene_biotype", "chromosome_name", "start_position", "end_position", "strand", "description"),
-  filters = "hgnc_symbol",
-  values = all_sig_genes,
-  mart = mart,
-  uniqueRows = TRUE
-) %>%
-  rename(
-    gene_name = hgnc_symbol,
-    ensembl_id = ensembl_gene_id,
-    gene_type = gene_biotype,
-    chr = chromosome_name,
-    start = start_position,
-    end = end_position
-  ) %>%
-  mutate(
+  bm_annot <- rbind(bm_annot, data.frame(
+    gene_name   = g,
+    ensembl_id  = res$id,
+    gene_type   = res$biotype,
+    chr         = res$seq_region_name,
+    start       = res$start,
+    end         = res$end,
     # Format strand values as standard + / -
-    strand = ifelse(strand == 1, "+", "-"),
+    strand      = ifelse(res$strand == 1, "+", "-"),
     # Strip the Ensembl source brackets from the end of the description
-    description = sub(" \\[Source:.*$", "", description)
-  )
+    description = if (is.null(res$description)) NA_character_ else
+                    sub(" \\[Source:.*$", "", res$description),
+    stringsAsFactors = FALSE
+  ))
+  Sys.sleep(0.1)
+}
 
-# Keep the first unique hit for each HGNC symbol to avoid duplicating rows in the join
+if (nrow(bm_annot) == 0) {
+  stop("Failed to fetch annotations from Ensembl REST for ", length(all_sig_genes), " gene(s).")
+}
+
+message("  [SUCCESS] Annotated ", nrow(bm_annot), " of ", length(all_sig_genes), " significant genes")
+
+# Keep the first unique hit for each gene name to avoid duplicating rows in the join
 bm_annot_uniq <- bm_annot %>% distinct(gene_name, .keep_all = TRUE)
 
 # 4. Annotate and save tables
